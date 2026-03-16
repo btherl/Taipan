@@ -1,0 +1,25 @@
+{
+  "name": "Taipan",
+  "tree": {
+    "$className": "DataModel",
+    "ServerScriptService": {
+      "$className": "ServerScriptService",
+      "$path": "src/ServerScriptService",
+      "Tests": {
+        "$className": "Folder",
+        "$path": "tests"
+      }
+    },
+    "ReplicatedStorage": {
+      "$className": "ReplicatedStorage",
+      "$path": "src/ReplicatedStorage"
+    },
+    "StarterGui": {
+      "$className": "StarterGui",
+      "TaipanGui": {
+        "$className": "ScreenGui",
+        "$path": "src/StarterGui/TaipanGui"
+      }
+    }
+  }
+}

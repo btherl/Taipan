@@ -8,6 +8,8 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local GameState   = require(ReplicatedStorage.shared.GameState)
 local PriceEngine = require(ReplicatedStorage.shared.PriceEngine)
 local Validators  = require(ReplicatedStorage.shared.Validators)
+local TravelEngine = require(ReplicatedStorage.shared.TravelEngine)
+local Constants   = require(ReplicatedStorage.shared.Constants)
 local Remotes     = require(ReplicatedStorage.Remotes)
 
 -- Per-player state map. Never use global state.
@@ -86,6 +88,61 @@ Remotes.EndTurn.OnServerEvent:Connect(function(player)
   if not state then return end
 
   state.currentPrices = PriceEngine.calculatePrices(state.basePrices, state.currentPort)
+  pushState(player)
+end)
+
+-- Travel to a new port: advance time, move to destination, recalculate prices
+Remotes.TravelTo.OnServerEvent:Connect(function(player, destination)
+  local state = playerStates[player]
+  if not state then return end
+  if type(destination) ~= "number" or destination < 1 or destination > 7
+      or math.floor(destination) ~= destination then return end
+
+  local err = TravelEngine.canDepart(state, destination)
+  if err then
+    pushState(player)
+    return
+  end
+
+  TravelEngine.timeAdvance(state)
+  state.destination   = destination
+  state.currentPort   = destination
+  state.currentPrices = PriceEngine.calculatePrices(state.basePrices, destination)
+  state.holdSpace = state.shipCapacity
+    - state.shipCargo[1] - state.shipCargo[2] - state.shipCargo[3] - state.shipCargo[4]
+    - state.guns * 10
+  pushState(player)
+end)
+
+-- Transfer goods from ship hold to warehouse (Hong Kong only)
+Remotes.TransferToWarehouse.OnServerEvent:Connect(function(player, goodIndex, quantity)
+  local state = playerStates[player]
+  if not state then return end
+  if state.currentPort ~= Constants.HONG_KONG then return end
+  if not validGood(goodIndex) or not validQty(quantity) then return end
+  if state.shipCargo[goodIndex] < quantity then pushState(player) return end
+  if state.warehouseUsed + quantity > Constants.WAREHOUSE_CAPACITY then pushState(player) return end
+
+  state.shipCargo[goodIndex]      = state.shipCargo[goodIndex]      - quantity
+  state.warehouseCargo[goodIndex] = state.warehouseCargo[goodIndex] + quantity
+  state.warehouseUsed             = state.warehouseUsed + quantity
+  state.holdSpace                 = state.holdSpace + quantity
+  pushState(player)
+end)
+
+-- Transfer goods from warehouse to ship hold (Hong Kong only)
+Remotes.TransferFromWarehouse.OnServerEvent:Connect(function(player, goodIndex, quantity)
+  local state = playerStates[player]
+  if not state then return end
+  if state.currentPort ~= Constants.HONG_KONG then return end
+  if not validGood(goodIndex) or not validQty(quantity) then return end
+  if state.warehouseCargo[goodIndex] < quantity then pushState(player) return end
+  if state.holdSpace < quantity then pushState(player) return end
+
+  state.warehouseCargo[goodIndex] = state.warehouseCargo[goodIndex] - quantity
+  state.shipCargo[goodIndex]      = state.shipCargo[goodIndex]      + quantity
+  state.warehouseUsed             = state.warehouseUsed - quantity
+  state.holdSpace                 = state.holdSpace - quantity
   pushState(player)
 end)
 

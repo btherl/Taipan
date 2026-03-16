@@ -9,11 +9,13 @@ local Players           = game:GetService("Players")
 assert(script:FindFirstChild("Panels"),
   "TaipanGui: 'Panels' folder missing — check Studio structure")
 
-local Remotes        = require(ReplicatedStorage.Remotes)
-local StatusStrip    = require(script.Panels.StatusStrip)
-local InventoryPanel = require(script.Panels.InventoryPanel)
-local PricesPanel    = require(script.Panels.PricesPanel)
-local BuySellPanel   = require(script.Panels.BuySellPanel)
+local Remotes          = require(ReplicatedStorage.Remotes)
+local StatusStrip      = require(script.Panels.StatusStrip)
+local InventoryPanel   = require(script.Panels.InventoryPanel)
+local PricesPanel      = require(script.Panels.PricesPanel)
+local BuySellPanel     = require(script.Panels.BuySellPanel)
+local PortPanel        = require(script.Panels.PortPanel)
+local WarehousePanel   = require(script.Panels.WarehousePanel)
 
 -- Build the ScreenGui root frame
 local screenGui = script.Parent  -- TaipanGui is already a ScreenGui in StarterGui
@@ -29,6 +31,9 @@ root.BorderSizePixel = 0
 root.Parent = screenGui
 
 -- Instantiate panels
+local portPanel      = PortPanel.new(root, function(dest)
+  Remotes.TravelTo:FireServer(dest)
+end)
 local statusStrip    = StatusStrip.new(root)
 local inventoryPanel = InventoryPanel.new(root)
 local pricesPanel    = PricesPanel.new(root)
@@ -38,17 +43,24 @@ local buySellPanel   = BuySellPanel.new(
   function(goodIndex, qty) Remotes.SellGoods:FireServer(goodIndex, qty) end,
   function() Remotes.EndTurn:FireServer() end
 )
+local warehousePanel = WarehousePanel.new(
+  root,
+  function(goodIndex, qty) Remotes.TransferToWarehouse:FireServer(goodIndex, qty) end,
+  function(goodIndex, qty) Remotes.TransferFromWarehouse:FireServer(goodIndex, qty) end
+)
 
 -- Receive state updates from server and refresh all panels
 Remotes.StateUpdate.OnClientEvent:Connect(function(state)
+  portPanel.update(state)
   statusStrip.update(state)
   inventoryPanel.update(state)
   pricesPanel.update(state)
   buySellPanel.update(state)
+  warehousePanel.update(state)
 end)
 
 -- Start the game (Phase 1: always cash start; start choice UI added later)
--- TODO Phase 2: replace with start-choice screen that fires "cash" or "guns"
+-- TODO Phase 3: replace with start-choice screen that fires "cash" or "guns"
 Remotes.ChooseStart:FireServer("cash")
 -- Always request state after ChooseStart: handles both new sessions (server pushes
 -- after init) and reconnects (ChooseStart guard returns early, but this still gets

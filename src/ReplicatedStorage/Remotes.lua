@@ -21,6 +21,9 @@ Remotes.BuyGoods       = getOrCreate("RemoteEvent", "BuyGoods")       -- goodInd
 Remotes.SellGoods      = getOrCreate("RemoteEvent", "SellGoods")      -- goodIndex, quantity
 Remotes.EndTurn        = getOrCreate("RemoteEvent", "EndTurn")        -- recalculate prices
 Remotes.RequestStateUpdate = getOrCreate("RemoteEvent", "RequestStateUpdate")  -- client requests full state refresh
+Remotes.TravelTo             = getOrCreate("RemoteEvent", "TravelTo")             -- destination (1-7)
+Remotes.TransferToWarehouse   = getOrCreate("RemoteEvent", "TransferToWarehouse")   -- goodIndex, quantity
+Remotes.TransferFromWarehouse = getOrCreate("RemoteEvent", "TransferFromWarehouse") -- goodIndex, quantity
 
 -- Server → Client updates
 Remotes.StateUpdate    = getOrCreate("RemoteEvent", "StateUpdate")    -- full state snapshot

@@ -17,6 +17,11 @@ Constants.PORT_NAMES = {
 
 Constants.HONG_KONG = 1  -- port index for HK-only events
 
+Constants.MONTH_NAMES = {
+  "Jan","Feb","Mar","Apr","May","Jun",
+  "Jul","Aug","Sep","Oct","Nov","Dec"
+}
+
 -- Good indices 1-4
 Constants.GOOD_NAMES = {
   "Opium",          -- 1

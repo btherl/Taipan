@@ -66,7 +66,7 @@ Computed fields (recalculated from canonical data):
 
 | Field | How derived |
 |---|---|
-| `holdSpace` | `shipCapacity - Σshipcargo - guns×10` — `shipCapacity` includes upgrades; `shipCargo` values reflect in-port trading before disconnect |
+| `holdSpace` | `shipCapacity - Σshipcargo - guns×10` — use the **restored canonical `shipCapacity`** (not any constant default; already includes purchased upgrades); use restored `shipCargo` values |
 | `warehouseUsed` | `Σwarehousecargo` |
 | `currentPrices` | `PriceEngine.calculatePrices(basePrices, currentPort)` — uses the restored (drifted) `basePrices` |
 | `destination` | Set to `currentPort` |
@@ -136,6 +136,8 @@ local gameStore = DataStoreService:GetDataStore("TaipanV1")
 
 ### `pushState` helper (modified)
 
+**This change must land before or simultaneously with the sentinel assignment in `ChooseStart`.** With the existing `if state then` guard, setting the sentinel `= true` would fire `true` to the client. The type guard prevents this:
+
 The existing guard `if state then` must be tightened to `if type(state) == "table"` to prevent sending the sentinel `true` value to the client during the async load window:
 
 ```lua
@@ -191,6 +193,10 @@ end
 
 **Save on departure** — call `savePlayer(player, state)` after the final `pushState(player)` call at the end of the `TravelTo` handler (not after any intermediate `pushState` calls inside sub-helpers like `postCombatStorm`). On a new player's first travel to HK, both the tutorial save (above) and the departure save will fire in the same handler invocation — this double-save is harmless and expected.
 
+### Handler sentinel guard
+
+All handlers that access `state.*` fields must guard against the sentinel `true` value set during `ChooseStart` async load. Any handler that currently checks `if not state then return end` must be updated to `if type(state) ~= "table" then return end`. This applies to all existing handlers (BuyGoods, SellGoods, TravelTo, etc.) and to the new RestartGame modification below.
+
 ### `RestartGame` handler (modified)
 
 Carry `seenTutorial` forward so the tutorial does not replay after restart:
@@ -198,7 +204,7 @@ Carry `seenTutorial` forward so the tutorial does not replay after restart:
 ```lua
 Remotes.RestartGame.OnServerEvent:Connect(function(player)
   local state = playerStates[player]
-  if not state or not state.gameOver then return end
+  if type(state) ~= "table" or not state.gameOver then return end
   local wasTutorialSeen = state.seenTutorial  -- preserve across restart
   local newState = GameState.newGame("cash")
   -- ... initialise prices, holdSpace as before ...

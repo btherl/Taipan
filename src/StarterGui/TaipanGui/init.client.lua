@@ -16,6 +16,12 @@ local PricesPanel      = require(script.Panels.PricesPanel)
 local BuySellPanel     = require(script.Panels.BuySellPanel)
 local PortPanel        = require(script.Panels.PortPanel)
 local WarehousePanel   = require(script.Panels.WarehousePanel)
+local WuPanel          = require(script.Panels.WuPanel)
+local BankPanel        = require(script.Panels.BankPanel)
+local MessagePanel     = require(script.Panels.MessagePanel)
+local GameOverPanel    = require(script.Panels.GameOverPanel)
+local CombatPanel      = require(script.Panels.CombatPanel)
+local ShipPanel        = require(script.Panels.ShipPanel)
 
 -- Build the ScreenGui root frame
 local screenGui = script.Parent  -- TaipanGui is already a ScreenGui in StarterGui
@@ -31,9 +37,11 @@ root.BorderSizePixel = 0
 root.Parent = screenGui
 
 -- Instantiate panels
-local portPanel      = PortPanel.new(root, function(dest)
-  Remotes.TravelTo:FireServer(dest)
-end)
+local portPanel      = PortPanel.new(root,
+  function(dest) Remotes.TravelTo:FireServer(dest) end,
+  function() Remotes.Retire:FireServer() end,
+  function() Remotes.QuitGame:FireServer() end
+)
 local statusStrip    = StatusStrip.new(root)
 local inventoryPanel = InventoryPanel.new(root)
 local pricesPanel    = PricesPanel.new(root)
@@ -48,6 +56,35 @@ local warehousePanel = WarehousePanel.new(
   function(goodIndex, qty) Remotes.TransferToWarehouse:FireServer(goodIndex, qty) end,
   function(goodIndex, qty) Remotes.TransferFromWarehouse:FireServer(goodIndex, qty) end
 )
+local messagePanel = MessagePanel.new(root)
+local wuPanel = WuPanel.new(
+  root,
+  function(amount) Remotes.WuRepay:FireServer(amount) end,
+  function(amount) Remotes.WuBorrow:FireServer(amount) end,
+  function() Remotes.LeaveWu:FireServer() end,
+  function() Remotes.BuyLiYuenProtection:FireServer() end
+)
+local bankPanel = BankPanel.new(
+  root,
+  function(amount) Remotes.BankDeposit:FireServer(amount) end,
+  function(amount) Remotes.BankWithdraw:FireServer(amount) end
+)
+local gameOverPanel = GameOverPanel.new(root, function()
+  Remotes.RestartGame:FireServer()
+end)
+local combatPanel = CombatPanel.new(root,
+  function() Remotes.CombatFight:FireServer() end,
+  function() Remotes.CombatRun:FireServer() end,
+  function(goodIndex, qty) Remotes.CombatThrow:FireServer(goodIndex, qty) end
+)
+local shipPanel = ShipPanel.new(root,
+  function(amount) Remotes.ShipRepair:FireServer(amount) end,
+  function() Remotes.AcceptUpgrade:FireServer() end,
+  function() Remotes.DeclineUpgrade:FireServer() end,
+  function() Remotes.AcceptGun:FireServer() end,
+  function() Remotes.DeclineGun:FireServer() end,
+  function() Remotes.ShipPanelDone:FireServer() end
+)
 
 -- Receive state updates from server and refresh all panels
 Remotes.StateUpdate.OnClientEvent:Connect(function(state)
@@ -57,6 +94,16 @@ Remotes.StateUpdate.OnClientEvent:Connect(function(state)
   pricesPanel.update(state)
   buySellPanel.update(state)
   warehousePanel.update(state)
+  wuPanel.update(state)
+  bankPanel.update(state)
+  gameOverPanel.update(state)
+  combatPanel.update(state)
+  shipPanel.update(state)
+end)
+
+-- Server notifications (Wu, Li Yuen, etc.)
+Remotes.Notify.OnClientEvent:Connect(function(message)
+  messagePanel.show(message)
 end)
 
 -- Start the game (Phase 1: always cash start; start choice UI added later)

@@ -21,7 +21,7 @@ Phase 7 is the final development phase before publishing prep (Phase 8). It adds
 | Persistence scope | Canonical fields only (not computed fields); always save, including game-over state |
 | Mobile | Full layout pass: 44px minimum touch targets + spacing/font review |
 | Transitions | None — instant state changes suit the terminal aesthetic |
-| Polish | Colour audit: enforce consistent amber/green/red/grey palette across all panels |
+| Polish | Colour audit: enforce consistent amber/green/red/orange/blue/grey palette across all panels |
 | Onboarding | DataStore-gated first-play Notify messages on first HK arrival (`seenTutorial` flag) |
 | TextService | Skip — no player-generated text in this game |
 
@@ -43,7 +43,9 @@ Three tasks, in dependency order:
 `src/ReplicatedStorage/shared/PersistenceEngine.lua`
 
 ### Modified file
-`src/ReplicatedStorage/shared/GameState.lua` — add `seenTutorial = false` to the state table returned by `newGame`. This makes `seenTutorial` a first-class field with a defined default, consistent with all other state fields.
+`src/ReplicatedStorage/shared/GameState.lua` — add two fields to the state table returned by `newGame`:
+- `startChoice = startChoice` — stores the start type as a raw field so it survives serialisation round-trips
+- `seenTutorial = false` — first-class field with a defined default
 
 ### Canonical fields (saved to DataStore)
 
@@ -152,18 +154,20 @@ The existing `if playerStates[player] then return end` guard must be extended to
 ```lua
 if playerStates[player] then return end
 playerStates[player] = true  -- sentinel: claim slot before async load
-local loaded = loadPlayer(player)  -- yields here
+-- Note: RequestStateUpdate calling pushState during this window silently no-ops (correct).
+local loaded = loadPlayer(player)  -- yields here (DataStore call)
 if loaded then
-  -- Loaded save: gameOver may be true (show game-over screen), or false (resume play)
+  -- Works for both resumed games (gameOver=false) and game-over saves (gameOver=true).
+  -- Client renders whichever screen is appropriate from the pushed state.
   playerStates[player] = loaded
   pushState(player)
   return
 end
--- No save: fresh game
+-- No save found: fresh game
 local state = GameState.newGame(startChoice)
 -- ... initialise prices, holdSpace as before ...
 -- state.seenTutorial is already false (set by GameState.newGame)
-state.pendingTutorial = true  -- fires tutorial on first HK arrival
+state.pendingTutorial = true  -- fires tutorial on first HK arrival (pendingTutorial not in newGame; set here only)
 playerStates[player] = state
 pushState(player)
 ```
@@ -275,7 +279,9 @@ Visual verification via Studio injection and manual review.
 
 ## Known Limitations
 
-**Mid-HK-session data loss:** State is saved on port departure and on `PlayerRemoving`. A player who arrives at HK, performs Wu/bank/warehouse actions, then disconnects without departing will have those in-session transactions lost — the restored save reflects state at the previous departure. This is an acceptable trade-off for Phase 7 (saving after every action would approach DataStore rate limits). Acknowledged here so testers know this scenario is not a bug.
+**Mid-HK-session data loss:** State is saved on port departure and on `PlayerRemoving`. A player who arrives at HK, performs Wu/bank/warehouse actions, then disconnects without departing will have those in-session transactions lost — the restored save reflects state at the previous departure. This is an acceptable trade-off for Phase 7 (saving after every action would approach DataStore rate limits). Testers should know this scenario is not a bug.
+
+**HK rehydration on load:** When a player loads with `currentPort == HK` (disconnected while at port), the `shipOffer` and `liYuenOfferCost` fields are `nil` — these are only computed during `TravelTo` HK arrival logic. Ship repair/upgrade/gun panels and the Li Yuen offer will be unavailable until the player departs and returns to HK. Wu repay/borrow work normally (those handlers only check `currentPort`, not `inWuSession`). This is an acceptable limitation — the player simply needs one extra voyage to re-trigger HK offers.
 
 ---
 

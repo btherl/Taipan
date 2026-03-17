@@ -7,6 +7,9 @@ local ShipPanel = {}
 
 local AMBER  = Color3.fromRGB(200, 180, 80)
 local GREEN  = Color3.fromRGB(140, 200, 80)
+local RED    = Color3.fromRGB(220, 80, 80)
+local ORANGE = Color3.fromRGB(220, 120, 60)
+local BLUE   = Color3.fromRGB(120, 120, 220)
 local DIM    = Color3.fromRGB(80, 80, 80)
 local BG     = Color3.fromRGB(15, 20, 10)
 local BORDER = Color3.fromRGB(60, 90, 30)
@@ -66,9 +69,10 @@ function ShipPanel.new(parent, onRepair, onAcceptUpgrade, onDeclineUpgrade,
   y = y + 36
 
   -- ── Upgrade section ──────────────────────────────────────────
+  -- Sub-frame: label (40px) + buttons (44px) + 6px padding top/bottom = 100px
   local upgradeFrame = Instance.new("Frame")
   upgradeFrame.Name             = "UpgradeFrame"
-  upgradeFrame.Size             = UDim2.new(1, -10, 0, 70)
+  upgradeFrame.Size             = UDim2.new(1, -10, 0, 100)
   upgradeFrame.Position         = UDim2.new(0, 5, 0, y)
   upgradeFrame.BackgroundColor3 = Color3.fromRGB(20, 30, 15)
   upgradeFrame.BorderColor3     = BORDER
@@ -81,20 +85,21 @@ function ShipPanel.new(parent, onRepair, onAcceptUpgrade, onDeclineUpgrade,
     "A merchant offers a larger ship...", AMBER, 13)
 
   local acceptUpgradeBtn = button(upgradeFrame, "AcceptUpgrade",
-    UDim2.new(0.45, 0, 0, 28), UDim2.new(0, 5, 0, 40),
+    UDim2.new(0.45, 0, 0, 44), UDim2.new(0, 5, 0, 50),
     "UPGRADE", Color3.fromRGB(20, 50, 15), GREEN)
   local declineUpgradeBtn = button(upgradeFrame, "DeclineUpgrade",
-    UDim2.new(0.45, 0, 0, 28), UDim2.new(0.5, 5, 0, 40),
-    "DECLINE", Color3.fromRGB(40, 20, 10), Color3.fromRGB(180, 100, 60))
+    UDim2.new(0.45, 0, 0, 44), UDim2.new(0.5, 5, 0, 50),
+    "DECLINE", Color3.fromRGB(40, 20, 10), ORANGE)
 
   acceptUpgradeBtn.Activated:Connect(onAcceptUpgrade)
   declineUpgradeBtn.Activated:Connect(onDeclineUpgrade)
-  y = y + 78
+  y = y + 108
 
   -- ── Gun section ───────────────────────────────────────────────
+  -- Sub-frame: label (40px) + buttons (44px) + 6px padding top/bottom = 100px
   local gunFrame = Instance.new("Frame")
   gunFrame.Name             = "GunFrame"
-  gunFrame.Size             = UDim2.new(1, -10, 0, 70)
+  gunFrame.Size             = UDim2.new(1, -10, 0, 100)
   gunFrame.Position         = UDim2.new(0, 5, 0, y)
   gunFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 30)
   gunFrame.BorderColor3     = Color3.fromRGB(60, 60, 110)
@@ -107,17 +112,18 @@ function ShipPanel.new(parent, onRepair, onAcceptUpgrade, onDeclineUpgrade,
     "An arms dealer is selling a gun...", AMBER, 13)
 
   local acceptGunBtn = button(gunFrame, "AcceptGun",
-    UDim2.new(0.45, 0, 0, 28), UDim2.new(0, 5, 0, 40),
-    "BUY GUN", Color3.fromRGB(20, 20, 50), Color3.fromRGB(120, 120, 220))
+    UDim2.new(0.45, 0, 0, 44), UDim2.new(0, 5, 0, 50),
+    "BUY GUN", Color3.fromRGB(20, 20, 50), BLUE)
   local declineGunBtn = button(gunFrame, "DeclineGun",
-    UDim2.new(0.45, 0, 0, 28), UDim2.new(0.5, 5, 0, 40),
-    "DECLINE", Color3.fromRGB(40, 20, 10), Color3.fromRGB(180, 100, 60))
+    UDim2.new(0.45, 0, 0, 44), UDim2.new(0.5, 5, 0, 50),
+    "DECLINE", Color3.fromRGB(40, 20, 10), ORANGE)
 
   acceptGunBtn.Activated:Connect(onAcceptGun)
   declineGunBtn.Activated:Connect(onDeclineGun)
-  y = y + 78
+  y = y + 108
 
   -- ── Repair section ────────────────────────────────────────────
+  -- Sub-frame: label (20px) + TextBox+buttons (44px) + 6px padding top/bottom = 80px
   local repairFrame = Instance.new("Frame")
   repairFrame.Name             = "RepairFrame"
   repairFrame.Size             = UDim2.new(1, -10, 0, 80)
@@ -130,11 +136,11 @@ function ShipPanel.new(parent, onRepair, onAcceptUpgrade, onDeclineUpgrade,
 
   local repairLabel = label(repairFrame, "RepairLabel",
     UDim2.new(1, -10, 0, 20), UDim2.new(0, 5, 0, 4),
-    "Ship Repair:", Color3.fromRGB(220, 120, 60), 13)
+    "Ship Repair:", ORANGE, 13)
 
   local amountBox = Instance.new("TextBox")
   amountBox.Name             = "AmountBox"
-  amountBox.Size             = UDim2.new(0.35, 0, 0, 28)
+  amountBox.Size             = UDim2.new(0.35, 0, 0, 44)
   amountBox.Position         = UDim2.new(0, 5, 0, 30)
   amountBox.BackgroundColor3 = Color3.fromRGB(10, 10, 10)
   amountBox.BorderColor3     = Color3.fromRGB(110, 60, 30)
@@ -146,11 +152,11 @@ function ShipPanel.new(parent, onRepair, onAcceptUpgrade, onDeclineUpgrade,
   amountBox.Parent           = repairFrame
 
   local allBtn = button(repairFrame, "AllBtn",
-    UDim2.new(0.2, 0, 0, 28), UDim2.new(0.37, 0, 0, 30),
-    "ALL", Color3.fromRGB(40, 25, 10), Color3.fromRGB(200, 150, 60))
+    UDim2.new(0.2, 0, 0, 44), UDim2.new(0.37, 0, 0, 30),
+    "ALL", Color3.fromRGB(40, 25, 10), ORANGE)
   local repairBtn = button(repairFrame, "RepairBtn",
-    UDim2.new(0.35, 0, 0, 28), UDim2.new(0.6, 0, 0, 30),
-    "REPAIR", Color3.fromRGB(50, 20, 10), Color3.fromRGB(220, 120, 60))
+    UDim2.new(0.35, 0, 0, 44), UDim2.new(0.6, 0, 0, 30),
+    "REPAIR", Color3.fromRGB(50, 20, 10), ORANGE)
 
   -- Internal state for "All" cost (updated by update())
   local currentAllCost = 0
@@ -169,7 +175,7 @@ function ShipPanel.new(parent, onRepair, onAcceptUpgrade, onDeclineUpgrade,
 
   -- ── DONE button ───────────────────────────────────────────────
   local doneBtn = button(frame, "DoneBtn",
-    UDim2.new(0.4, 0, 0, 36), UDim2.new(0.3, 0, 0, y),
+    UDim2.new(0.4, 0, 0, 44), UDim2.new(0.3, 0, 0, y),
     "DONE", Color3.fromRGB(30, 40, 20), GREEN, 12)
   doneBtn.Activated:Connect(onDone)
 

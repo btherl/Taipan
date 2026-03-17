@@ -23,7 +23,7 @@ function GameOverPanel.new(parent, onRestart)
   title.Size = UDim2.new(1, 0, 0, 80)
   title.Position = UDim2.new(0, 0, 0.3, 0)
   title.BackgroundTransparency = 1
-  title.TextColor3 = Color3.fromRGB(220, 50, 50)
+  title.TextColor3 = Color3.fromRGB(220, 80, 80)   -- Red
   title.Font = Enum.Font.RobotoMono
   title.TextSize = 42
   title.TextXAlignment = Enum.TextXAlignment.Center
@@ -36,7 +36,7 @@ function GameOverPanel.new(parent, onRestart)
   subtitle.Size = UDim2.new(1, -20, 0, 40)
   subtitle.Position = UDim2.new(0, 10, 0.3, 90)
   subtitle.BackgroundTransparency = 1
-  subtitle.TextColor3 = Color3.fromRGB(200, 150, 150)
+  subtitle.TextColor3 = Color3.fromRGB(200, 180, 80)   -- Amber (default; overridden per reason)
   subtitle.Font = Enum.Font.RobotoMono
   subtitle.TextSize = 16
   subtitle.TextXAlignment = Enum.TextXAlignment.Center
@@ -50,7 +50,7 @@ function GameOverPanel.new(parent, onRestart)
   restartBtn.Position = UDim2.new(0.3, 0, 0.3, 160)
   restartBtn.BackgroundColor3 = Color3.fromRGB(60, 15, 15)
   restartBtn.BorderColor3 = Color3.fromRGB(150, 40, 40)
-  restartBtn.TextColor3 = Color3.fromRGB(220, 100, 100)
+  restartBtn.TextColor3 = Color3.fromRGB(220, 80, 80)   -- Red
   restartBtn.Font = Enum.Font.RobotoMono
   restartBtn.TextSize = 16
   restartBtn.ZIndex = 20
@@ -73,24 +73,24 @@ function GameOverPanel.new(parent, onRestart)
     local reason = state.gameOverReason
     if reason == "retired" then
       title.Text       = "RETIRED!"
-      title.TextColor3 = Color3.fromRGB(100, 220, 100)
+      title.TextColor3 = Color3.fromRGB(140, 200, 80)   -- Green
       frame.BackgroundColor3 = Color3.fromRGB(5, 30, 5)
     elseif reason == "quit" then
       title.Text       = "FAREWELL, TAIPAN"
-      title.TextColor3 = Color3.fromRGB(180, 180, 50)
+      title.TextColor3 = Color3.fromRGB(200, 180, 80)   -- Amber
       frame.BackgroundColor3 = Color3.fromRGB(20, 20, 5)
     else  -- "sunk" or nil (legacy)
       title.Text       = "GAME OVER"
-      title.TextColor3 = Color3.fromRGB(220, 50, 50)
+      title.TextColor3 = Color3.fromRGB(220, 80, 80)    -- Red
       frame.BackgroundColor3 = Color3.fromRGB(30, 5, 5)
     end
 
     if reason == "retired" then
-      subtitle.TextColor3 = Color3.fromRGB(100, 220, 100)
+      subtitle.TextColor3 = Color3.fromRGB(140, 200, 80)   -- Green
     elseif reason == "quit" then
-      subtitle.TextColor3 = Color3.fromRGB(200, 190, 80)
+      subtitle.TextColor3 = Color3.fromRGB(200, 180, 80)   -- Amber
     else
-      subtitle.TextColor3 = Color3.fromRGB(200, 150, 150)
+      subtitle.TextColor3 = Color3.fromRGB(220, 80, 80)    -- Red
     end
 
     if state.finalScore ~= nil then

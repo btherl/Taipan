@@ -25,6 +25,33 @@ Remotes.TravelTo             = getOrCreate("RemoteEvent", "TravelTo")           
 Remotes.TransferToWarehouse   = getOrCreate("RemoteEvent", "TransferToWarehouse")   -- goodIndex, quantity
 Remotes.TransferFromWarehouse = getOrCreate("RemoteEvent", "TransferFromWarehouse") -- goodIndex, quantity
 
+-- Phase 3: Financial interactions
+Remotes.WuRepay             = getOrCreate("RemoteEvent", "WuRepay")             -- client→server: amount
+Remotes.WuBorrow            = getOrCreate("RemoteEvent", "WuBorrow")            -- client→server: amount
+Remotes.LeaveWu             = getOrCreate("RemoteEvent", "LeaveWu")             -- client→server: triggers enforcer check
+Remotes.BankDeposit         = getOrCreate("RemoteEvent", "BankDeposit")         -- client→server: amount
+Remotes.BankWithdraw        = getOrCreate("RemoteEvent", "BankWithdraw")        -- client→server: amount
+Remotes.BuyLiYuenProtection = getOrCreate("RemoteEvent", "BuyLiYuenProtection") -- client→server: no args
+Remotes.Notify              = getOrCreate("RemoteEvent", "Notify")              -- server→client: message string
+
+-- Phase 4: Game over
+Remotes.RestartGame = getOrCreate("RemoteEvent", "RestartGame")  -- client→server: restart after game over
+
+-- Phase 5: Combat
+Remotes.CombatFight = getOrCreate("RemoteEvent", "CombatFight") -- client→server: fight action
+Remotes.CombatRun   = getOrCreate("RemoteEvent", "CombatRun")   -- client→server: run action
+Remotes.CombatThrow = getOrCreate("RemoteEvent", "CombatThrow") -- client→server: goodIndex, qty
+
+-- Phase 6: Ship progression + retirement
+Remotes.ShipRepair     = getOrCreate("RemoteEvent", "ShipRepair")     -- amount (cash to spend)
+Remotes.AcceptUpgrade  = getOrCreate("RemoteEvent", "AcceptUpgrade")  -- no args
+Remotes.DeclineUpgrade = getOrCreate("RemoteEvent", "DeclineUpgrade") -- no args
+Remotes.AcceptGun      = getOrCreate("RemoteEvent", "AcceptGun")      -- no args
+Remotes.DeclineGun     = getOrCreate("RemoteEvent", "DeclineGun")     -- no args
+Remotes.ShipPanelDone  = getOrCreate("RemoteEvent", "ShipPanelDone")  -- dismiss ship panel
+Remotes.Retire         = getOrCreate("RemoteEvent", "Retire")         -- retire (HK, netWorth>=1M)
+Remotes.QuitGame       = getOrCreate("RemoteEvent", "QuitGame")       -- quit game (any time)
+
 -- Server → Client updates
 Remotes.StateUpdate    = getOrCreate("RemoteEvent", "StateUpdate")    -- full state snapshot
 

@@ -61,7 +61,17 @@ function GameState.newGame(startChoice)
     -- Flags
     wuWarningGiven   = false,  -- WN
     liYuenProtection = 0,      -- LI: 0 = no protection, non-zero = protected
+    liYuenOfferCost  = nil,   -- set on HK arrival when LI=0 and CA>0; cost to buy Li Yuen protection
+    inWuSession      = false,  -- true while at HK Wu interaction; cleared by LeaveWu
     bankruptcyCount  = 0,      -- BL (BASIC int var): emergency loan counter
+    gameOver         = false,  -- true when ship sinks; client shows game over screen
+    combat           = nil,    -- combat sub-table when in combat, nil otherwise
+
+    -- Phase 6: progression
+    gameOverReason = nil,   -- "sunk" | "quit" | "retired" (nil = game in progress)
+    finalScore     = nil,   -- set at game over
+    finalRating    = nil,   -- set at game over
+    shipOffer      = nil,   -- set on HK arrival: { repairRate=BR, upgradeOffer={cost=X}|nil, gunOffer={cost=Y}|nil }
 
     -- Combat scaling (increase each January)
     enemyBaseHP     = Constants.EC_START,   -- EC

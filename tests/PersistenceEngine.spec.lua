@@ -99,6 +99,7 @@ return function()
       expect(restored.seenTutorial).to.equal(true)
       expect(restored.shipCargo[1]).to.equal(10)
       expect(restored.warehouseCargo[1]).to.equal(20)
+      expect(restored.basePrices[3][2]).to.equal(s.basePrices[3][2])
     end)
 
     it("computes holdSpace from restored shipCapacity and shipCargo (not from constants)", function()

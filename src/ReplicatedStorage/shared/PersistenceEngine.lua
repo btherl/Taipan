@@ -42,7 +42,7 @@ end
 
 function PersistenceEngine.deserialize(data, PriceEngine)
   if data == nil then return nil end
-  if data.version == nil or data.version ~= 1 then return nil end
+  if data.version ~= 1 then return nil end
 
   local state = {}
 

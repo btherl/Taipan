@@ -69,6 +69,9 @@ Remotes.ChooseStart.OnServerEvent:Connect(function(player, startChoice)
   local state = GameState.newGame(startChoice)
   state.currentPrices = PriceEngine.calculatePrices(state.basePrices, state.currentPort)
   state.holdSpace = state.shipCapacity
+    - state.shipCargo[1] - state.shipCargo[2]
+    - state.shipCargo[3] - state.shipCargo[4]
+    - state.guns * 10
   -- state.seenTutorial is already false (set by GameState.newGame)
   state.pendingTutorial = true  -- fires tutorial on first HK arrival; not in newGame
   playerStates[player] = state
@@ -359,6 +362,9 @@ Remotes.RestartGame.OnServerEvent:Connect(function(player)
   local newState = GameState.newGame("cash")
   newState.currentPrices = PriceEngine.calculatePrices(newState.basePrices, newState.currentPort)
   newState.holdSpace = newState.shipCapacity
+    - newState.shipCargo[1] - newState.shipCargo[2]
+    - newState.shipCargo[3] - newState.shipCargo[4]
+    - newState.guns * 10
   newState.seenTutorial = wasTutorialSeen
   if not wasTutorialSeen then
     newState.pendingTutorial = true  -- tutorial still pending; fires on first HK arrival

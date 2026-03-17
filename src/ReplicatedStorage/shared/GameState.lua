@@ -66,6 +66,8 @@ function GameState.newGame(startChoice)
     bankruptcyCount  = 0,      -- BL (BASIC int var): emergency loan counter
     gameOver         = false,  -- true when ship sinks; client shows game over screen
     combat           = nil,    -- combat sub-table when in combat, nil otherwise
+    startChoice      = startChoice,   -- ADD: raw start type for save/load round-trips
+    seenTutorial     = false,         -- ADD: set true after first HK tutorial fires
 
     -- Phase 6: progression
     gameOverReason = nil,   -- "sunk" | "quit" | "retired" (nil = game in progress)

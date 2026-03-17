@@ -9,7 +9,7 @@ function InventoryPanel.new(parent)
   local frame = Instance.new("Frame")
   frame.Name = "InventoryPanel"
   frame.Size = UDim2.new(1, 0, 0, 120)
-  frame.Position = UDim2.new(0, 0, 0, 130)
+  frame.Position = UDim2.new(0, 0, 0, 160)
   frame.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
   frame.BorderSizePixel = 1
   frame.BorderColor3 = Color3.fromRGB(80, 80, 80)

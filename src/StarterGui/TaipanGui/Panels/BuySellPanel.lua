@@ -12,7 +12,7 @@ function BuySellPanel.new(parent, onBuy, onSell, onEndTurn)
   local frame = Instance.new("Frame")
   frame.Name = "BuySellPanel"
   frame.Size = UDim2.new(1, 0, 0, 200)
-  frame.Position = UDim2.new(0, 0, 0, 380)
+  frame.Position = UDim2.new(0, 0, 0, 410)
   frame.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
   frame.BorderSizePixel = 1
   frame.BorderColor3 = Color3.fromRGB(80, 80, 80)

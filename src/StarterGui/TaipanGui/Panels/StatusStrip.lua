@@ -8,7 +8,7 @@ function StatusStrip.new(parent)
   local frame = Instance.new("Frame")
   frame.Name = "StatusStrip"
   frame.Size = UDim2.new(1, 0, 0, 30)
-  frame.Position = UDim2.new(0, 0, 0, 95)
+  frame.Position = UDim2.new(0, 0, 0, 125)
   frame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
   frame.BorderSizePixel = 0
   frame.Parent = parent

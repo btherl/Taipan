@@ -9,7 +9,7 @@ function PricesPanel.new(parent)
   local frame = Instance.new("Frame")
   frame.Name = "PricesPanel"
   frame.Size = UDim2.new(0.4, 0, 0, 120)
-  frame.Position = UDim2.new(0, 0, 0, 255)
+  frame.Position = UDim2.new(0, 0, 0, 285)
   frame.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
   frame.BorderSizePixel = 1
   frame.BorderColor3 = Color3.fromRGB(80, 80, 80)

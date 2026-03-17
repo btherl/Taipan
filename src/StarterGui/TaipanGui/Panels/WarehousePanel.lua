@@ -14,7 +14,7 @@ function WarehousePanel.new(parent, onPut, onTake)
   local frame = Instance.new("Frame")
   frame.Name = "WarehousePanel"
   frame.Size = UDim2.new(1, 0, 0, 160)
-  frame.Position = UDim2.new(0, 0, 0, 585)
+  frame.Position = UDim2.new(0, 0, 0, 615)
   frame.BackgroundColor3 = Color3.fromRGB(10, 10, 15)
   frame.BorderSizePixel = 1
   frame.BorderColor3 = Color3.fromRGB(60, 60, 100)

@@ -6,13 +6,13 @@ local Constants = require(game.ReplicatedStorage.shared.Constants)
 
 local PortPanel = {}
 
-function PortPanel.new(parent, onTravel)
+function PortPanel.new(parent, onTravel, onRetire, onQuit)
   -- parent: Frame (the root 480px frame)
   -- onTravel(destinationIndex: number): called when player clicks a port button
 
   local frame = Instance.new("Frame")
   frame.Name = "PortPanel"
-  frame.Size = UDim2.new(1, 0, 0, 90)
+  frame.Size = UDim2.new(1, 0, 0, 120)
   frame.Position = UDim2.new(0, 0, 0, 0)
   frame.BackgroundColor3 = Color3.fromRGB(10, 10, 10)
   frame.BorderSizePixel = 1
@@ -75,6 +75,36 @@ function PortPanel.new(parent, onTravel)
     end)
   end
 
+  -- RETIRE button (only visible at HK when netWorth >= 1M)
+  local retireBtn = Instance.new("TextButton")
+  retireBtn.Name             = "RetireBtn"
+  retireBtn.Size             = UDim2.new(0.48, 0, 0, 24)
+  retireBtn.Position         = UDim2.new(0, 2, 0, 90)
+  retireBtn.BackgroundColor3 = Color3.fromRGB(20, 50, 15)
+  retireBtn.BorderColor3     = Color3.fromRGB(60, 120, 40)
+  retireBtn.TextColor3       = Color3.fromRGB(100, 220, 100)
+  retireBtn.Font             = Enum.Font.RobotoMono
+  retireBtn.TextSize         = 12
+  retireBtn.Text             = "RETIRE"
+  retireBtn.Visible          = false
+  retireBtn.Parent           = frame
+
+  -- QUIT button (always visible)
+  local quitBtn = Instance.new("TextButton")
+  quitBtn.Name             = "QuitBtn"
+  quitBtn.Size             = UDim2.new(0.48, 0, 0, 24)
+  quitBtn.Position         = UDim2.new(0.5, 2, 0, 90)
+  quitBtn.BackgroundColor3 = Color3.fromRGB(35, 15, 15)
+  quitBtn.BorderColor3     = Color3.fromRGB(100, 40, 40)
+  quitBtn.TextColor3       = Color3.fromRGB(180, 80, 80)
+  quitBtn.Font             = Enum.Font.RobotoMono
+  quitBtn.TextSize         = 12
+  quitBtn.Text             = "QUIT GAME"
+  quitBtn.Parent           = frame
+
+  retireBtn.Activated:Connect(onRetire)
+  quitBtn.Activated:Connect(onQuit)
+
   local panel = {}
 
   function panel.update(state)
@@ -101,6 +131,10 @@ function PortPanel.new(parent, onTravel)
         btn.Active = true
       end
     end
+
+    local nw = (state.cash or 0) + (state.bankBalance or 0) - (state.debt or 0)
+    retireBtn.Visible = (state.currentPort == 1 and nw >= 1000000 and not state.gameOver)
+    quitBtn.Visible = not state.gameOver
   end
 
   return panel

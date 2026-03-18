@@ -1,5 +1,5 @@
 -- StatusStrip.lua
--- One-line display: Cash | Debt | Bank
+-- One-line display: Cash | Debt | Bank | Guns
 -- Receives the full game state table and refreshes labels.
 
 local StatusStrip = {}
@@ -22,7 +22,7 @@ function StatusStrip.new(parent)
   local function makeLabel(name)
     local lbl = Instance.new("TextLabel")
     lbl.Name = name
-    lbl.Size = UDim2.new(0.33, -7, 1, 0)
+    lbl.Size = UDim2.new(0.25, -8, 1, 0)
     lbl.BackgroundTransparency = 1
     lbl.TextColor3 = Color3.fromRGB(200, 180, 80)  -- amber terminal
     lbl.Font = Enum.Font.RobotoMono
@@ -38,6 +38,8 @@ function StatusStrip.new(parent)
   debtLabel.LayoutOrder = 2
   local bankLabel = makeLabel("BankLabel")
   bankLabel.LayoutOrder = 3
+  local gunsLabel = makeLabel("GunsLabel")
+  gunsLabel.LayoutOrder = 4
 
   local strip = {}
 
@@ -45,6 +47,7 @@ function StatusStrip.new(parent)
     cashLabel.Text = string.format("Cash: $%d", state.cash)
     debtLabel.Text = string.format("Debt: $%d", state.debt)
     bankLabel.Text = string.format("Bank: $%d", state.bankBalance)
+    gunsLabel.Text = string.format("Guns: %d", state.guns)
   end
 
   return strip

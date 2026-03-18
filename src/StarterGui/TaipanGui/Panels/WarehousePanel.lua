@@ -38,7 +38,7 @@ function WarehousePanel.new(parent, onPut, onTake)
   title.Font = Enum.Font.RobotoMono
   title.TextSize = 12
   title.TextXAlignment = Enum.TextXAlignment.Left
-  title.Text = "GODOWN"
+  title.Text = "WAREHOUSE TRANSFER"
   title.Parent = frame
 
   -- Space label

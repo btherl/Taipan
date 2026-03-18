@@ -22,6 +22,7 @@ local MessagePanel     = require(script.Panels.MessagePanel)
 local GameOverPanel    = require(script.Panels.GameOverPanel)
 local CombatPanel      = require(script.Panels.CombatPanel)
 local ShipPanel        = require(script.Panels.ShipPanel)
+local StartPanel       = require(script.Panels.StartPanel)
 
 -- Build the ScreenGui root frame
 local screenGui = script.Parent  -- TaipanGui is already a ScreenGui in StarterGui
@@ -86,8 +87,15 @@ local shipPanel = ShipPanel.new(root,
   function() Remotes.ShipPanelDone:FireServer() end
 )
 
+-- Start-choice overlay: shown until player picks firm or ship
+local startPanel = StartPanel.new(root, function(startChoice)
+  Remotes.ChooseStart:FireServer(startChoice)
+  Remotes.RequestStateUpdate:FireServer()
+end)
+
 -- Receive state updates from server and refresh all panels
 Remotes.StateUpdate.OnClientEvent:Connect(function(state)
+  startPanel.hide()
   portPanel.update(state)
   statusStrip.update(state)
   inventoryPanel.update(state)
@@ -106,10 +114,3 @@ Remotes.Notify.OnClientEvent:Connect(function(message)
   messagePanel.show(message)
 end)
 
--- Start the game (Phase 1: always cash start; start choice UI added later)
--- TODO Phase 3: replace with start-choice screen that fires "cash" or "guns"
-Remotes.ChooseStart:FireServer("cash")
--- Always request state after ChooseStart: handles both new sessions (server pushes
--- after init) and reconnects (ChooseStart guard returns early, but this still gets
--- the existing state pushed back to the client)
-Remotes.RequestStateUpdate:FireServer()

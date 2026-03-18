@@ -131,7 +131,7 @@ function BuySellPanel.new(parent, onBuy, onSell, onEndTurn)
   endTurnBtn.Position = UDim2.new(0.7, 0, 0, 105)
   endTurnBtn.BackgroundColor3 = Color3.fromRGB(20, 20, 60)
   endTurnBtn.BorderColor3 = Color3.fromRGB(40, 40, 120)
-  endTurnBtn.TextColor3 = Color3.fromRGB(120, 120, 220)   -- Blue
+  endTurnBtn.TextColor3 = Color3.fromRGB(140, 200, 80)   -- Green
   endTurnBtn.Font = Enum.Font.RobotoMono
   endTurnBtn.TextSize = 12
   endTurnBtn.Text = "END TURN"

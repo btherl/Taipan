@@ -76,7 +76,7 @@ function WuPanel.new(parent, onRepay, onBorrow, onLeaveWu, onBuyLiYuen)
   repayBtn.Position = UDim2.new(0.55, 0, 0, 54)
   repayBtn.BackgroundColor3 = Color3.fromRGB(20, 20, 60)
   repayBtn.BorderColor3 = Color3.fromRGB(60, 40, 120)
-  repayBtn.TextColor3 = Color3.fromRGB(120, 120, 220)   -- Blue
+  repayBtn.TextColor3 = Color3.fromRGB(140, 200, 80)   -- Green
   repayBtn.Font = Enum.Font.RobotoMono
   repayBtn.TextSize = 11
   repayBtn.Text = "REPAY"
@@ -225,7 +225,7 @@ function WuPanel.new(parent, onRepay, onBorrow, onLeaveWu, onBuyLiYuen)
     -- Enable/disable repay button
     repayBtn.Active = (state.debt > 0 and state.cash > 0)
     repayBtn.TextColor3 = repayBtn.Active
-      and Color3.fromRGB(120, 120, 220)   -- Blue active
+      and Color3.fromRGB(140, 200, 80)    -- Green active
       or  Color3.fromRGB(80, 80, 80)      -- Grey disabled
     -- Enable/disable borrow button
     borrowBtn.Active = (state.cash > 0)

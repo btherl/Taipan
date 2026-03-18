@@ -140,7 +140,7 @@ function CombatPanel.new(parent, onFight, onRun, onThrow)
   runBtn.Position = UDim2.new(0, 250, 0, 8)
   runBtn.BackgroundColor3 = Color3.fromRGB(30, 80, 180)
   runBtn.BorderSizePixel = 0
-  runBtn.TextColor3 = Color3.fromRGB(120, 120, 220)   -- Blue
+  runBtn.TextColor3 = Color3.fromRGB(140, 200, 80)   -- Green
   runBtn.Font = Enum.Font.RobotoMono
   runBtn.TextSize = 16
   runBtn.ZIndex = Z

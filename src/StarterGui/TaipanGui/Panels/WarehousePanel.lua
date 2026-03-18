@@ -119,7 +119,7 @@ function WarehousePanel.new(parent, onPut, onTake)
   putBtn.Position = UDim2.new(0, 5, 0, 128)
   putBtn.BackgroundColor3 = Color3.fromRGB(20, 20, 60)
   putBtn.BorderColor3 = Color3.fromRGB(40, 40, 120)
-  putBtn.TextColor3 = Color3.fromRGB(120, 120, 220)   -- Blue
+  putBtn.TextColor3 = Color3.fromRGB(140, 200, 80)   -- Green
   putBtn.Font = Enum.Font.RobotoMono
   putBtn.TextSize = 12
   putBtn.Text = "PUT"

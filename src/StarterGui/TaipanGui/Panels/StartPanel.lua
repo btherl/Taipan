@@ -8,7 +8,6 @@ local StartPanel = {}
 
 local AMBER = Color3.fromRGB(200, 180, 80)
 local GREEN = Color3.fromRGB(140, 200, 80)
-local DIM   = Color3.fromRGB(80, 80, 80)
 
 function StartPanel.new(parent, onChoose)
   -- onChoose(startChoice): called with "cash" or "guns" when player picks
@@ -83,7 +82,14 @@ function StartPanel.new(parent, onChoose)
   local function choose(startChoice)
     if chosen then return end
     chosen = true
-    frame.Visible = false
+    -- Keep frame visible (covers port buttons) until first StateUpdate arrives.
+    -- Dim the buttons and show a loading message so the player knows their
+    -- choice was registered while the server initialises game state.
+    cashBtn.Active = false
+    gunsBtn.Active = false
+    cashBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+    gunsBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+    prompt.Text = "Loading..."
     onChoose(startChoice)
   end
 

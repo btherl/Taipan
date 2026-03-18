@@ -58,7 +58,7 @@ Constants.CASH_START_GUNS    = 0
 Constants.CASH_START_BP      = 10  -- pirate encounter base
 Constants.GUNS_START_CASH    = 0
 Constants.GUNS_START_DEBT    = 0
-Constants.GUNS_START_HOLD    = 10
+Constants.GUNS_START_HOLD    = 60
 Constants.GUNS_START_GUNS    = 5
 Constants.GUNS_START_BP      = 7   -- pirate encounter base
 

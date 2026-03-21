@@ -18,7 +18,7 @@ Both PNGs share identical grid geometry, discovered by pixel analysis:
 | Separator width | 2px |
 | Cell pitch (horizontal) | 16px (14 + 2) |
 | Row pitch (vertical) | 18px (16 + 2) |
-| Pixel values | `61` = gray separator, `0` = cell background, `255` = glyph |
+| Pixel values | `61` = gray separator, `0` = cell background, `255` (and intermediate values) = glyph pixels |
 
 Cell at grid position `(col, row)` has its top-left content corner at:
 - `x = 2 + col * 16`
@@ -29,7 +29,7 @@ Cell at grid position `(col, row)` has its top-left content corner at:
 | Font | Image size | Chars per row | Rows used |
 |---|---|---|---|
 | TaipanStandardFont.png | 258×110 | 16 | 6 |
-| TaipanThickFont.png | 514×110 | 32 | 3 (rows 3–5 contain ship image, ignored) |
+| TaipanThickFont.png | 514×110 | 32 | 3 (rows 0–2); rows 3–5 contain ship image, ignored |
 
 ## Character Set
 
@@ -46,10 +46,31 @@ The Thick font's rows 3–5 (positions 96–191) contain ship image artwork and 
 
 ## XML Output Format
 
-BMFont XML format, one file per font. Example `<char>` entry:
+BMFont XML format, one file per font. Full example header:
 
 ```xml
-<char id="65" x="2" y="2" width="14" height="16" xoffset="0" yoffset="0" xadvance="16" page="0" chnl="15" />
+<?xml version="1.0"?>
+<font>
+  <info face="TaipanStandardFont" size="16" bold="0" italic="0" charset=""
+        unicode="1" stretchH="100" smooth="0" aa="0" padding="0,0,0,0"
+        spacing="0,0" outline="0"/>
+  <common lineHeight="18" base="16" scaleW="258" scaleH="110" pages="1"
+          packed="0" alphaChnl="4" redChnl="0" greenChnl="0" blueChnl="0"/>
+  <pages>
+    <page id="0" file="TaipanStandardFont.png" />
+  </pages>
+  <chars count="95">
+    ...
+  </chars>
+</font>
+```
+
+The `<info>` `face` attribute is set to the font name; `size` matches cell height (16). All other `<info>` attributes use the fixed values shown above. Per the BMFont spec, channel value `0` means that channel holds glyph data; `4` means constant 1 (always lit). Since the PNGs carry glyph data in their RGB channels (alpha is always 255 and carries no glyph info), `redChnl="0" greenChnl="0" blueChnl="0"` marks the RGB channels as glyph sources, and `alphaChnl="4"` marks alpha as a constant. (`example_font.xml` uses `alphaChnl="1"` for an outlined font; our fonts have no outlines, so `alphaChnl="4"` is correct here.)
+
+Example `<char>` entry (id=32 is space, the first character at col=0, row=0):
+
+```xml
+<char id="32" x="2" y="2" width="14" height="16" xoffset="0" yoffset="0" xadvance="16" page="0" chnl="15" />
 ```
 
 All characters use identical `width`, `height`, `xoffset`, `yoffset`, and `xadvance` values — fixed-width rendering for Apple II terminal simulation.
@@ -57,7 +78,8 @@ All characters use identical `width`, `height`, `xoffset`, `yoffset`, and `xadva
 ### Font-level metrics
 
 ```xml
-<common lineHeight="18" base="16" scaleW="<image_width>" scaleH="<image_height>" pages="1" packed="0" />
+<common lineHeight="18" base="16" scaleW="<image_width>" scaleH="<image_height>" pages="1"
+        packed="0" alphaChnl="4" redChnl="0" greenChnl="0" blueChnl="0"/>
 ```
 
 - `lineHeight=18`: full row pitch including 2px separator, keeps lines evenly spaced
@@ -75,8 +97,10 @@ Single Python script, no dependencies beyond the standard library. Generates bot
 
 ```
 for each font in [Standard, Thick]:
+    chars_per_row = 16 (Standard) or 32 (Thick)
     open image, read width/height from PNG header
     write XML header, <info>, <common>, <pages>
+    write <chars count="95">
     for c in range(32, 127):
         char_idx = c - 32
         col = char_idx % chars_per_row
@@ -84,7 +108,8 @@ for each font in [Standard, Thick]:
         x = 2 + col * 16
         y = 2 + row * 18
         write <char> element
-    write </chars></font>
+    write </chars>
+    write </font>
 ```
 
 No PIL required — image dimensions are read directly from the PNG IHDR chunk (8 bytes at known offsets).

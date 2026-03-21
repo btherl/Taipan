@@ -8,7 +8,7 @@ import sys
 sys.path.insert(0, os.path.dirname(__file__))
 import generate_font_xml as gfx
 
-SCRIPT_DIR = os.path.dirname(__file__)
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 
 
 class TestCharCoordinates(unittest.TestCase):

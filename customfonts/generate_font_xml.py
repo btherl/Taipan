@@ -62,7 +62,7 @@ def generate_xml(font):
         '<?xml version="1.0"?>',
         '<font>',
         f'  <info face="{name}" size="{CELL_H}" bold="0" italic="0" charset=""'
-        f' unicode="1" stretchH="100" smooth="0" aa="0" padding="0,0,0,0"'
+        f' unicode="1" stretchH="100" smooth="0" aa="1" padding="0,0,0,0"'
         f' spacing="0,0" outline="0"/>',
         f'  <common lineHeight="{LINE_HEIGHT}" base="{BASE}"'
         f' scaleW="{scale_w}" scaleH="{scale_h}" pages="1"'

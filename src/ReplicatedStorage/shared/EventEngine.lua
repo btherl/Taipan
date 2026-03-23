@@ -16,7 +16,7 @@ end
 -- Opium Seizure (BASIC lines 1900-1910)
 -- Triggers: non-HK port, ship has opium (index 1), 1-in-18 chance.
 -- Confiscates all hold opium, restores holdSpace, deducts fine from cash.
--- Fine = FN_R(CA / 1.8) — can leave cash negative.
+-- Fine = FN_R(CA / 1.8) -- can leave cash negative.
 -- Returns fine amount (number) if fired, nil otherwise.
 function EventEngine.opiumSeizure(state)
   if state.currentPort == Constants.HONG_KONG then return nil end

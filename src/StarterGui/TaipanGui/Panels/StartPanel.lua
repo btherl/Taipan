@@ -1,17 +1,8 @@
 -- StartPanel.lua
--- Full-screen start-choice overlay shown before ChooseStart fires.
--- Presents two options: cash+debt start (firm) or guns start (ship).
--- Hides itself once the player makes a choice.
--- ZIndex=30 sits above all other panels (including GameOverPanel at 20).
-
 local StartPanel = {}
-
 local AMBER = Color3.fromRGB(200, 180, 80)
 local GREEN = Color3.fromRGB(140, 200, 80)
-
 function StartPanel.new(parent, onChoose)
-  -- onChoose(startChoice): called with "cash" or "guns" when player picks
-
   local frame = Instance.new("Frame")
   frame.Name = "StartPanel"
   frame.Size = UDim2.new(1, 0, 1, 0)
@@ -21,7 +12,6 @@ function StartPanel.new(parent, onChoose)
   frame.ZIndex = 30
   frame.Visible = true
   frame.Parent = parent
-
   local title = Instance.new("TextLabel")
   title.Size = UDim2.new(1, -20, 0, 50)
   title.Position = UDim2.new(0, 10, 0, 30)
@@ -33,7 +23,6 @@ function StartPanel.new(parent, onChoose)
   title.TextXAlignment = Enum.TextXAlignment.Center
   title.ZIndex = 30
   title.Parent = frame
-
   local prompt = Instance.new("TextLabel")
   prompt.Size = UDim2.new(1, -20, 0, 60)
   prompt.Position = UDim2.new(0, 10, 0, 95)
@@ -46,8 +35,6 @@ function StartPanel.new(parent, onChoose)
   prompt.TextWrapped = true
   prompt.ZIndex = 30
   prompt.Parent = frame
-
-  -- Cash/firm start button
   local cashBtn = Instance.new("TextButton")
   cashBtn.Size = UDim2.new(0.8, 0, 0, 88)
   cashBtn.Position = UDim2.new(0.1, 0, 0, 175)
@@ -61,8 +48,6 @@ function StartPanel.new(parent, onChoose)
   cashBtn.TextWrapped = true
   cashBtn.ZIndex = 30
   cashBtn.Parent = frame
-
-  -- Guns/ship start button
   local gunsBtn = Instance.new("TextButton")
   gunsBtn.Size = UDim2.new(0.8, 0, 0, 88)
   gunsBtn.Position = UDim2.new(0.1, 0, 0, 275)
@@ -76,15 +61,10 @@ function StartPanel.new(parent, onChoose)
   gunsBtn.TextWrapped = true
   gunsBtn.ZIndex = 30
   gunsBtn.Parent = frame
-
-  local chosen = false  -- guard: ignore second click / double-fire
-
+  local chosen = false
   local function choose(startChoice)
     if chosen then return end
     chosen = true
-    -- Keep frame visible (covers port buttons) until first StateUpdate arrives.
-    -- Dim the buttons and show a loading message so the player knows their
-    -- choice was registered while the server initialises game state.
     cashBtn.Active = false
     gunsBtn.Active = false
     cashBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
@@ -92,21 +72,12 @@ function StartPanel.new(parent, onChoose)
     prompt.Text = "Loading..."
     onChoose(startChoice)
   end
-
   cashBtn.Activated:Connect(function() choose("cash") end)
   gunsBtn.Activated:Connect(function() choose("guns") end)
-
   local panel = {}
-
   function panel.hide()
-    -- Called when StateUpdate arrives (game state loaded successfully).
-    -- Destroys the frame to free memory; safe to call multiple times.
-    if frame and frame.Parent then
-      frame:Destroy()
-    end
+    if frame and frame.Parent then frame:Destroy() end
   end
-
   return panel
 end
-
 return StartPanel

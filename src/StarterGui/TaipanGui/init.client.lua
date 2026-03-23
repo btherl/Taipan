@@ -7,7 +7,7 @@ local Players           = game:GetService("Players")
 
 -- Sanity check: Panels folder must exist as a child of this LocalScript's container
 assert(script:FindFirstChild("Panels"),
-  "TaipanGui: 'Panels' folder missing — check Studio structure")
+  "TaipanGui: 'Panels' folder missing -- check Studio structure")
 
 local Remotes          = require(ReplicatedStorage.Remotes)
 local StatusStrip      = require(script.Panels.StatusStrip)
@@ -113,4 +113,3 @@ end)
 Remotes.Notify.OnClientEvent:Connect(function(message)
   messagePanel.show(message)
 end)
-

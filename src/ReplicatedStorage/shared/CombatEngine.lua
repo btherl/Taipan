@@ -84,7 +84,7 @@ end
 
 -- ── Fight action ──────────────────────────────────────────────────────────────
 
--- Fire all guns. Returns { sunk=N, fleeCount=N, messages={} }.
+-- Fire all guns. Returns { sunk=N, fleeCount=N }.
 -- Mutates combat grid, enemyTotal, enemyOnScreen, enemyWaiting.
 -- If all enemies destroyed, sets combat.outcome = "victory".
 function CombatEngine.fight(state, combat)
@@ -252,8 +252,6 @@ function CombatEngine.enemyFire(state, combat)
   -- Damage formula: FN_R(ED * I * F1) + I/2
   local dmg = fnR(state.enemyBaseDamage * i * f1) + i / 2
   state.damage = state.damage + dmg
-
-  -- DM truncation happens at start of next round (replicated in GameService)
 
   -- Check if ship is sunk by accumulated damage
   local sunk = false

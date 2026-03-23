@@ -30,7 +30,7 @@ end
 -- Cash needed to repair all damage ("All" button).
 -- BASIC formula: BR*DM+1 (DM was always integer in BASIC).
 -- Luau adaptation: uses math.ceil(damage) because our damage is fractional
--- (combat accumulates I/2 terms). Raw DM=2.1 → BR*2.1+1=211 → repairAmount=2, leaving 0.1
+-- (combat accumulates I/2 terms). Raw DM=2.1 -> BR*2.1+1=211 -> repairAmount=2, leaving 0.1
 -- damage; ceil ensures the "All" cost guarantees a complete repair.
 function ProgressionEngine.repairAllCost(br, damage)
   return br * math.ceil(damage) + 1

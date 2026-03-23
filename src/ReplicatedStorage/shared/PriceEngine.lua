@@ -35,7 +35,7 @@ function PriceEngine.calculatePrices(basePrices, portIndex)
   local prices = {}
   for good = 1, 4 do
     local bp = basePrices[portIndex][good]
-    local randFactor = math.random(1, 3)           -- FN_R(3) + 1 → range 1-3
+    local randFactor = math.random(1, 3)           -- FN_R(3) + 1 -> range 1-3
     prices[good] = PriceEngine._basePrice(bp, good, randFactor)
   end
 
@@ -45,7 +45,7 @@ function PriceEngine.calculatePrices(basePrices, portIndex)
     if math.random(0, 1) == 0 then
       prices[affectedGood] = PriceEngine._crashPrice(prices[affectedGood])
     else
-      local multiplier = math.random(5, 9)         -- FN R(5) + 5 → range 5-9
+      local multiplier = math.random(5, 9)         -- FN R(5) + 5 -> range 5-9
       prices[affectedGood] = PriceEngine._boomPrice(prices[affectedGood], multiplier)
     end
   end

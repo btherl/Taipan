@@ -1,8 +1,8 @@
 -- TestRunner.server.lua
--- Runs all .spec files. Activate via Studio's "Run" button (server-only mode).
--- Does NOT run during normal Play-testing or in live games.
+-- Run this in Studio Play mode (not Live) to execute all .spec files.
+-- Output appears in the Studio Output window.
 local RunService = game:GetService("RunService")
-if not RunService:IsRunMode() then return end   -- only run in Run mode, not Play/Live
+if not RunService:IsRunMode() then return end
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ServerScriptService = game:GetService("ServerScriptService")

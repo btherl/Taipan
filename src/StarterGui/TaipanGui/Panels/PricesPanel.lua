@@ -43,15 +43,11 @@ function PricesPanel.new(parent)
   end
 
   local panel = {}
-
   function panel.update(state)
     for i = 1, 4 do
-      priceLabels[i].Text = string.format(
-        "%-14s $%d", Constants.GOOD_NAMES[i], state.currentPrices[i]
-      )
+      priceLabels[i].Text = string.format("%-14s $%d", Constants.GOOD_NAMES[i], state.currentPrices[i])
     end
   end
-
   return panel
 end
 

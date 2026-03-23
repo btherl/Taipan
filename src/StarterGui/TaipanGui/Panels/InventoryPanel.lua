@@ -15,7 +15,6 @@ function InventoryPanel.new(parent)
   frame.BorderColor3 = Color3.fromRGB(80, 80, 80)
   frame.Parent = parent
 
-  -- Header (left: hold free space, right: warehouse used/capacity)
   local holdHeader = Instance.new("TextLabel")
   holdHeader.Name = "HoldHeader"
   holdHeader.Size = UDim2.new(0.5, -5, 0, 20)
@@ -26,7 +25,6 @@ function InventoryPanel.new(parent)
   holdHeader.TextSize = 13
   holdHeader.TextXAlignment = Enum.TextXAlignment.Left
   holdHeader.Parent = frame
-
   local wareHeader = Instance.new("TextLabel")
   wareHeader.Name = "WareHeader"
   wareHeader.Size = UDim2.new(0.5, -5, 0, 20)
@@ -66,7 +64,6 @@ function InventoryPanel.new(parent)
   end
 
   local panel = {}
-
   function panel.update(state)
     holdHeader.Text = string.format("HOLD [%d free]", state.holdSpace)
     wareHeader.Text = string.format("WAREHOUSE [%d/%d]", state.warehouseUsed, Constants.WAREHOUSE_CAPACITY)
@@ -75,7 +72,6 @@ function InventoryPanel.new(parent)
       wareLabels[i].Text = string.format("%-14s %4d", Constants.GOOD_NAMES[i], state.warehouseCargo[i])
     end
   end
-
   return panel
 end
 

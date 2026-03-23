@@ -1,7 +1,4 @@
 -- CombatPanel.lua
--- Full-screen combat overlay shown when state.combat ~= nil.
--- ZIndex=15 (below GameOverPanel at 20, above all other panels).
-
 local CombatPanel = {}
 
 local AMBER = Color3.fromRGB(200, 180, 80)
@@ -12,20 +9,7 @@ local GOOD_NAMES = {"Opium", "Silk", "Arms", "General"}
 local Z = 15
 
 function CombatPanel.new(parent, onFight, onRun, onThrow)
-  -- onFight()
-  -- onRun()
-  -- onThrow(goodIndex, qty)
-
   local selectedGood = 1
-
-  -- Layout:
-  --   0   header      40px
-  --   40  enemy count 24px
-  --   64  enemy grid  40px
-  --   104 action row  52px  (8px top pad + 44px buttons)
-  --   156 throw row   52px  (8px top pad + 44px buttons)
-  --   208 total height
-  -- Root frame is 480×208
 
   local frame = Instance.new("Frame")
   frame.Name = "CombatPanel"
@@ -38,7 +22,6 @@ function CombatPanel.new(parent, onFight, onRun, onThrow)
   frame.Visible = false
   frame.Parent = parent
 
-  -- ── 1. Header row (full width, 40px) ──────────────────────────────────────
   local header = Instance.new("Frame")
   header.Name = "Header"
   header.Size = UDim2.new(1, 0, 0, 40)
@@ -74,7 +57,6 @@ function CombatPanel.new(parent, onFight, onRun, onThrow)
   swLabel.Text = "SW: 100%"
   swLabel.Parent = header
 
-  -- ── 2. Enemy count label (full width, 24px) ────────────────────────────────
   local enemyCountLabel = Instance.new("TextLabel")
   enemyCountLabel.Name = "EnemyCountLabel"
   enemyCountLabel.Size = UDim2.new(1, 0, 0, 24)
@@ -88,7 +70,6 @@ function CombatPanel.new(parent, onFight, onRun, onThrow)
   enemyCountLabel.Text = "Enemy ships: 0 remaining"
   enemyCountLabel.Parent = frame
 
-  -- ── 3. Enemy grid (full width, 40px, 10 squares) ───────────────────────────
   local gridFrame = Instance.new("Frame")
   gridFrame.Name = "EnemyGrid"
   gridFrame.Size = UDim2.new(1, 0, 0, 40)
@@ -102,7 +83,6 @@ function CombatPanel.new(parent, onFight, onRun, onThrow)
     local sq = Instance.new("Frame")
     sq.Name = "GridSquare" .. i
     sq.Size = UDim2.new(0, 36, 0, 36)
-    -- Center 10 squares (each 36px wide) with 4px gap: total = 10*36 + 9*4 = 396px, left offset = (480-396)/2 = 42
     sq.Position = UDim2.new(0, 42 + (i - 1) * 40, 0, 2)
     sq.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
     sq.BorderSizePixel = 0
@@ -111,7 +91,6 @@ function CombatPanel.new(parent, onFight, onRun, onThrow)
     gridSquares[i] = sq
   end
 
-  -- ── 4. Action row (full width, 52px: 8px pad + 44px buttons) ──────────────
   local actionRow = Instance.new("Frame")
   actionRow.Name = "ActionRow"
   actionRow.Size = UDim2.new(1, 0, 0, 52)
@@ -120,7 +99,6 @@ function CombatPanel.new(parent, onFight, onRun, onThrow)
   actionRow.ZIndex = Z
   actionRow.Parent = frame
 
-  -- Center two 140px buttons with a gap; total = 140+140+20 = 300; left = (480-300)/2 = 90
   local fightBtn = Instance.new("TextButton")
   fightBtn.Name = "FightBtn"
   fightBtn.Size = UDim2.new(0, 140, 0, 44)
@@ -140,14 +118,13 @@ function CombatPanel.new(parent, onFight, onRun, onThrow)
   runBtn.Position = UDim2.new(0, 250, 0, 8)
   runBtn.BackgroundColor3 = Color3.fromRGB(30, 80, 180)
   runBtn.BorderSizePixel = 0
-  runBtn.TextColor3 = Color3.fromRGB(140, 200, 80)   -- Green
+  runBtn.TextColor3 = Color3.fromRGB(140, 200, 80)   -- Green (was Blue)
   runBtn.Font = Enum.Font.RobotoMono
   runBtn.TextSize = 16
   runBtn.ZIndex = Z
   runBtn.Text = "RUN"
   runBtn.Parent = actionRow
 
-  -- ── 5. Throw row (full width, 52px: 8px pad + 44px buttons) ───────────────
   local throwRow = Instance.new("Frame")
   throwRow.Name = "ThrowRow"
   throwRow.Size = UDim2.new(1, 0, 0, 52)
@@ -156,7 +133,6 @@ function CombatPanel.new(parent, onFight, onRun, onThrow)
   throwRow.ZIndex = Z
   throwRow.Parent = frame
 
-  -- Layout: 4 good buttons (4×70=280) + gap4 (4×4=16) + amount box (60) + gap (4) + throw btn (80) = 440; left = (480-440)/2 = 20
   local goodBtns = {}
   for i, name in ipairs(GOOD_NAMES) do
     local btn = Instance.new("TextButton")
@@ -194,93 +170,58 @@ function CombatPanel.new(parent, onFight, onRun, onThrow)
   throwBtn.Position = UDim2.new(0, 20 + 4 * 74 + 64, 0, 8)
   throwBtn.BackgroundColor3 = Color3.fromRGB(180, 100, 20)
   throwBtn.BorderSizePixel = 0
-  throwBtn.TextColor3 = Color3.fromRGB(220, 120, 60)   -- Orange
+  throwBtn.TextColor3 = Color3.fromRGB(220, 120, 60)
   throwBtn.Font = Enum.Font.RobotoMono
   throwBtn.TextSize = 14
   throwBtn.ZIndex = Z
   throwBtn.Text = "THROW"
   throwBtn.Parent = throwRow
 
-  -- ── Internal helpers ───────────────────────────────────────────────────────
-
   local function refreshGoodButtons()
     for i, btn in ipairs(goodBtns) do
       if i == selectedGood then
         btn.BackgroundColor3 = Color3.fromRGB(180, 100, 20)
-        btn.TextColor3 = Color3.fromRGB(200, 180, 80)   -- Amber selected
+        btn.TextColor3 = Color3.fromRGB(200, 180, 80)
       else
         btn.BackgroundColor3 = Color3.fromRGB(60, 30, 10)
         btn.TextColor3 = AMBER
       end
     end
   end
-
   refreshGoodButtons()
 
-  -- ── Wire button events ─────────────────────────────────────────────────────
-
-  fightBtn.Activated:Connect(function()
-    onFight()
-  end)
-
-  runBtn.Activated:Connect(function()
-    onRun()
-  end)
-
+  fightBtn.Activated:Connect(function() onFight() end)
+  runBtn.Activated:Connect(function() onRun() end)
   throwBtn.Activated:Connect(function()
     local amount = tonumber(amountBox.Text) or 0
     onThrow(selectedGood, amount)
   end)
-
   for i, btn in ipairs(goodBtns) do
     local idx = i
-    btn.Activated:Connect(function()
-      selectedGood = idx
-      refreshGoodButtons()
-    end)
+    btn.Activated:Connect(function() selectedGood = idx; refreshGoodButtons() end)
   end
 
-  -- ── panel.update ───────────────────────────────────────────────────────────
-
   local panel = {}
-
   function panel.update(state)
-    if not state.combat then
-      frame.Visible = false
-      return
-    end
+    if not state.combat then frame.Visible = false; return end
     frame.Visible = true
-
-    -- Seaworthiness
     local shipCapacity = state.shipCapacity or 1
     local damage = state.damage or 0
     local sw = 100 - math.floor(damage / shipCapacity * 100)
     if sw < 0 then sw = 0 end
     swLabel.Text = "SW: " .. sw .. "%"
-    if sw > 60 then
-      swLabel.TextColor3 = GREEN
-    elseif sw >= 30 then
-      swLabel.TextColor3 = AMBER
-    else
-      swLabel.TextColor3 = RED
-    end
-
-    -- Enemy count
+    if sw > 60 then swLabel.TextColor3 = GREEN
+    elseif sw >= 30 then swLabel.TextColor3 = AMBER
+    else swLabel.TextColor3 = RED end
     local total = state.combat.enemyTotal or 0
     enemyCountLabel.Text = "Enemy ships: " .. total .. " remaining"
-
-    -- Grid indicators
     local grid = state.combat.grid or {}
     for i = 1, 10 do
       local slot = grid[i]
-      if slot ~= nil then
-        gridSquares[i].BackgroundColor3 = GREEN
-      else
-        gridSquares[i].BackgroundColor3 = Color3.fromRGB(60, 60, 60)
-      end
+      if slot ~= nil then gridSquares[i].BackgroundColor3 = GREEN
+      else gridSquares[i].BackgroundColor3 = Color3.fromRGB(60, 60, 60) end
     end
   end
-
   return panel
 end
 

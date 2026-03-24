@@ -34,14 +34,28 @@ if type(state) == "table" then
 end
 ```
 
-**`ChooseStart` handler** — apply pending mode just before each `pushState` call (both the "loaded save" and "new game" branches):
+**`ChooseStart` handler** — apply pending mode in both branches before `pushState`. The loaded-save branch uses the local `loaded`; the new-game branch uses `state`:
+
 ```lua
+-- loaded-save branch (variable is `loaded`):
+if pendingModes[player] then
+  loaded.uiMode = pendingModes[player]
+  pendingModes[player] = nil
+end
+playerStates[player] = loaded
+pushState(player)
+return
+
+-- new-game branch (variable is `state`):
 if pendingModes[player] then
   state.uiMode = pendingModes[player]
   pendingModes[player] = nil
 end
+playerStates[player] = state
 pushState(player)
 ```
+
+Note: If `PlayerRemoving` fires during the DataStore yield (between the sentinel assignment and the `pushState` call), `pendingModes[player]` may already be nil when the coroutine resumes. In that case `uiMode` will not be applied to the saved state. This is the same pre-existing race as for `playerStates` itself and is accepted behaviour — the player has already disconnected.
 
 **`PlayerRemoving` handler** — add `pendingModes[player] = nil`.
 
@@ -87,7 +101,18 @@ local lines, promptDef = PromptEngine.processState(state or {}, scene, actions, 
 
 This is a defensive guard: in the designed flow `update({})` is always called (not `update(nil)`), so `state` inside `render()` is already `{}`. The `or {}` protects against future nil calls without changing current behaviour.
 
-### Note: `PromptEngine.lua` — no change needed
+### 5. `PromptEngine.lua` — update stale comment only
+
+Lines 660–661 contain a comment that is now incorrect:
+```lua
+-- InterfacePicker handles this before Apple2Interface is created,
+-- so state.startChoice is always set on arrival
+```
+Replace with:
+```lua
+-- Fires when startChoice is nil (pre-choice) — including the initial update({})
+-- call from the bootstrapper before ChooseStart has been sent.
+```
 
 The full guard for `sceneStartChoice` is:
 ```lua
@@ -131,3 +156,4 @@ Steps 1–3 same as above (player sees start choice screen; this is faithful to 
 | `src/StarterGui/TaipanGui/InterfacePicker.lua` | Remove Phase 2; add `onPicked` callback param |
 | `src/StarterGui/TaipanGui/init.client.lua` | Pass `onPicked` to picker; immediate adapter creation |
 | `src/StarterGui/TaipanGui/Apple2Interface.lua` | Pass `state or {}` to PromptEngine |
+| `src/StarterGui/TaipanGui/Apple2/PromptEngine.lua` | Update stale comment at lines 660–661 |

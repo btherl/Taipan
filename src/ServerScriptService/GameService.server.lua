@@ -25,6 +25,7 @@ local gameStore         = DataStoreService:GetDataStore("TaipanV1")
 Players.CharacterAutoLoads = false
 
 local playerStates: {[Player]: any} = {}
+local pendingModes: {[Player]: string} = {}
 
 local function savePlayer(player, state)
   if RunService:IsStudio() then return end
@@ -649,6 +650,17 @@ Players.PlayerAdded:Connect(function(player)
       local clone = gui:Clone()
       clone.Parent = player.PlayerGui
     end
+    -- Returning players: load save and push state immediately.
+    -- Client (showing InterfacePicker) receives StateUpdate with uiMode set
+    -- and transitions straight to the saved game -- no picker interaction needed.
+    -- Guard: only apply if ChooseStart hasn't already claimed the slot.
+    task.spawn(function()
+      local loaded = loadPlayer(player)
+      if loaded and playerStates[player] == nil then
+        playerStates[player] = loaded
+        pushState(player)
+      end
+    end)
   end)
 end)
 

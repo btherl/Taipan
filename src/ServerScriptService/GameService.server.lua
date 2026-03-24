@@ -671,18 +671,21 @@ Players.PlayerRemoving:Connect(function(player)
     savePlayer(player, state)  -- save before removing from map
   end
   playerStates[player] = nil
+  pendingModes[player] = nil
 end)
 
 -- Failsafe save on server shutdown (covers force-close / studio stop).
 -- DataStore calls yield the coroutine; saves are sequential.
 -- Max 3s backoff per player; well within Roblox's ~30s BindToClose budget.
 Remotes.SetUIMode.OnServerEvent:Connect(function(player, mode)
-  local state = playerStates[player]
-  if type(state) ~= "table" then return end
   if mode ~= "modern" and mode ~= "apple2" then return end
-  state.uiMode = mode
-  savePlayer(player, state)
-  pushState(player)
+  pendingModes[player] = mode
+  local state = playerStates[player]
+  if type(state) == "table" then
+    state.uiMode = mode
+    savePlayer(player, state)
+    pushState(player)
+  end
 end)
 
 game:BindToClose(function()

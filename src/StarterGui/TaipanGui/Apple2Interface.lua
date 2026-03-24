@@ -45,7 +45,7 @@ function Apple2Interface.new(screenGui, actions)
   end
 
   local function render(state, scene)
-    local lines, promptDef = PromptEngine.processState(state, scene, actions,
+    local lines, promptDef = PromptEngine.processState(state or {}, scene, actions,
       function(newScene)
         -- Local scene transition callback: set scene, re-render without StateUpdate
         localScene = newScene

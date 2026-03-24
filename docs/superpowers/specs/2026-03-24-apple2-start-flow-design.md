@@ -6,21 +6,35 @@
 
 ## Goal
 
-When a player selects the Apple II interface, they should see the Apple II terminal-style start choice screen ("Do you have a firm, or a ship?") before gameplay begins — not jump straight to port. Returning players with a saved game still see the start choice screen (faithful to the original Apple II game), but their F/S keypress merely triggers the DataStore load; the saved state overrides any start choice.
+New players should first choose their interface (Apple II or Modern), then see the start choice screen ("Do you have a firm, or a ship?") rendered by their chosen interface. Returning players with a saved game skip both screens entirely and land directly at their saved state, using the interface stored in their save.
 
 ## Problem
 
 `SetUIMode` currently requires existing server state (guarded by `type(state) ~= "table"`), but the Apple II start choice must be shown *before* state exists. The bootstrapper cannot create `Apple2Interface` until it knows the mode, and it cannot know the mode until `SetUIMode` is acknowledged — creating a chicken-and-egg dependency.
 
-## Solution: Server-side pending mode + immediate adapter creation
+## Solution: Early load on connect + server-side pending mode + immediate adapter creation
 
-Accept `SetUIMode` before state exists by storing the choice in a `pendingModes` table. When `ChooseStart` fires and creates or loads state, the pending mode is applied before `pushState`. The bootstrapper creates the adapter immediately when Phase 1 is picked (via an `onPicked` callback), calls `update({})` on Apple2Interface to show `sceneStartChoice`, then lets the real `StateUpdate` transition to the correct scene.
+The server attempts a DataStore load inside `PlayerAdded`. If a save is found, it pushes state immediately — the client receives a `StateUpdate` with `uiMode` set, destroys the picker, and goes straight to the saved game. No `ChooseStart` needed for returning players.
+
+For new players the DataStore miss produces nothing. The bootstrapper keeps the picker visible. When the player picks an interface, `onPicked` fires immediately: the adapter is created, `SetUIMode` stores the choice in a `pendingModes` table (since no state exists yet), and — for Apple II — `update({})` renders `sceneStartChoice`. When the player presses F/S, `ChooseStart` creates the new game and applies the pending mode before `pushState`.
 
 ## Changes
 
 ### 1. `GameService.server.lua`
 
 Add `pendingModes: {[Player]: string} = {}` alongside `playerStates`.
+
+**`PlayerAdded` handler** — attempt DataStore load immediately after cloning StarterGui:
+```lua
+task.spawn(function()
+  local loaded = loadPlayer(player)
+  if loaded then
+    playerStates[player] = loaded
+    pushState(player)
+  end
+  -- new player: do nothing, wait for ChooseStart
+end)
+```
 
 **`SetUIMode` handler** — remove the state-existence guard; always store the mode (retain existing input validation):
 ```lua
@@ -34,19 +48,10 @@ if type(state) == "table" then
 end
 ```
 
-**`ChooseStart` handler** — apply pending mode in both branches before `pushState`. The loaded-save branch uses the local `loaded`; the new-game branch uses `state`:
+**`ChooseStart` handler** — returning players now have their state set by `PlayerAdded`, so the sentinel guard (`if playerStates[player] then return end`) silently drops any `ChooseStart` they send. Only new players reach the body. Apply the pending mode before `pushState` in the new-game branch:
 
 ```lua
--- loaded-save branch (variable is `loaded`):
-if pendingModes[player] then
-  loaded.uiMode = pendingModes[player]
-  pendingModes[player] = nil
-end
-playerStates[player] = loaded
-pushState(player)
-return
-
--- new-game branch (variable is `state`):
+-- new-game branch only (returning players are no-op'd by the sentinel guard):
 if pendingModes[player] then
   state.uiMode = pendingModes[player]
   pendingModes[player] = nil
@@ -55,7 +60,7 @@ playerStates[player] = state
 pushState(player)
 ```
 
-Note: If `PlayerRemoving` fires during the DataStore yield (between the sentinel assignment and the `pushState` call), `pendingModes[player]` may already be nil when the coroutine resumes. In that case `uiMode` will not be applied to the saved state. This is the same pre-existing race as for `playerStates` itself and is accepted behaviour — the player has already disconnected.
+The DataStore load previously in `ChooseStart` is now done in `PlayerAdded`, so the loaded-save branch in `ChooseStart` is removed.
 
 **`PlayerRemoving` handler** — add `pendingModes[player] = nil`.
 
@@ -89,7 +94,7 @@ local currentAdapter = InterfacePicker.new(screenGui, GameActions, function(mode
 end)
 ```
 
-`StateUpdate` handler: in the new design, `StateUpdate` never arrives while `currentMode == "picker"` (the server only fires StateUpdate after `ChooseStart`, which happens after `onPicked` already set `currentMode`). The `currentMode == "picker"` branch in the handler becomes dead code and can be simplified. Live interface switching (changing mode from settings after game start) is still handled by the `targetMode ~= currentMode` branch.
+`StateUpdate` handler: `StateUpdate` can now arrive while `currentMode == "picker"` — when a returning player's save is found in `PlayerAdded` and pushed immediately. The existing `currentMode == "picker"` + `targetMode ~= nil` branch already handles this: it destroys the picker and creates the correct adapter. For new players, `StateUpdate` only arrives after `ChooseStart` (by which time `currentMode` is already set by `onPicked`). Live interface switching is still handled by the `targetMode ~= currentMode` branch.
 
 ### 4. `Apple2Interface.lua`
 
@@ -131,13 +136,11 @@ An empty table `{}` satisfies all three conditions (`nil`, `1`, `0`), so `sceneS
 5. Server creates fresh state, applies `pendingModes` → `state.uiMode = "apple2"`, `state.startChoice = "cash"` → `pushState`
 6. `StateUpdate` arrives; `currentMode == "apple2"` already → `adapter.update(state)` → `sceneAtPort` renders ✓
 
-### Returning player, picks Apple II
+### Returning player (any interface)
 
-Steps 1–3 same as above (player sees start choice screen; this is faithful to original Apple II game).
-
-4. Player presses **F** or **S** (choice doesn't affect loaded save)
-5. Server loads saved state, applies `pendingModes` → `state.uiMode = "apple2"` (overrides any old saved mode) → `pushState`
-6. `StateUpdate` arrives → `adapter.update(savedState)` → `sceneAtPort` (or wherever they left off) ✓
+1. Player connects → server's `PlayerAdded` fires → DataStore load succeeds → `pushState(player)`
+2. Client receives `StateUpdate` while `currentMode == "picker"` → `state.uiMode` is set → picker destroyed → correct adapter created → `adapter.update(savedState)` → saved scene renders ✓
+3. Player never interacts with InterfacePicker or the start choice screen
 
 ### New player, picks Modern
 
@@ -152,7 +155,7 @@ Steps 1–3 same as above (player sees start choice screen; this is faithful to 
 
 | File | Change |
 |------|--------|
-| `src/ServerScriptService/GameService.server.lua` | Add `pendingModes`; update `SetUIMode`, `ChooseStart`, `PlayerRemoving` handlers |
+| `src/ServerScriptService/GameService.server.lua` | Add `pendingModes`; early load in `PlayerAdded`; update `SetUIMode`, `ChooseStart`, `PlayerRemoving` handlers |
 | `src/StarterGui/TaipanGui/InterfacePicker.lua` | Remove Phase 2; add `onPicked` callback param |
 | `src/StarterGui/TaipanGui/init.client.lua` | Pass `onPicked` to picker; immediate adapter creation |
 | `src/StarterGui/TaipanGui/Apple2Interface.lua` | Pass `state or {}` to PromptEngine |

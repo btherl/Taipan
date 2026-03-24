@@ -657,8 +657,9 @@ function PromptEngine.processState(state, localScene, actions, localSceneCb)
   end
   if localScene == "travel"   then return sceneTravel(state, actions, localSceneCb) end
   if localScene == "settings" then return sceneSettings(state, actions, localSceneCb) end
-  -- StartChoice: new game not yet started
-  if (state.turnsElapsed or 1) == 1 and (state.destination or 0) == 0 then
+  -- StartChoice: only when startChoice not yet made (InterfacePicker handles this
+  -- before Apple2Interface is created, so state.startChoice is always set on arrival)
+  if state.startChoice == nil and (state.turnsElapsed or 1) == 1 and (state.destination or 0) == 0 then
     return sceneStartChoice(state, actions, localSceneCb)
   end
   -- Default: AtPort

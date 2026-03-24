@@ -2,6 +2,32 @@
 -- Bootstrapper: shows InterfacePicker immediately, then delegates to the right adapter.
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Players           = game:GetService("Players")
+
+-- Taipan is pure 2D: hide the 3D world behind a full-screen black backdrop.
+-- CharacterAutoLoads=false (set server-side) means no avatar spawns,
+-- so key presses are never consumed by character movement scripts.
+do
+  local backdrop = Instance.new("ScreenGui")
+  backdrop.Name            = "Backdrop"
+  backdrop.DisplayOrder    = -10
+  backdrop.ResetOnSpawn    = false
+  backdrop.IgnoreGuiInset  = true
+  backdrop.ZIndexBehavior  = Enum.ZIndexBehavior.Sibling
+  backdrop.Parent          = Players.LocalPlayer.PlayerGui
+
+  local fill = Instance.new("Frame")
+  fill.Size                  = UDim2.fromScale(1, 1)
+  fill.BackgroundColor3      = Color3.new(0, 0, 0)
+  fill.BackgroundTransparency = 0
+  fill.BorderSizePixel       = 0
+  fill.Parent                = backdrop
+end
+
+-- Point camera away from the world so nothing leaks through transparent areas.
+local camera = workspace.CurrentCamera
+camera.CameraType = Enum.CameraType.Scriptable
+camera.CFrame     = CFrame.new(0, 1e6, 0)
 
 local Remotes           = require(ReplicatedStorage.Remotes)
 local GameActions       = require(script.GameActions)

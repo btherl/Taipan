@@ -17,12 +17,17 @@ local PersistenceEngine = require(ReplicatedStorage.shared.PersistenceEngine)
 local Constants   = require(ReplicatedStorage.shared.Constants)
 local Remotes     = require(ReplicatedStorage.Remotes)
 
+local RunService        = game:GetService("RunService")
 local DataStoreService  = game:GetService("DataStoreService")
 local gameStore         = DataStoreService:GetDataStore("TaipanV1")
+
+-- Taipan is pure 2D — no 3D world or avatar needed
+Players.CharacterAutoLoads = false
 
 local playerStates: {[Player]: any} = {}
 
 local function savePlayer(player, state)
+  if RunService:IsStudio() then return end
   local data = PersistenceEngine.serialize(state)
   PersistenceEngine.dataStoreRetry(function()
     gameStore:SetAsync("player_" .. player.UserId, data)
@@ -30,6 +35,7 @@ local function savePlayer(player, state)
 end
 
 local function loadPlayer(player)
+  if RunService:IsStudio() then return nil end
   local data = PersistenceEngine.dataStoreRetry(function()
     return gameStore:GetAsync("player_" .. player.UserId)
   end)
@@ -656,6 +662,7 @@ Remotes.SetUIMode.OnServerEvent:Connect(function(player, mode)
 end)
 
 game:BindToClose(function()
+  if RunService:IsStudio() then return end
   for player, state in pairs(playerStates) do
     if type(state) == "table" then
       savePlayer(player, state)

@@ -1,3 +1,4 @@
+--!nocheck
 --[[
 	TestEZ - BDD-style test and assertion library for Roblox
 	Bundled single-file version from https://github.com/Roblox/testez (Apache 2.0)

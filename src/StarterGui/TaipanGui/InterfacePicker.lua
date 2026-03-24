@@ -1,7 +1,7 @@
 -- InterfacePicker.lua
--- Two-phase start: Phase 1 = start choice (cash/guns), Phase 2 = interface choice.
--- Phase 1 fires actions.chooseStart(); server responds with StateUpdate (uiMode=nil).
--- adapter.update() advances to Phase 2; player then picks interface → setUIMode().
+-- Phase 1: interface choice (modern/apple2), stores pendingMode.
+-- Phase 2: start choice (cash/guns), fires chooseStart.
+-- adapter.update() fires setUIMode(pendingMode) after ChooseStart state arrives.
 local UserInputService = game:GetService("UserInputService")
 
 local AMBER = Color3.fromRGB(200, 180, 80)
@@ -19,9 +19,10 @@ function InterfacePicker.new(screenGui, actions)
   frame.ZIndex = 30
   frame.Parent = screenGui
 
-  local conn  = nil   -- active keyboard connection
-  local phase = 1     -- 1 = start choice, 2 = interface choice
-  local chosen = false
+  local conn        = nil
+  local phase       = 1
+  local chosen      = false
+  local pendingMode = nil   -- set in Phase 1, consumed by update()
 
   local function clearChildren()
     for _, child in ipairs(frame:GetChildren()) do child:Destroy() end
@@ -61,20 +62,20 @@ function InterfacePicker.new(screenGui, actions)
     return btn
   end
 
-  local function showPhase1()
+  local function showPhase2()
     clearChildren()
     if conn then conn:Disconnect(); conn = nil end
     chosen = false
 
     lbl("TAIPAN!", 40, 60)
     lbl("Elder Brother Wu asks:", 110, 24)
-    lbl("\"Shall I buy a ship for you?\n Or will you trade in your Clipper?\"", 140, 24)
+    lbl('"Shall I buy a ship for you? Or will you trade in your Clipper?"', 140, 24)
 
-    makeBtn("[C] Buy a Cargo Hold",     "$400 cash, large debt, no guns",   220, function()
+    makeBtn("[C] Buy a Cargo Hold",    "$400 cash, large debt, no guns",  220, function()
       if chosen then return end; chosen = true
       actions.chooseStart("cash")
     end)
-    makeBtn("[G] Trade in my Clipper",  "No cash, no debt, 5 guns",         300, function()
+    makeBtn("[G] Trade in my Clipper", "No cash, no debt, 5 guns",        300, function()
       if chosen then return end; chosen = true
       actions.chooseStart("guns")
     end)
@@ -89,7 +90,7 @@ function InterfacePicker.new(screenGui, actions)
     end)
   end
 
-  local function showPhase2()
+  local function showPhase1()
     clearChildren()
     if conn then conn:Disconnect(); conn = nil end
     chosen = false
@@ -98,10 +99,12 @@ function InterfacePicker.new(screenGui, actions)
     lbl("Choose your interface style:", 120, 28)
 
     makeBtn("[M] Modern",   "touch-friendly panels",             190, function()
-      if chosen then return end; chosen = true; actions.setUIMode("modern")
+      if chosen then return end; chosen = true
+      pendingMode = "modern"; phase = 2; showPhase2()
     end)
     makeBtn("[A] Apple II", "keyboard terminal, authentic style", 270, function()
-      if chosen then return end; chosen = true; actions.setUIMode("apple2")
+      if chosen then return end; chosen = true
+      pendingMode = "apple2"; phase = 2; showPhase2()
     end)
 
     lbl("(You can change this later from Settings at any port)", 355, 24, DIM)
@@ -109,9 +112,11 @@ function InterfacePicker.new(screenGui, actions)
     conn = UserInputService.InputBegan:Connect(function(input, gameProcessed)
       if gameProcessed then return end
       if input.KeyCode == Enum.KeyCode.M then
-        if chosen then return end; chosen = true; actions.setUIMode("modern")
+        if chosen then return end; chosen = true
+        pendingMode = "modern"; phase = 2; showPhase2()
       elseif input.KeyCode == Enum.KeyCode.A then
-        if chosen then return end; chosen = true; actions.setUIMode("apple2")
+        if chosen then return end; chosen = true
+        pendingMode = "apple2"; phase = 2; showPhase2()
       end
     end)
   end
@@ -121,12 +126,12 @@ function InterfacePicker.new(screenGui, actions)
   local adapter = {}
 
   function adapter.update(_state)
-    -- Called when StateUpdate arrives with uiMode=nil — advance to interface choice
-    if phase == 1 then
-      phase = 2
-      showPhase2()
+    -- Called when StateUpdate arrives with uiMode=nil (after ChooseStart fired).
+    -- Fire SetUIMode to complete the selection; bootstrapper handles the rest.
+    if phase == 2 and pendingMode then
+      actions.setUIMode(pendingMode)
+      pendingMode = nil
     end
-    -- Phase 2 and beyond: no-op (bootstrapper will destroy us when uiMode is set)
   end
 
   function adapter.notify(_msg)  end

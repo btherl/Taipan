@@ -1,10 +1,12 @@
 -- InterfacePicker.lua
--- Shown when state.uiMode == nil (new player, no preference saved).
--- Implements the adapter contract: update() and notify() are no-ops.
+-- Two-phase start: Phase 1 = start choice (cash/guns), Phase 2 = interface choice.
+-- Phase 1 fires actions.chooseStart(); server responds with StateUpdate (uiMode=nil).
+-- adapter.update() advances to Phase 2; player then picks interface → setUIMode().
 local UserInputService = game:GetService("UserInputService")
 
 local AMBER = Color3.fromRGB(200, 180, 80)
 local GREEN = Color3.fromRGB(140, 200, 80)
+local DIM   = Color3.fromRGB(120, 120, 120)
 
 local InterfacePicker = {}
 
@@ -16,6 +18,14 @@ function InterfacePicker.new(screenGui, actions)
   frame.BorderSizePixel = 0
   frame.ZIndex = 30
   frame.Parent = screenGui
+
+  local conn  = nil   -- active keyboard connection
+  local phase = 1     -- 1 = start choice, 2 = interface choice
+  local chosen = false
+
+  local function clearChildren()
+    for _, child in ipairs(frame:GetChildren()) do child:Destroy() end
+  end
 
   local function lbl(text, yPos, size, color)
     local l = Instance.new("TextLabel")
@@ -33,21 +43,7 @@ function InterfacePicker.new(screenGui, actions)
     return l
   end
 
-  lbl("TAIPAN!", 40, 60)
-  lbl("Choose your interface:", 120, 28)
-
-  local chosen = false
-  local conn   -- keyboard connection
-
-  local function pick(mode)
-    if chosen then return end
-    chosen = true
-    if conn then conn:Disconnect() end
-    actions.setUIMode(mode)
-    -- Bootstrapper will detect state.uiMode change and call destroy() + instantiate real adapter
-  end
-
-  local function makeBtn(label, desc, yPos, mode)
+  local function makeBtn(label, desc, yPos, onClick)
     local btn = Instance.new("TextButton")
     btn.Size = UDim2.new(0.8, 0, 0, 70)
     btn.Position = UDim2.new(0.1, 0, 0, yPos)
@@ -61,29 +57,85 @@ function InterfacePicker.new(screenGui, actions)
     btn.ZIndex = 30
     btn.Text = label .. "\n" .. desc
     btn.Parent = frame
-    btn.Activated:Connect(function() pick(mode) end)
+    btn.Activated:Connect(onClick)
+    return btn
   end
 
-  makeBtn("[M] Modern",   "touch-friendly panels",             170, "modern")
-  makeBtn("[A] Apple II", "keyboard terminal, authentic style", 260, "apple2")
+  local function showPhase1()
+    clearChildren()
+    if conn then conn:Disconnect(); conn = nil end
+    chosen = false
 
-  lbl("(You can change this later from the Settings option at port)", 350, 28, Color3.fromRGB(120, 120, 120))
+    lbl("TAIPAN!", 40, 60)
+    lbl("Elder Brother Wu asks:", 110, 24)
+    lbl("\"Shall I buy a ship for you?\n Or will you trade in your Clipper?\"", 140, 24)
 
-  -- Keyboard shortcut: M or A
-  conn = UserInputService.InputBegan:Connect(function(input, gameProcessed)
-    if gameProcessed then return end
-    if input.KeyCode == Enum.KeyCode.M then pick("modern")
-    elseif input.KeyCode == Enum.KeyCode.A then pick("apple2")
-    end
-  end)
+    makeBtn("[C] Buy a Cargo Hold",     "$400 cash, large debt, no guns",   220, function()
+      if chosen then return end; chosen = true
+      actions.chooseStart("cash")
+    end)
+    makeBtn("[G] Trade in my Clipper",  "No cash, no debt, 5 guns",         300, function()
+      if chosen then return end; chosen = true
+      actions.chooseStart("guns")
+    end)
+
+    conn = UserInputService.InputBegan:Connect(function(input, gameProcessed)
+      if gameProcessed then return end
+      if input.KeyCode == Enum.KeyCode.C then
+        if chosen then return end; chosen = true; actions.chooseStart("cash")
+      elseif input.KeyCode == Enum.KeyCode.G then
+        if chosen then return end; chosen = true; actions.chooseStart("guns")
+      end
+    end)
+  end
+
+  local function showPhase2()
+    clearChildren()
+    if conn then conn:Disconnect(); conn = nil end
+    chosen = false
+
+    lbl("TAIPAN!", 40, 60)
+    lbl("Choose your interface style:", 120, 28)
+
+    makeBtn("[M] Modern",   "touch-friendly panels",             190, function()
+      if chosen then return end; chosen = true; actions.setUIMode("modern")
+    end)
+    makeBtn("[A] Apple II", "keyboard terminal, authentic style", 270, function()
+      if chosen then return end; chosen = true; actions.setUIMode("apple2")
+    end)
+
+    lbl("(You can change this later from Settings at any port)", 355, 24, DIM)
+
+    conn = UserInputService.InputBegan:Connect(function(input, gameProcessed)
+      if gameProcessed then return end
+      if input.KeyCode == Enum.KeyCode.M then
+        if chosen then return end; chosen = true; actions.setUIMode("modern")
+      elseif input.KeyCode == Enum.KeyCode.A then
+        if chosen then return end; chosen = true; actions.setUIMode("apple2")
+      end
+    end)
+  end
+
+  showPhase1()
 
   local adapter = {}
-  function adapter.update(_state)  end   -- no-op
-  function adapter.notify(_msg)    end   -- no-op
+
+  function adapter.update(_state)
+    -- Called when StateUpdate arrives with uiMode=nil — advance to interface choice
+    if phase == 1 then
+      phase = 2
+      showPhase2()
+    end
+    -- Phase 2 and beyond: no-op (bootstrapper will destroy us when uiMode is set)
+  end
+
+  function adapter.notify(_msg)  end
+
   function adapter.destroy()
     if conn then conn:Disconnect() end
     frame:Destroy()
   end
+
   return adapter
 end
 

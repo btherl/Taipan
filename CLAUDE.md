@@ -272,6 +272,70 @@ return function()
 end
 ```
 
+## MCP UI Playtesting
+
+Claude can drive the game UI end-to-end using the Roblox Studio MCP tools. This complements the TestEZ unit tests (which test pure logic modules in isolation) — MCP playtesting verifies that the UI correctly wires into the game logic at runtime.
+
+### MCP Tools and Their Roles
+
+| Tool | Purpose |
+|---|---|
+| `start_stop_play` | Enter/exit Play mode (`is_start: true/false`) |
+| `screen_capture` | Capture current Studio viewport; use after every action to observe UI state |
+| `user_mouse_input` | Click GUI elements using pixel coordinates derived from `inspect_instance` |
+| `user_keyboard_input` | Send key presses; preferred for the Apple II interface (fully keyboard-driven) |
+| `search_game_tree` + `inspect_instance` | Discover runtime GUI hierarchy under `Players.LocalPlayer.PlayerGui` and read properties (Text, Visibility, AbsolutePosition, AbsoluteSize) |
+| `execute_luau` | Runs **client-side** Luau; used to fire remotes and capture state |
+
+### Critical: execute_luau Runs Client-Side
+
+Despite intuition, `execute_luau` executes in the **client context** during Play mode. ServerScriptService scripts are consumed by Rojo and not directly accessible. This means:
+
+- **Can** fire `RemoteEvent:FireServer()` to simulate client actions
+- **Can** connect `RemoteEvent.OnClientEvent` to capture server responses
+- **Cannot** directly read server-side local variables (e.g. `playerStates`)
+
+### State Verification Pattern
+
+To read current game state, fire `RequestStateUpdate` and capture the `StateUpdate` response:
+
+```lua
+local Remotes = require(game:GetService("ReplicatedStorage").Remotes)
+local state = nil
+Remotes.StateUpdate.OnClientEvent:Connect(function(s) state = s end)
+Remotes.RequestStateUpdate:FireServer()
+-- (wait a tick, then read state)
+```
+
+### GUI Element Discovery Pattern
+
+Runtime GUI elements (created programmatically by panels) only exist under `LocalPlayer.PlayerGui` during Play mode. Use `search_game_tree` to find them, then `inspect_instance` to get coordinates:
+
+```
+instance path: Players.LocalPlayer.PlayerGui.TaipanGui.Root.<PanelName>.<ElementName>
+```
+
+Compute click target from properties: `AbsolutePosition + AbsoluteSize / 2`.
+
+### Recommended Playtest Sequence
+
+1. `start_stop_play(true)` — enter Play mode
+2. `screen_capture` — observe starting state
+3. Interact via `user_keyboard_input` (Apple II interface) or `user_mouse_input` (GUI buttons)
+4. `screen_capture` — verify UI changed as expected
+5. Fire `RequestStateUpdate` via `execute_luau`, capture `StateUpdate` response — verify server state
+6. Repeat steps 3-5 for each action under test
+7. `start_stop_play(false)` — exit Play mode when done
+
+### Proof-of-Concept Results
+
+The full flow was tested successfully end-to-end:
+
+1. Started Play mode
+2. Selected Apple II interface (mouse click on InterfacePicker button)
+3. Selected "Firm" cash start (keypress `F` on Apple II terminal screen)
+4. Verified server state: `currentPort=1`, `cash=400`, `debt=5000`, `guns=0`, `year=1860`, `gameOver=false`
+
 ## Constants Reference
 
 Key constants from `src/ReplicatedStorage/shared/Constants.lua`:

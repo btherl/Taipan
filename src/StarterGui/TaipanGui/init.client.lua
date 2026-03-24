@@ -39,15 +39,23 @@ local screenGui = script.Parent   -- TaipanGui ScreenGui
 screenGui.ResetOnSpawn   = false
 screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 
-local function makeAdapter(mode)
-  if mode == "modern"  then return ModernInterface.new(screenGui, GameActions) end
-  if mode == "apple2"  then return Apple2Interface.new(screenGui, GameActions) end
-  return InterfacePicker.new(screenGui, GameActions)
-end
-
--- Show picker immediately — no wait for StateUpdate
+-- Show picker immediately — no wait for StateUpdate.
+-- onPicked fires when the player selects an interface style.
 local currentMode    = "picker"
-local currentAdapter = InterfacePicker.new(screenGui, GameActions)
+local currentAdapter = InterfacePicker.new(screenGui, GameActions, function(mode)
+  currentAdapter.destroy()
+  GameActions.setUIMode(mode)   -- server stores pendingMode (no state yet)
+
+  if mode == "apple2" then
+    currentAdapter = Apple2Interface.new(screenGui, GameActions)
+    currentMode    = "apple2"
+    currentAdapter.update({})   -- empty state → sceneStartChoice renders
+  else  -- "modern"
+    currentAdapter = ModernInterface.new(screenGui, GameActions)
+    currentMode    = "modern"
+    -- no update() needed — StartPanel is visible from constructor
+  end
+end)
 
 Remotes.StateUpdate.OnClientEvent:Connect(function(state)
   if type(state) ~= "table" then return end   -- sentinel guard (boolean during DataStore load)
@@ -56,23 +64,31 @@ Remotes.StateUpdate.OnClientEvent:Connect(function(state)
 
   if currentMode == "picker" then
     if targetMode ~= nil then
-      -- Returning player with saved mode, or player just selected interface
+      -- Returning player: StateUpdate arrived before picker was interacted with.
+      -- Destroy picker and show the saved game using the stored interface.
       currentAdapter.destroy()
-      currentAdapter = makeAdapter(targetMode)
-      currentMode    = targetMode
+      if targetMode == "apple2" then
+        currentAdapter = Apple2Interface.new(screenGui, GameActions)
+      else
+        currentAdapter = ModernInterface.new(screenGui, GameActions)
+      end
+      currentMode = targetMode
     else
-      -- ChooseStart fired; state exists but no interface chosen yet → advance to Phase 2
-      currentAdapter.update(state)
+      -- StateUpdate arrived but no interface chosen yet (shouldn't happen in normal flow).
       return
     end
 
   elseif (currentMode == "modern" or currentMode == "apple2")
       and targetMode ~= nil
       and targetMode ~= currentMode then
-    -- Live interface switch from settings
+    -- Live interface switch from Settings
     currentAdapter.destroy()
-    currentAdapter = makeAdapter(targetMode)
-    currentMode    = targetMode
+    if targetMode == "apple2" then
+      currentAdapter = Apple2Interface.new(screenGui, GameActions)
+    else
+      currentAdapter = ModernInterface.new(screenGui, GameActions)
+    end
+    currentMode = targetMode
   end
 
   currentAdapter.update(state)

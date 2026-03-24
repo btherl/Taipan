@@ -640,6 +640,18 @@ Remotes.QuitGame.OnServerEvent:Connect(function(player)
   pushState(player)
 end)
 
+-- With CharacterAutoLoads=false, Roblox never auto-copies StarterGui to PlayerGui.
+-- Clone it manually so the GameController LocalScript reaches the client.
+Players.PlayerAdded:Connect(function(player)
+  task.defer(function()
+    local StarterGui = game:GetService("StarterGui")
+    for _, gui in ipairs(StarterGui:GetChildren()) do
+      local clone = gui:Clone()
+      clone.Parent = player.PlayerGui
+    end
+  end)
+end)
+
 -- Cleanup on disconnect
 Players.PlayerRemoving:Connect(function(player)
   local state = playerStates[player]

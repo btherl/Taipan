@@ -59,7 +59,7 @@ end
 
 Remotes.ChooseStart.OnServerEvent:Connect(function(player, startChoice)
   if startChoice ~= "cash" and startChoice ~= "guns" then startChoice = "cash" end
-  if playerStates[player] then return end           -- already initialised (returning player handled by PlayerAdded)
+  if playerStates[player] then return end           -- already initialised (returning player) or double-fire guard
 
   -- New player: start a fresh game
   local state = GameState.newGame(startChoice)

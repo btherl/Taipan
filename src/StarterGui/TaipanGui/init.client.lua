@@ -41,8 +41,12 @@ screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 
 -- Show picker immediately — no wait for StateUpdate.
 -- onPicked fires when the player selects an interface style.
+-- currentAdapter is forward-declared so the closure captures the upvalue correctly;
+-- without this, Roblox's Activated event can fire synchronously inside InterfacePicker.new
+-- before the assignment completes, leaving currentAdapter nil inside the callback.
 local currentMode    = "picker"
-local currentAdapter = InterfacePicker.new(screenGui, GameActions, function(mode)
+local currentAdapter   -- forward-declared; assigned below
+currentAdapter = InterfacePicker.new(screenGui, GameActions, function(mode)
   currentAdapter.destroy()
   GameActions.setUIMode(mode)   -- server stores pendingMode (no state yet)
 
@@ -74,14 +78,16 @@ Remotes.StateUpdate.OnClientEvent:Connect(function(state)
       end
       currentMode = targetMode
     else
-      -- StateUpdate arrived but no interface chosen yet (shouldn't happen in normal flow).
+      -- New-player state arrived before interface was chosen (e.g. exploiter replay).
+      -- Ignore and let the picker complete normally.
       return
     end
 
   elseif (currentMode == "modern" or currentMode == "apple2")
       and targetMode ~= nil
       and targetMode ~= currentMode then
-    -- Live interface switch from Settings
+    -- Live interface switch from Settings (or: StateUpdate arrived after onPicked already
+    -- set currentMode — saved uiMode wins over the locally-picked mode)
     currentAdapter.destroy()
     if targetMode == "apple2" then
       currentAdapter = Apple2Interface.new(screenGui, GameActions)

@@ -10,6 +10,7 @@ local Text              = require(ReplicatedStorage.Text)
 local ROWS       = 24
 local TEXT_SIZE  = 3
 local ROW_HEIGHT = 48   -- 16 virtual px * TextSize 3
+local X_OFFSET   = 30   -- left margin: sprites are center-anchored so x=0 clips the first glyph
 local GREEN      = Color3.fromRGB(140, 200, 80)
 
 local Terminal = {}
@@ -35,7 +36,7 @@ function Terminal.new(displayOrder)
   for i = 1, ROWS do
     local t = Text.new("TaipanStandardFont", true)  -- automatic_update = true
     t.Parent    = gui.TextParent
-    t.Position  = Vector2.new(0, (i - 1) * ROW_HEIGHT)
+    t.Position  = Vector2.new(X_OFFSET, (i - 1) * ROW_HEIGHT)
     t.TextSize  = TEXT_SIZE
     t.TextColor3 = GREEN
     t.ZIndex    = 1

@@ -60,7 +60,7 @@ function InterfacePicker.new(screenGui, _actions, onPicked)
     if chosen then return end
     chosen = true
     if conn then conn:Disconnect(); conn = nil end
-    onPicked(mode)
+    task.defer(onPicked, mode)   -- defer so InterfacePicker.new has returned before onPicked fires
   end
 
   lbl("TAIPAN!", 40, 60)

@@ -59,20 +59,9 @@ end
 
 Remotes.ChooseStart.OnServerEvent:Connect(function(player, startChoice)
   if startChoice ~= "cash" and startChoice ~= "guns" then startChoice = "cash" end
-  if playerStates[player] then return end           -- already initialised (or sentinel)
-  playerStates[player] = true                       -- sentinel: claim slot before async
-  -- RequestStateUpdate calling pushState during this window silently no-ops (type guard).
+  if playerStates[player] then return end           -- already initialised (returning player handled by PlayerAdded)
 
-  local loaded = loadPlayer(player)                 -- yields on DataStore call
-  if loaded then
-    -- Works for both resumed games (gameOver=false) and game-over saves (gameOver=true).
-    -- Client renders whichever screen is appropriate from the pushed state.
-    playerStates[player] = loaded
-    pushState(player)
-    return
-  end
-
-  -- No save found: start a fresh game
+  -- New player: start a fresh game
   local state = GameState.newGame(startChoice)
   state.currentPrices = PriceEngine.calculatePrices(state.basePrices, state.currentPort)
   state.holdSpace = state.shipCapacity
@@ -81,6 +70,10 @@ Remotes.ChooseStart.OnServerEvent:Connect(function(player, startChoice)
     - state.guns * 10
   -- state.seenTutorial is already false (set by GameState.newGame)
   state.pendingTutorial = true  -- fires tutorial on first HK arrival; not in newGame
+  if pendingModes[player] then
+    state.uiMode = pendingModes[player]
+    pendingModes[player] = nil
+  end
   playerStates[player] = state
   pushState(player)
 end)
@@ -674,9 +667,6 @@ Players.PlayerRemoving:Connect(function(player)
   pendingModes[player] = nil
 end)
 
--- Failsafe save on server shutdown (covers force-close / studio stop).
--- DataStore calls yield the coroutine; saves are sequential.
--- Max 3s backoff per player; well within Roblox's ~30s BindToClose budget.
 Remotes.SetUIMode.OnServerEvent:Connect(function(player, mode)
   if mode ~= "modern" and mode ~= "apple2" then return end
   pendingModes[player] = mode
@@ -688,6 +678,9 @@ Remotes.SetUIMode.OnServerEvent:Connect(function(player, mode)
   end
 end)
 
+-- Failsafe save on server shutdown (covers force-close / studio stop).
+-- DataStore calls yield the coroutine; saves are sequential.
+-- Max 3s backoff per player; well within Roblox's ~30s BindToClose budget.
 game:BindToClose(function()
   if RunService:IsStudio() then return end
   for player, state in pairs(playerStates) do

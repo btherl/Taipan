@@ -68,6 +68,7 @@ function GameState.newGame(startChoice)
     combat           = nil,    -- combat sub-table when in combat, nil otherwise
     startChoice      = startChoice,   -- ADD: raw start type for save/load round-trips
     seenTutorial     = false,         -- ADD: set true after first HK tutorial fires
+    uiMode = nil,   -- nil = not yet chosen; "modern" or "apple2" once set
 
     -- Phase 6: progression
     gameOverReason = nil,   -- "sunk" | "quit" | "retired" (nil = game in progress)

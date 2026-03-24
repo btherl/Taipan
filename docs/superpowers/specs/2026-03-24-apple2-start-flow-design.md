@@ -22,8 +22,9 @@ Accept `SetUIMode` before state exists by storing the choice in a `pendingModes`
 
 Add `pendingModes: {[Player]: string} = {}` alongside `playerStates`.
 
-**`SetUIMode` handler** — remove the state-existence guard; always store the mode:
+**`SetUIMode` handler** — remove the state-existence guard; always store the mode (retain existing input validation):
 ```lua
+if mode ~= "modern" and mode ~= "apple2" then return end
 pendingModes[player] = mode
 local state = playerStates[player]
 if type(state) == "table" then
@@ -99,15 +100,15 @@ An empty table `{}` satisfies all three conditions (`nil`, `1`, `0`), so `sceneS
 ### New player, picks Apple II
 
 1. InterfacePicker Phase 1 → picks Apple II → `onPicked("apple2")`
-2. Bootstrapper destroys picker, creates `Apple2Interface`, calls `update({})` → `sceneStartChoice` renders in terminal
-3. Fires `SetUIMode("apple2")` → server stores `pendingModes[player] = "apple2"`
+2. Bootstrapper destroys picker, fires `SetUIMode("apple2")` → server stores `pendingModes[player] = "apple2"`
+3. Bootstrapper creates `Apple2Interface`, calls `update({})` → `sceneStartChoice` renders in terminal
 4. Player presses **F** or **S** → `ChooseStart("cash"/"guns")` fires
 5. Server creates fresh state, applies `pendingModes` → `state.uiMode = "apple2"`, `state.startChoice = "cash"` → `pushState`
 6. `StateUpdate` arrives; `currentMode == "apple2"` already → `adapter.update(state)` → `sceneAtPort` renders ✓
 
 ### Returning player, picks Apple II
 
-Steps 1–3 same as above.
+Steps 1–3 same as above (player sees start choice screen; this is faithful to original Apple II game).
 
 4. Player presses **F** or **S** (choice doesn't affect loaded save)
 5. Server loads saved state, applies `pendingModes` → `state.uiMode = "apple2"` (overrides any old saved mode) → `pushState`
@@ -116,8 +117,8 @@ Steps 1–3 same as above.
 ### New player, picks Modern
 
 1. InterfacePicker Phase 1 → picks Modern → `onPicked("modern")`
-2. Bootstrapper creates `ModernInterface` (no `update()` call) → `StartPanel` visible by default
-3. Fires `SetUIMode("modern")` → server stores `pendingModes[player] = "modern"`
+2. Bootstrapper destroys picker, fires `SetUIMode("modern")` → server stores `pendingModes[player] = "modern"`
+3. Bootstrapper creates `ModernInterface` (no `update()` call) → `StartPanel` visible by default
 4. Player clicks cash/guns in `StartPanel` → `ChooseStart` fires
 5. Server creates state, applies pendingMode → `state.uiMode = "modern"` → `pushState`
 6. `StateUpdate` → `adapter.update(state)` → `startPanel.hide()`, port panels shown ✓

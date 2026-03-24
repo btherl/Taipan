@@ -14,10 +14,10 @@ Add an authentic Apple II–style keyboard terminal interface to Taipan! as an a
 ## Goals
 
 - High-fidelity Apple II aesthetic: bitmap fonts, green phosphor on black, sequential text prompts, no simultaneous panels
-- Full-screen 40×24 grid scaled to fill the screen (independent of the modern UI's 480px column)
+- Full-screen 40-column grid scaled to fill the screen (independent of the modern UI's 480px column)
 - Mobile-friendly: virtual key buttons appear for touch players when single-key input is expected
 - Placeholder composable glitch layer for future CRT effects (scan lines, phosphor glow)
-- Zero changes to existing panel files, engine modules, or test specs
+- Zero changes to engine modules or test specs; zero changes to existing panel files (settings button is an independent element in ModernInterface, not added inside any panel)
 - Live interface switching mid-session (no rejoin required)
 
 ---
@@ -26,7 +26,7 @@ Add an authentic Apple II–style keyboard terminal interface to Taipan! as an a
 
 ### Adapter Contract
 
-Both interfaces implement the same four-method contract:
+Both interfaces implement the same three-method contract:
 
 ```lua
 adapter.update(state)     -- called on every StateUpdate from server
@@ -34,18 +34,36 @@ adapter.notify(message)   -- called on every Notify from server
 adapter.destroy()         -- called when switching interfaces (cleanup)
 ```
 
+`InterfacePicker` also implements this contract. Its `update` and `notify` methods are no-ops — the picker is only destroyed when `state.uiMode` becomes non-nil in a subsequent StateUpdate, at which point the bootstrapper calls `destroy()` and instantiates the real adapter.
+
 ### Bootstrapper (`init.client.lua` — replaced)
 
-The existing `init.client.lua` is replaced with a ~30-line bootstrapper. It no longer knows about any specific panel. Responsibilities:
+The existing `init.client.lua` is replaced with a ~30-line bootstrapper. It no longer knows about any specific panel. It tracks `currentMode` (string, initially `nil`) to detect interface switches. Responsibilities:
 
 1. Connect to `Remotes.StateUpdate` and `Remotes.Notify`
-2. On first `StateUpdate`:
-   - If `state.uiMode == nil` → instantiate `InterfacePicker`
-   - If `state.uiMode == "modern"` → instantiate `ModernInterface`
-   - If `state.uiMode == "apple2"` → instantiate `Apple2Interface`
-3. Wire `StateUpdate` → `adapter.update(state)`
-4. Wire `Notify` → `adapter.notify(message)`
-5. On subsequent `StateUpdate`, if `state.uiMode` changed from current mode → call `adapter.destroy()` and instantiate the new adapter
+2. On **every** `StateUpdate`:
+   - If `type(state) ~= "table"` (server boolean sentinel during async DataStore load) → ignore entirely; do nothing. The bootstrapper never passes a non-table value to any adapter.
+   - Determine whether to (re)instantiate an adapter:
+     - **No adapter yet** (`currentMode == nil`): instantiate based on `state.uiMode`:
+       - `nil` → instantiate `InterfacePicker`; set `currentMode = "picker"`
+       - `"modern"` → instantiate `ModernInterface`; set `currentMode = "modern"`
+       - `"apple2"` → instantiate `Apple2Interface`; set `currentMode = "apple2"`
+     - **Picker active, mode now chosen** (`currentMode == "picker"` and `state.uiMode ~= nil`): call `adapter.destroy()` on the picker; instantiate the chosen interface; set `currentMode = state.uiMode`
+     - **Live interface switch** (`currentMode` is `"modern"` or `"apple2"`, and `state.uiMode ~= currentMode`): call `adapter.destroy()`; instantiate the new adapter; set `currentMode = state.uiMode`
+     - Otherwise: no instantiation change
+   - Call `adapter.update(state)` on the current adapter
+3. Wire `Notify` → call `adapter.notify(message)` on whatever adapter is current at time of event
+
+This logic handles both new players (first StateUpdate has `uiMode == nil` → picker) and returning players (first StateUpdate has `uiMode` set from persisted save → adapter instantiated directly) uniformly.
+
+### StartPanel Ownership
+
+`StartPanel` (the "firm or ship" choice) is owned by **both interface adapters independently**:
+
+- **`ModernInterface`**: Instantiates `StartPanel` as one of its managed panels. `startPanel.hide()` is called unconditionally on every `adapter.update(state)` call — the method is idempotent (it destroys the frame on first call; subsequent calls are no-ops since the frame is already gone).
+- **`Apple2Interface`**: When `state.turnsElapsed == 1` and `state.destination == 0` (game not yet started), the PromptEngine enters a `StartChoice` scene that presents the firm/ship choice as sequential text prompts. On selection, `GameActions.chooseStart(choice)` fires.
+
+`InterfacePicker` fires before the game is started, so it never needs to show StartPanel — that happens inside whichever adapter is instantiated after the mode is chosen.
 
 ---
 
@@ -56,11 +74,11 @@ The existing `init.client.lua` is replaced with a ~30-line bootstrapper. It no l
 ```
 src/StarterGui/TaipanGui/
   GameActions.lua           -- shared Remote wrappers (imported by both interfaces)
-  InterfacePicker.lua       -- first-time interface selection screen
+  InterfacePicker.lua       -- first-time interface selection screen (adapter contract)
   ModernInterface.lua       -- adapter wrapping existing Panels/ unchanged
   Apple2Interface.lua       -- Apple II terminal controller (adapter contract)
   Apple2/
-    Terminal.lua            -- 24-line bitmap font screen manager
+    Terminal.lua            -- bitmap font screen manager
     PromptEngine.lua        -- state → scene → text lines + promptDef
     KeyInput.lua            -- keyboard + mobile virtual-key input handler
     GlitchLayer.lua         -- stub overlay (future CRT effects)
@@ -77,7 +95,7 @@ src/StarterGui/TaipanGui/
 
 ### Untouched Files
 
-All 13 existing panel files, all engine modules (`PriceEngine`, `TravelEngine`, `FinanceEngine`, `EventEngine`, `CombatEngine`, `ProgressionEngine`, `PersistenceEngine`, `Validators`, `Constants`, `GameState` internals), all test specs, `Text/` font library.
+All 13 existing panel files (settings access in the Modern UI is provided by a standalone button created in `ModernInterface.lua`, not by modifying any panel), all engine modules, all test specs, `Text/` font library.
 
 ---
 
@@ -124,18 +142,26 @@ return {
 
 A thin adapter wrapping all 13 existing panels. Panels are instantiated exactly as in the current `init.client.lua`, with `GameActions` functions passed as callbacks. The `destroy()` method destroys the Root frame, cleaning up all panels.
 
+`adapter.notify(message)` maps directly to `messagePanel.show(message)` — the existing MessagePanel exposes `show()` rather than `notify()`, and this single-line mapping lives inside ModernInterface.
+
+The settings entry point is a standalone `TextButton` created by ModernInterface and parented directly to the Root frame (not inside any existing panel). It is positioned in the PortPanel region and made visible only when `not state.gameOver and state.combat == nil and state.shipOffer == nil`. Clicking it shows a sub-prompt (implemented as a small overlay Frame) offering `(M)odern / (A)pple II / (C)ancel`. On confirmation, fires `GameActions.setUIMode(newMode)`.
+
 ```lua
 function ModernInterface.new(screenGui, actions)
-  -- creates Root frame (480px wide column)
+  -- creates Root frame (480px wide column, black background)
   -- instantiates all 13 panels with actions.X callbacks
-  -- adds settings button to PortPanel triggering actions.setUIMode
+  -- creates standalone settings button (not inside any panel)
   -- returns { update(state), notify(message), destroy() }
+  --   where notify(msg) calls messagePanel.show(msg)
+  --   where update(state) calls startPanel.hide() unconditionally (idempotent)
 end
 ```
 
 ### `InterfacePicker.lua`
 
-Full-screen overlay (ZIndex 30) shown when `state.uiMode == nil`. Presents two choices as both clickable buttons and keyboard shortcuts:
+Full-screen overlay (ZIndex 30) shown when `state.uiMode == nil`. Implements the three-method adapter contract: `update` and `notify` are no-ops; `destroy` removes the frame.
+
+Presents two choices as both clickable buttons and keyboard shortcuts (M / A):
 
 ```
           TAIPAN!
@@ -148,55 +174,106 @@ Full-screen overlay (ZIndex 30) shown when `state.uiMode == nil`. Presents two c
   (You can change this later from the Settings option at port)
 ```
 
-On selection, fires `GameActions.setUIMode(mode)`. The bootstrapper receives the updated state and instantiates the chosen interface.
+On selection, fires `GameActions.setUIMode(mode)`. The bootstrapper receives the next StateUpdate (with `state.uiMode` now set), detects the mode change from `"picker"`, calls `picker.destroy()`, and instantiates the chosen interface.
 
 ### `Apple2Interface.lua`
 
-Orchestrates Terminal, PromptEngine, KeyInput, and GlitchLayer. On `update(state)`, calls `PromptEngine.processState(state)` which returns `{lines, promptDef}`, prints lines to Terminal, and passes promptDef to KeyInput. On `notify(message)`, prints the message to Terminal in amber. Exposes the standard adapter contract.
+Orchestrates Terminal, PromptEngine, KeyInput, and GlitchLayer. Implements the three-method adapter contract.
+
+**Internal state**: holds `lastState` (most recent server state table) and `localScene` (string or nil, set by player keypresses).
+
+**`update(state)`**:
+1. Sets `lastState = state`
+2. Any server-driven scene (Combat, ShipOffers, WuSession, GameOver) clears `localScene` to nil — these override whatever sub-scene the player was in
+3. Calls `PromptEngine.processState(state, localScene)` → returns `{lines, promptDef}`
+4. Calls `Terminal.clear()` then calls `Terminal.print(line, color)` for each line
+5. Calls `KeyInput.setPrompt(promptDef, lastState, actions)`
+
+**Local scene transitions** (player presses B, S, W, K at AtPort):
+- Apple2Interface calls `KeyInput.setLocalSceneCallback(function(scene) ... end)`
+- When a scene-changing key is pressed (e.g., B), KeyInput calls this callback with `"buy"`
+- The callback sets `localScene = "buy"`, then calls `PromptEngine.processState(lastState, "buy")` and re-renders Terminal and KeyInput without waiting for a StateUpdate
+
+**`notify(message)`**: Splits message on `\n` and calls `Terminal.print(line, AMBER)` for each line, below the current display. Does not clear the screen. Does not change the active promptDef.
+
+**`destroy()`**: Disconnects KeyInput listeners, calls `Terminal.destroy()` and `GlitchLayer.destroy()`.
 
 ### `Terminal.lua`
 
-Manages the 24-line full-screen text display.
+Manages the full-screen bitmap font display using the existing `Text` library.
 
-- **Rendering**: Fixed pool of 24 `Text.new("TaipanStandardFont")` objects (one per row). The 40×24 grid fills the full screen via `UIAspectRatioConstraint`. Background is solid black (`Color3.fromRGB(0, 0, 0)`).
-- **API**:
-  - `print(text, color)` — appends a line to the buffer; scrolls all rows up when full
-  - `clear()` — wipes all 24 lines
-  - `showInputLine(text)` — updates row 24 (the input line) with typed-so-far characters
-  - `setRowColor(row, color)` — recolor a specific row
+**Container**: Call `Text.GetTextGUI(displayOrder)` (where `displayOrder` is e.g. 5, above TaipanGui's default). This returns a `ScreenGui` containing a `TextParent` frame with a 16:9 `UIAspectRatioConstraint` matching the library's 1920×1080 virtual coordinate space. The ScreenGui's parent is set to `LocalPlayer.PlayerGui`. All Text object `.Parent` properties are set to `textGui.TextParent`. A solid black `Frame` (full size, `BackgroundColor3 = Color3.new(0,0,0)`, `BackgroundTransparency = 0`, `ZIndex = 0`) is parented to `TextParent` as the terminal background.
+
+**Grid layout using `TaipanStandardFont`**: The `TaipanStandardFont` glyphs have `xadvance = 16` and `height = 16` virtual pixels (from `FontData.lua`). At `TextSize = 3`:
+- Each character occupies 48×48 virtual pixels
+- 40 columns: 40 × 48 = 1920 virtual pixels (exactly fills virtual width)
+- Row positions: row `n` (1-indexed) starts at Y = `(n - 1) * 48` virtual pixels
+- At `TextSize = 3`, rows 1–22 fit within the 1080px virtual height (22 × 48 = 1056px). Row 23 starts at Y=1056 and extends to Y=1104, which is 24px beyond the virtual bottom; row 24 starts at Y=1104. Rows 23–24 will be clipped at the screen edge — this is acceptable (authentic CRT overscan behavior). The spec uses a logical 24-row model; the implementer should be aware that rows 23–24 may be partially off-screen and should reserve them for less critical content (e.g., the input line at row 24 may need to be placed at row 22 or 23 instead).
+
+**Newline handling**: `Terminal.print(text, color)` splits `text` on `\n` and calls itself recursively for each segment. Callers may pass multi-line strings; single-line strings work as before.
+
+**Row objects**: A fixed pool of 24 `Text.new("TaipanStandardFont", true)` objects. `automatic_update = true` connects each to `RunService.RenderStepped` internally. Each object's `.Parent` is set to `textGui.TextParent`, its `.Position` is set to `Vector2.new(0, (row-1)*48)`, and its `.TextSize` is set to `3`.
+
+**API**:
+- `print(text, color)` — splits on `\n`; appends each line to the buffer; if buffer is full (all 24 rows occupied), shifts rows 1–23 up one (row 1 discarded) and places the new line at row 24
+- `clear()` — sets all 24 Text objects' `.Text` to `""` and resets the buffer
+- `showInputLine(text)` — writes `text` to row 24 without shifting the buffer (dedicated input row)
+- `setRowColor(row, color)` — sets `Text.TextColor3` on the specified row object
+- `destroy()` — calls `:Destroy()` on each Text object (which disconnects RenderStepped) and destroys the ScreenGui
 
 ### `PromptEngine.lua`
 
-Maps game state to scenes. On each `processState(state)` call, compares to previous state, determines the current scene, and returns `{lines, promptDef}`.
+Maps game state + local scene to output. Signature:
 
-**Scene determination** (evaluated in priority order):
+```lua
+PromptEngine.processState(state, localScene) → { lines: string[], promptDef: table }
+```
 
-| Scene | Condition |
-|---|---|
-| `GameOver` | `state.gameOver == true` |
-| `Combat` | `state.combat ~= nil` |
-| `ShipOffers` | `state.shipOffer ~= nil` |
-| `WuSession` | `state.currentPort == HONG_KONG and state.inWuSession` |
-| `BankSession` | player pressed K at port (local scene flag) |
-| `WarehouseSession` | player pressed W at port (local scene flag) |
-| `BuySell` | player pressed B or S at port (local scene flag) |
-| `AtPort` | default |
+`localScene` is a string set by Apple2Interface based on player keypresses at AtPort (`"buy"`, `"sell"`, `"warehouse"`, `"bank"`). It is `nil` when no sub-scene is active or when a server-driven scene overrides.
+
+**Scene determination** (evaluated in priority order; server-driven scenes override localScene):
+
+| Priority | Scene | Condition |
+|---|---|---|
+| 1 | `GameOver` | `state.gameOver == true` |
+| 2 | `Combat` | `state.combat ~= nil` |
+| 3 | `ShipOffers` | `state.shipOffer ~= nil` |
+| 4 | `WuSession` | `state.currentPort == HONG_KONG and state.inWuSession == true` |
+| 5 | `BankSession` | `localScene == "bank"` |
+| 6 | `WarehouseSession` | `localScene == "warehouse"` |
+| 7 | `BuySell` | `localScene == "buy"` or `localScene == "sell"` |
+| 8 | `StartChoice` | `state.turnsElapsed == 1 and state.destination == 0` |
+| 9 | `AtPort` | default |
+
+**Note on `WuSession`**: `state.inWuSession` is an ephemeral field — it is not persisted across reconnects, but it is reliably present in the live state table. The server sets `inWuSession = true` when the player arrives at Hong Kong and pushes state immediately, so the first StateUpdate after HK arrival will have `inWuSession == true`. Wu interaction in the Apple II interface is therefore automatic on HK arrival (same as original game), not player-initiated. The AtPort menu does NOT include a manual Wu entry point.
+
+**Local scene flag lifecycle**:
+- Set by Apple2Interface when the player presses B, S, W, or K at AtPort
+- Cleared when: (a) a server-driven scene activates (priorities 1–4 in the table above), (b) the player presses C or Escape (cancel/back key shown in every sub-scene prompt), or (c) a server action succeeds (Apple2Interface clears `localScene` before calling `processState` with the new state)
+- Each sub-scene shows an explicit Cancel key in its prompt hint
 
 **`promptDef` structure**:
 
 ```lua
 promptDef = {
   type   = "key",              -- "key" (single keypress) or "type" (typed + Enter)
-  keys   = {"F", "R", "T"},   -- valid keys for "key" mode
-  label  = "(F)ight (R)un (T)hrow",  -- display hint shown on terminal
-  onKey  = function(key, state, actions) ... end,  -- fires GameActions
-  onType = function(text, state, actions) ... end, -- "type" mode only
+  keys   = {"F", "R", "T"},   -- valid keys for "key" mode (uppercase single chars)
+  label  = "(F)ight (R)un (T)hrow",  -- display hint shown at bottom of terminal
+  onKey  = function(key, state, actions) ... end,
+  -- For "type" mode:
+  onType = function(text, state, actions) → string|nil end,
+  --   Returns nil on success (Apple2Interface clears localScene, waits for StateUpdate)
+  --   Returns an error string to re-display on terminal and re-prompt without scene change
+  typePlaceholder = "amount (A=all): ",  -- prefix shown in input line
 }
 ```
 
-Sub-scenes (BuySell, Warehouse, Wu, Bank) are local client state — they don't require a server round-trip to enter. The server is only contacted when an action is taken.
+**Type mode input rules**:
+- The "A" shorthand is supported: if submitted text is `"A"` or `"a"`, `onType` resolves it to the appropriate maximum quantity (same logic as the modern panels: all cash for repay, all cargo for sell, all hold space for buy, etc.) before calling `GameActions`
+- On invalid input (non-numeric, negative, zero, exceeds valid range), `onType` returns an error string. Apple2Interface prints the error to Terminal and re-calls `KeyInput.setPrompt(promptDef, ...)` so the player is re-prompted without re-rendering the whole scene
+- On success, `onType` returns nil; Apple2Interface clears the input line and `localScene`, and waits for the next StateUpdate to re-render
 
-**AtPort menu** (example output):
+**AtPort menu example** (HK, all options shown):
 ```
 HONG KONG                         Jan 1860
 Cash: $400  Debt: $5,000  Bank: $0  Guns: 0
@@ -207,10 +284,12 @@ Prices:
   Arms:    $78      General: $9
 
 (B)uy  (S)ell  (T)ravel  (W)arehouse
-(K)Bank  (E)Wu  (!)Settings  (Q)uit
+(K)Bank  (R)etire  (!)Settings  (Q)uit
 ```
 
-**Combat menu** (example output):
+*(Wu interaction activates automatically when arriving at HK — there is no manual Wu entry key in the AtPort menu.)*
+
+**Combat menu example**:
 ```
 BATTLE!!                        SW: 100%
 Enemy ships: 5 remaining
@@ -219,34 +298,40 @@ Enemy ships: 5 remaining
 (F)ight  (R)un  (T)hrow cargo overboard
 ```
 
+**Settings sub-prompt** (accessible via `!` at AtPort only — not reachable from Combat, ShipOffers, WuSession, or GameOver):
+```
+Switch interface? (M)odern / (A)pple II / (C)ancel
+```
+
 ### `KeyInput.lua`
 
-Handles player input and calls back into PromptEngine.
+Handles player input and calls back into Apple2Interface.
+
+**Mobile detection**: Uses `UserInputService.TouchEnabled` (the standard Roblox idiom for detecting touch/mobile devices).
+
+**`setPrompt(promptDef, state, actions)`**: Disconnects previous input listeners, destroys mobile virtual buttons if any, then activates the new mode.
 
 **Key mode** (`promptDef.type == "key"`):
-- `UserInputService.InputBegan` → if `input.KeyCode` matches a key in `promptDef.keys` → calls `promptDef.onKey(key, state, actions)`
-- Mobile: renders a row of `TextButton`s at screen bottom, one per key in `promptDef.keys`. Tapping fires the same callback.
+- Desktop: `UserInputService.InputBegan` → converts `input.KeyCode` to uppercase letter → checks against `promptDef.keys` → calls `promptDef.onKey(key, state, actions)`
+- Mobile (`TouchEnabled == true`): renders a row of `TextButton`s at screen bottom (ZIndex 50, above Terminal), one per key in `promptDef.keys`, labeled with the key letter. Tapping fires the same `onKey` callback.
 
 **Type mode** (`promptDef.type == "type"`):
-- Captures keystrokes into a local string buffer
-- Backspace removes last character
-- Enter submits: calls `promptDef.onType(buffer, state, actions)` and clears buffer
-- Buffer is shown live via `Terminal.showInputLine()`
-- Mobile: Roblox's native on-screen keyboard appears automatically via a hidden `TextBox`
-
-**Mobile detection**: `GuiService:IsTenFootInterface()` or screen width below a threshold (e.g., 768px).
+- Desktop: captures `UserInputService.InputBegan` for printable characters; Backspace removes last character; Enter submits. Buffer shown live via `Terminal.showInputLine(promptDef.typePlaceholder .. buffer)`.
+- Mobile: a hidden `TextBox` (size 0×0, off-screen) is focused to trigger Roblox's native on-screen keyboard. The `TextBox.Text` is mirrored to `Terminal.showInputLine()` each frame via a `RunService.RenderStepped` connection. `TextBox.FocusLost` with `enterPressed == true` submits the buffer.
 
 ### `GlitchLayer.lua`
 
-Stub. Creates a transparent `Frame` covering the full screen at ZIndex 100.
+Stub. Creates a transparent `Frame` covering the full screen, parented to the `TextParent` frame inside the Terminal's ScreenGui at ZIndex 100 (above all terminal content).
 
 ```lua
-function GlitchLayer.new(screenGui)
+function GlitchLayer.new(terminalGui)
+  -- terminalGui is the ScreenGui returned by Text.GetTextGUI()
   local frame = Instance.new("Frame")
-  frame.Size = UDim2.new(1, 0, 1, 0)
+  frame.Size = UDim2.fromScale(1, 1)
   frame.BackgroundTransparency = 1
   frame.ZIndex = 100
-  frame.Parent = screenGui
+  frame.Visible = false
+  frame.Parent = terminalGui.TextParent
   return {
     enable  = function() frame.Visible = true end,
     disable = function() frame.Visible = false end,
@@ -255,7 +340,7 @@ function GlitchLayer.new(screenGui)
 end
 ```
 
-Future implementation will add scan lines, phosphor bloom, random pixel glitches as children of this frame.
+Future implementation will add scan lines, phosphor bloom, and random pixel glitches as children of this frame without requiring changes to other modules.
 
 ---
 
@@ -293,17 +378,17 @@ end)
 
 ## Interface Switching
 
-The settings entry point differs by interface:
+Settings is reachable only from AtPort-equivalent scenes (not during Combat, ShipOffers, WuSession, or GameOver). The server `SetUIMode` handler guards with `if type(state) ~= "table" then return end` as all handlers do; no additional server-side guard is needed since the client never offers the settings option during those scenes.
 
-- **Modern interface**: A small settings button added to PortPanel (visible only when not in combat or game-over)
-- **Apple II interface**: `(!)Settings` key available in the AtPort menu
+- **Modern interface**: A standalone settings button created by ModernInterface, positioned in the PortPanel region, visible only when `not state.gameOver and state.combat == nil and state.shipOffer == nil`
+- **Apple II interface**: `(!)Settings` key available only in the AtPort scene promptDef
 
-Both show a sub-prompt:
+Both present:
 ```
 Switch interface? (M)odern / (A)pple II / (C)ancel
 ```
 
-On confirmation, `GameActions.setUIMode(newMode)` fires. The bootstrapper detects the `uiMode` change in the next `StateUpdate`, calls `currentAdapter.destroy()`, and instantiates the new adapter. No rejoin required.
+On confirmation, `GameActions.setUIMode(newMode)` fires. The bootstrapper detects `state.uiMode` changed (comparing to `currentMode`), calls `currentAdapter.destroy()`, and instantiates the new adapter. No rejoin required.
 
 ---
 
@@ -316,7 +401,7 @@ On confirmation, `GameActions.setUIMode(newMode)` fires. The bootstrapper detect
 - `GameService.server.lua`: +1 handler
 
 **Not required** (existing code is already clean enough):
-- No panel changes
+- No panel changes (settings button is a standalone element in ModernInterface)
 - No engine module changes
 - No ViewModel/MVC extraction
 - No test spec changes

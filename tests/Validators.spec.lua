@@ -14,10 +14,22 @@ return function()
       expect(Validators.canBuy(s, 1, 1, 1000)).to.equal(false) -- 1 opium at 1000 > 400 cash
     end)
 
-    it("returns false when quantity exceeds hold space", function()
+    it("returns false when quantity exceeds hold space at non-HK port", function()
       local s = GameState.newGame("cash")
+      s.currentPort = 2  -- Shanghai (not Hong Kong)
       s.cash = 1000000
       expect(Validators.canBuy(s, 61, 1, 1)).to.equal(false)  -- 61 units, only 60 hold
+    end)
+
+    it("allows buying over hold capacity at Hong Kong", function()
+      local s = GameState.newGame("cash")  -- starts at HK (port 1)
+      s.cash = 1000000
+      expect(Validators.canBuy(s, 100, 4, 1)).to.equal(true)  -- 100 units > 60 hold, but HK
+    end)
+
+    it("still checks cash at Hong Kong", function()
+      local s = GameState.newGame("cash")  -- 400 cash, at HK
+      expect(Validators.canBuy(s, 1, 1, 1000)).to.equal(false)  -- too expensive even at HK
     end)
 
     it("returns true when total cost exactly equals cash", function()

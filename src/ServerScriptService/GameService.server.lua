@@ -120,7 +120,13 @@ Remotes.TravelTo.OnServerEvent:Connect(function(player, destination)
       or math.floor(destination) ~= destination then return end
 
   local err = TravelEngine.canDepart(state, destination)
-  if err then pushState(player) return end
+  if err then
+    if err == "ship is overloaded" then
+      Remotes.Notify:FireClient(player, "Ship is overloaded! Offload cargo to warehouse before departing.")
+    end
+    pushState(player)
+    return
+  end
 
   TravelEngine.timeAdvance(state)
   state.destination   = destination
@@ -191,6 +197,7 @@ Remotes.TravelTo.OnServerEvent:Connect(function(player, destination)
               state.currentPort   = newPort
               state.destination   = newPort
               state.currentPrices = PriceEngine.calculatePrices(state.basePrices, newPort)
+              destination         = newPort  -- sync local so HK offer check uses actual port
               Remotes.Notify:FireClient(player,
                 string.format("We've been blown off course to %s!", Constants.PORT_NAMES[newPort]))
             end
@@ -202,6 +209,7 @@ Remotes.TravelTo.OnServerEvent:Connect(function(player, destination)
             state.currentPort   = newPort
             state.destination   = newPort
             state.currentPrices = PriceEngine.calculatePrices(state.basePrices, newPort)
+            destination         = newPort  -- sync local so HK offer check uses actual port
             Remotes.Notify:FireClient(player,
               string.format("We've been blown off course to %s!", Constants.PORT_NAMES[newPort]))
           end
@@ -359,13 +367,16 @@ Remotes.RestartGame.OnServerEvent:Connect(function(player)
   local state = playerStates[player]
   if type(state) ~= "table" or not state.gameOver then return end
   local wasTutorialSeen = state.seenTutorial  -- preserve so tutorial doesn't replay
-  local newState = GameState.newGame("cash")
+  local prevStartChoice = state.startChoice or "cash"  -- preserve original start choice
+  local prevUIMode = state.uiMode                      -- preserve interface mode
+  local newState = GameState.newGame(prevStartChoice)
   newState.currentPrices = PriceEngine.calculatePrices(newState.basePrices, newState.currentPort)
   newState.holdSpace = newState.shipCapacity
     - newState.shipCargo[1] - newState.shipCargo[2]
     - newState.shipCargo[3] - newState.shipCargo[4]
     - newState.guns * 10
   newState.seenTutorial = wasTutorialSeen
+  newState.uiMode = prevUIMode
   if not wasTutorialSeen then
     newState.pendingTutorial = true  -- tutorial still pending; fires on first HK arrival
   end

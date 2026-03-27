@@ -11,12 +11,18 @@ FONTS = [
         'png':  'TaipanStandardFont.png',
         'xml':  'TaipanStandardFont.xml',
         'chars_per_row': 16,
+        'range_start': 32,
+        'range_end': 127,   # 32 + 96 - 1
+        'chars_count': 96,
     },
     {
         'name': 'TaipanThickFont',
         'png':  'TaipanThickFont.png',
         'xml':  'TaipanThickFont.xml',
         'chars_per_row': 32,
+        'range_start': 32,
+        'range_end': 223,   # 32 + 192 - 1
+        'chars_count': 192,
     },
 ]
 
@@ -25,8 +31,8 @@ CELL_H      = 16   # content height in px
 CELL_PITCH  = 16   # cell_w + 2px separator
 ROW_PITCH   = 18   # cell_h + 2px separator
 ORIGIN      = 2    # first cell starts at x=2, y=2 (after 2px border)
-XADVANCE    = 16   # cursor advance = full cell pitch
-LINE_HEIGHT = 18   # line advance = full row pitch
+XADVANCE    = 14   # cursor advance = same as content, no additional spacing
+LINE_HEIGHT = 16   # line advance = same as content, no additional spacing
 BASE        = 16   # baseline = bottom of cell
 
 
@@ -70,10 +76,10 @@ def generate_xml(font):
         '  <pages>',
         f'    <page id="0" file="{font["png"]}" />',
         '  </pages>',
-        '  <chars count="95">',
+        f'  <chars count="{font["chars_count"]}">',
     ]
 
-    for c in range(32, 127):
+    for c in range(font['range_start'], font['range_end']):
         x, y = char_cell(c, chars_per_row)
         lines.append(
             f'    <char id="{c}" x="{x}" y="{y}"'

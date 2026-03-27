@@ -8,6 +8,13 @@ local Players          = game:GetService("Players")
 
 local isMobile = UserInputService.TouchEnabled
 
+-- Roblox KeyCode.Name for number keys are spelled out ("One", "Two", etc.)
+-- Map them to digit characters for matching against prompt key sets.
+local NUMKEY_MAP = {
+  One = "1", Two = "2", Three = "3", Four = "4",
+  Five = "5", Six = "6", Seven = "7", Eight = "8", Nine = "9", Zero = "0",
+}
+
 local KeyInput = {}
 
 function KeyInput.new(screenGui)
@@ -85,10 +92,11 @@ function KeyInput.new(screenGui)
         table.insert(connections,
           UserInputService.InputBegan:Connect(function(input, gameProcessed)
             if gameProcessed then return end
-            local name = input.KeyCode.Name  -- e.g. "F", "R", "T", "Exclamation"
+            local name = input.KeyCode.Name  -- e.g. "F", "R", "T", "One", "Two"
             -- Map common keys to their character
             local char = name
             if #name == 1 then char = name:upper()
+            elseif NUMKEY_MAP[name] then char = NUMKEY_MAP[name]
             elseif name == "Exclamation" then char = "!"
             elseif name == "Escape" then char = "C"   -- Escape acts as Cancel
             end
@@ -140,11 +148,18 @@ function KeyInput.new(screenGui)
               if terminal then terminal.showInputLine(placeholder) end
               local err = promptDef.onType(submitted, state, actions)
               if err and promptDef._onError then promptDef._onError(err) end
+            elseif input.KeyCode == Enum.KeyCode.Escape then
+              -- Escape in type mode submits empty string (cancel)
+              typeBuf = ""
+              if terminal then terminal.showInputLine(placeholder) end
+              local err = promptDef.onType("", state, actions)
+              if err and promptDef._onError then promptDef._onError(err) end
             elseif input.KeyCode == Enum.KeyCode.Backspace then
               typeBuf = typeBuf:sub(1, -2)
               if terminal then terminal.showInputLine(placeholder .. typeBuf) end
             else
               local char = input.KeyCode.Name
+              if NUMKEY_MAP[char] then char = NUMKEY_MAP[char] end
               if #char == 1 then
                 typeBuf = typeBuf .. char
                 if terminal then terminal.showInputLine(placeholder .. typeBuf) end

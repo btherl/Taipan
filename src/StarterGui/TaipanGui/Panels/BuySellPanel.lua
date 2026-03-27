@@ -53,6 +53,9 @@ function BuySellPanel.new(parent, onBuy, onSell, onEndTurn)
     local raw = amountBox.Text:upper()
     if raw == "A" then
       if isSell then return state and state.shipCargo[selectedGood] or 0
+      elseif state and state.currentPort == Constants.HONG_KONG then
+        local price = (state.currentPrices or {})[selectedGood] or 1
+        return math.floor((state.cash or 0) / math.max(1, price))
       else return state and state.holdSpace or 0 end
     end
     return tonumber(raw) or 0

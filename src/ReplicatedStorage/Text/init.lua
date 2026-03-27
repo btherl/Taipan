@@ -191,11 +191,7 @@ function Text:Update(DeltaTime)
 			self.Sprites[i]:AddManual(text[i], animation)
 			self.Sprites[i]:Play(text[i], true)
 
-			if text[i] == " " then
-				total_x_length += frame.xadvance * self.TextSize
-			else
-				total_x_length += frame.width * self.TextSize
-			end
+			total_x_length += frame.xadvance * self.TextSize
 		end
 
 		-- Position sprites
@@ -210,10 +206,7 @@ function Text:Update(DeltaTime)
 
 		for i = 1, length do
 			local letter = text[i + 1] or text[i]
-			local x_advance = self.FontData[Unicode[letter]].width
-			if letter == " " then
-				x_advance = self.FontData[Unicode[letter]].xadvance
-			end
+			local x_advance = self.FontData[Unicode[letter]].xadvance
 
 			self.Sprites[i].Position = Vector2.new(current_x, current_y)
 

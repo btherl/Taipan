@@ -82,18 +82,34 @@ function CombatEngine.onScreenCount(combat)
   return n
 end
 
+-- ── Consistency guard ────────────────────────────────────────────────────────
+
+-- Reconcile enemyTotal with actual on-screen + waiting ships.
+-- Fixes desync caused by flee/partial-escape double-counting (pre-fix saves).
+local function reconcileEnemyTotal(combat)
+  local actual = CombatEngine.onScreenCount(combat) + combat.enemyWaiting
+  if combat.enemyTotal > actual then
+    combat.enemyTotal = actual
+  end
+end
+
 -- ── Fight action ──────────────────────────────────────────────────────────────
 
 -- Fire all guns. Returns { sunk=N, fleeCount=N }.
 -- Mutates combat grid, enemyTotal, enemyOnScreen, enemyWaiting.
 -- If all enemies destroyed, sets combat.outcome = "victory".
 function CombatEngine.fight(state, combat)
+  reconcileEnemyTotal(combat)
+
   if state.guns == 0 then
     return { sunk = 0, fleeCount = 0, noGuns = true }
   end
 
   -- Ensure grid is populated before firing
   if CombatEngine.onScreenCount(combat) == 0 then
+    if combat.enemyTotal == 0 then
+      combat.outcome = "victory"
+    end
     return { sunk = 0, fleeCount = 0 }
   end
 
@@ -141,11 +157,13 @@ function CombatEngine.fight(state, combat)
     if fnR(s0) < sn * 0.6 / f1 then
       local w = fnR(sn / 3 / f1) + 1
       combat.enemyTotal   = combat.enemyTotal   - w
-      combat.enemyWaiting = math.max(0, combat.enemyWaiting - w)
-      -- Remove excess on-screen ships if needed
+      -- Subtract from waiting pool first; remainder must come from on-screen
+      local fromWaiting = math.min(w, combat.enemyWaiting)
+      combat.enemyWaiting = combat.enemyWaiting - fromWaiting
+      local fromScreen = w - fromWaiting
       local removed = 0
       for i = 10, 1, -1 do
-        if removed >= w then break end
+        if removed >= fromScreen then break end
         if combat.grid[i] ~= nil then
           combat.grid[i] = nil
           combat.enemyOnScreen = math.max(0, combat.enemyOnScreen - 1)
@@ -180,6 +198,7 @@ end
 -- Attempt to run. Returns true if escaped.
 -- Sets combat.outcome = "fled" on success.
 function CombatEngine.attemptRun(combat)
+  reconcileEnemyTotal(combat)
   local escaped = fnR(combat.runMomentum) > fnR(combat.enemyTotal)
   if escaped then
     combat.outcome = "fled"
@@ -196,10 +215,13 @@ function CombatEngine.partialEscape(combat)
 
   local w = fnR(combat.enemyTotal / 2) + 1
   combat.enemyTotal   = combat.enemyTotal   - w
-  combat.enemyWaiting = math.max(0, combat.enemyWaiting - w)
+  -- Subtract from waiting pool first; remainder must come from on-screen
+  local fromWaiting = math.min(w, combat.enemyWaiting)
+  combat.enemyWaiting = combat.enemyWaiting - fromWaiting
+  local fromScreen = w - fromWaiting
   local removed = 0
   for i = 10, 1, -1 do
-    if removed >= w then break end
+    if removed >= fromScreen then break end
     if combat.grid[i] ~= nil then
       combat.grid[i] = nil
       combat.enemyOnScreen = math.max(0, combat.enemyOnScreen - 1)
@@ -232,6 +254,7 @@ end
 -- Apply enemy fire for one round. Mutates state.damage, state.guns.
 -- Returns { gunDestroyed=bool, damageDealt=N, liYuenIntervened=bool, sunk=bool }
 function CombatEngine.enemyFire(state, combat)
+  reconcileEnemyTotal(combat)
   local f1  = combat.encounterType
   local sn  = combat.enemyTotal
   local i   = math.min(sn, 15)    -- effective shooters capped at 15

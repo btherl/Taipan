@@ -28,6 +28,10 @@ local function pad(s, width)
   return s
 end
 
+local function seg(segments)
+  return { segments = segments }
+end
+
 local function fmt(n)
   -- Format number with commas
   local s = tostring(math.floor(n))

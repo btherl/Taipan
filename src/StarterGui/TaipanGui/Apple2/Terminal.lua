@@ -2,16 +2,22 @@
 -- 24-row bitmap font display using the ReplicatedStorage.Text library.
 -- Uses TaipanStandardFont at TextSize=3: 40 cols x ~22 fully-visible rows.
 -- Rows 23-24 may be partially clipped (CRT overscan authenticity).
+--
+-- Lines may be single-font: { text = string, color = Color3 }
+-- or multi-font segmented:  { segments = { {text, color, font?}, ... } }
+-- font defaults to "TaipanStandardFont" if omitted from a segment.
 
 local Players           = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Text              = require(ReplicatedStorage.Text)
 
-local ROWS       = 24
-local TEXT_SIZE  = 3
-local ROW_HEIGHT = 48   -- 16 virtual px * TextSize 3
-local X_OFFSET   = 30   -- left margin: sprites are center-anchored so x=0 clips the first glyph
-local GREEN      = Color3.fromRGB(140, 200, 80)
+local ROWS        = 24
+local TEXT_SIZE   = 3
+local ROW_HEIGHT  = 48   -- 16 virtual px * TextSize 3
+local X_OFFSET    = 30   -- left margin: sprites are center-anchored so x=0 clips the first glyph
+local CHAR_WIDTH  = 14 * TEXT_SIZE  -- 42 virtual px per char (both fonts share xadvance=14)
+local GREEN       = Color3.fromRGB(140, 200, 80)
+local DEFAULT_FONT = "TaipanStandardFont"
 
 local Terminal = {}
 
@@ -31,27 +37,80 @@ function Terminal.new(displayOrder)
   bg.BorderSizePixel    = 0
   bg.Parent             = gui.TextParent
 
-  -- Fixed pool of ROWS Text objects (one per row)
-  local rows = {}
+  -- rowObjs[i] = array of Text objects for row i (one per font segment)
+  local rowObjs = {}
   for i = 1, ROWS do
-    local t = Text.new("TaipanStandardFont", true)  -- automatic_update = true
-    t.Parent    = gui.TextParent
-    t.Position  = Vector2.new(X_OFFSET, (i - 1) * ROW_HEIGHT)
-    t.TextSize  = TEXT_SIZE
+    local t = Text.new(DEFAULT_FONT, true)
+    t.Parent     = gui.TextParent
+    t.Position   = Vector2.new(X_OFFSET, (i - 1) * ROW_HEIGHT)
+    t.TextSize   = TEXT_SIZE
     t.TextColor3 = GREEN
-    t.ZIndex    = 1
-    rows[i] = t
+    t.ZIndex     = 1
+    t.FontName   = DEFAULT_FONT  -- custom field for change detection
+    rowObjs[i] = { t }
   end
 
-  -- Buffer: which logical line is in which row slot
-  -- buffer[row] = { text = string, color = Color3 }
+  -- Buffer: buffer[row] = { text, color } or { segments = {{text, color, font?}, ...} }
   local buffer = {}
   for i = 1, ROWS do buffer[i] = { text = "", color = GREEN } end
 
+  -- Sync one row's Text objects to its buffer entry
+  local function syncRow(i)
+    local entry = buffer[i]
+
+    -- Normalise to segments array
+    local segs
+    if entry.segments then
+      segs = entry.segments
+    else
+      segs = {{ text = entry.text or "", color = entry.color or GREEN, font = DEFAULT_FONT }}
+    end
+
+    local current = rowObjs[i]
+
+    -- Destroy excess Text objects
+    for j = #segs + 1, #current do
+      current[j]:Destroy()
+      current[j] = nil
+    end
+
+    -- Update each segment (creating missing Text objects as needed)
+    local xPos = X_OFFSET
+    for j = 1, #segs do
+      local s    = segs[j]
+      local font = s.font or DEFAULT_FONT
+
+      if not current[j] then
+        -- Create missing Text object
+        local t = Text.new(font, true)
+        t.Parent   = gui.TextParent
+        t.TextSize = TEXT_SIZE
+        t.ZIndex   = 1
+        t.FontName = font
+        current[j] = t
+      elseif current[j].FontName ~= font then
+        -- Font changed — replace the Text object
+        current[j]:Destroy()
+        local t = Text.new(font, true)
+        t.Parent   = gui.TextParent
+        t.TextSize = TEXT_SIZE
+        t.ZIndex   = 1
+        t.FontName = font
+        current[j] = t
+      end
+
+      local obj = current[j]
+      obj.Text       = s.text or ""
+      obj.TextColor3 = s.color or GREEN
+      obj.Position   = Vector2.new(xPos, (i - 1) * ROW_HEIGHT)
+
+      xPos = xPos + #(s.text or "") * CHAR_WIDTH
+    end
+  end
+
   local function redrawAll()
     for i = 1, ROWS do
-      rows[i].Text       = buffer[i].text
-      rows[i].TextColor3 = buffer[i].color
+      syncRow(i)
     end
   end
 
@@ -63,17 +122,24 @@ function Terminal.new(displayOrder)
   end
 
   -- Splits on \n and appends each segment; scrolls when full
-  function term.print(text, color)
-    color = color or GREEN
-    -- Handle multi-line strings
-    local segments = text:split("\n")
-    for _, seg in ipairs(segments) do
-      -- Scroll: shift buffer up, place new line at bottom (row ROWS-1, leaving row ROWS for input)
+  -- Accepts either a string (single-font) or a segmented line table
+  function term.print(lineOrText, color)
+    if type(lineOrText) == "table" then
+      -- Segmented line: { segments = {...} }
       for i = 1, ROWS - 2 do
         buffer[i] = buffer[i + 1]
       end
-      buffer[ROWS - 1] = { text = seg, color = color }
-      -- Row ROWS is the input line -- preserve it (showInputLine manages it)
+      buffer[ROWS - 1] = lineOrText
+    else
+      -- Plain string (legacy): split on \n
+      color = color or GREEN
+      local parts = tostring(lineOrText):split("\n")
+      for _, part in ipairs(parts) do
+        for i = 1, ROWS - 2 do
+          buffer[i] = buffer[i + 1]
+        end
+        buffer[ROWS - 1] = { text = part, color = color }
+      end
     end
     redrawAll()
   end
@@ -81,19 +147,26 @@ function Terminal.new(displayOrder)
   -- Writes text to the dedicated input row (row ROWS) without scrolling
   function term.showInputLine(text)
     buffer[ROWS] = { text = text or "", color = GREEN }
-    rows[ROWS].Text = buffer[ROWS].text
-    rows[ROWS].TextColor3 = GREEN
+    syncRow(ROWS)
   end
 
   function term.setRowColor(row, color)
     if row < 1 or row > ROWS then return end
-    buffer[row].color = color
-    rows[row].TextColor3 = color
+    if buffer[row].segments then
+      for _, obj in ipairs(rowObjs[row]) do
+        obj.TextColor3 = color
+      end
+    else
+      buffer[row].color = color
+      rowObjs[row][1].TextColor3 = color
+    end
   end
 
   function term.destroy()
     for i = 1, ROWS do
-      rows[i]:Destroy()
+      for _, obj in ipairs(rowObjs[i]) do
+        obj:Destroy()
+      end
     end
     gui:Destroy()
   end

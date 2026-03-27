@@ -294,7 +294,6 @@ Remotes.TransferFromWarehouse.OnServerEvent:Connect(function(player, goodIndex, 
   if state.currentPort ~= Constants.HONG_KONG then return end
   if not validGood(goodIndex) or not validQty(quantity) then return end
   if state.warehouseCargo[goodIndex] < quantity then pushState(player) return end
-  if state.holdSpace < quantity then pushState(player) return end
   state.warehouseCargo[goodIndex] = state.warehouseCargo[goodIndex] - quantity
   state.shipCargo[goodIndex]      = state.shipCargo[goodIndex]      + quantity
   state.warehouseUsed             = state.warehouseUsed - quantity

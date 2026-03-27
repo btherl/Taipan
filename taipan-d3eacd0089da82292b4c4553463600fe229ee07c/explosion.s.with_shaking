@@ -1,0 +1,96 @@
+; explosion seen when we're hit by enemy fire.
+; currently just flashes the screen. the apple version is
+; kinda funky-looking, best way I can describe it is that it
+; looks like TV static. would be hard to imitate that on the
+; atari.
+
+; this version shakes the screen, but I'm not happy with how it
+; looks. Might revisit at some point.
+
+; original code was in C, and looked like:
+;; for(i = 0; i < 3; i++) {
+;; 	unsigned char color = PEEK(710) & 0xf0;
+;; 	unsigned char textcolor = PEEK(709);
+;; 	POKE(709,0);
+;; 	POKE(710, color | 0x0c);
+;; 	jsleep(10);
+;; 	POKE(710, color & 0xf0);
+;; 	jsleep(10);
+;; 	POKE(709,textcolor);
+;; }
+
+ .export _explosion
+ .include "atari.inc"
+ .importzp tmp1, tmp2, tmp3, ptr1
+ .import _jsleep
+
+color1save = tmp1
+color2save = tmp2
+shakectr = tmp3
+dlptr = ptr1
+
+; extern void explosion(void);
+_explosion:
+; {
+ ; save original colors (don't hardcode, they can be changed on the title screen)
+ lda COLOR1
+ sta color1save
+ lda COLOR2
+ sta color2save
+
+ ; setup display list pointer (for screen shaking)
+ lda SDLSTL
+ sta dlptr
+ lda SDLSTL+1
+ sta dlptr+1
+
+ ; dark text
+ lda #0
+ sta COLOR1
+
+ ldy #2 ; loop counter, counts 2 1 0
+
+;   {
+@loop:
+ lda color2save
+ ora #$0c   ; embrighten text background (without changing the hue)
+ sta COLOR2
+
+ lda #2
+ sta shakectr ; screen shaking counter
+
+;       {
+@shakeloop:
+ lda #$30 ; display list "blank 4 lines", replaces standard "blank 8 lines"
+ sta (dlptr),y
+
+ ldx #0      ;\
+ lda #$05    ; | jsleep(1)... _jsleep must NOT modify Y reg!
+ jsr _jsleep ;/
+
+ lda #$70 ; display list "blank 8 lines", put it back like it was
+ sta (dlptr),y
+
+ ldx #0      ;\
+ lda #$05    ; | jsleep(1);
+ jsr _jsleep ;/
+
+ dec shakectr
+ bne @shakeloop
+;      }
+
+ lda color2save ; put text bg back like it was...
+ sta COLOR2
+
+ ldx #0         ; ...and jsleep(10)
+ lda #$0a
+ jsr _jsleep
+
+ dey
+ bpl @loop ; we're done if Y < 0
+;   }
+
+ lda color1save ; restore text color
+ sta COLOR1
+ rts
+; }

@@ -1,0 +1,172 @@
+
+What's needed to get taipan onto a cart:
+
+joey_z is willing to manufacture carts like this:
+
++---------------------------------------------------------------------------+
+| Type 12: XEGS 32 KB cartridge                                             |
++---------------------------------------------------------------------------+
+
+ This bank-switched cartridge occupies 16 KB of address space between $8000
+ and $BFFF. The cartridge memory is divided into 4 banks, 8 KB each.
+ Bank 3 (the last one) is always mapped to $A000-$BFFF. Two lowest bits of
+ a byte written to $D500-$D5FF select the bank mapped to $8000-$9FFF.
+ The initially selected bank is random, although it seems that 0 gets chosen
+ the most often. Atari800 always selects bank 0 initially.
+
+ Reference:
+ http://www.atarimax.com/jindroush.atari.org/acarts.html#xegs
+
+"For bank-switched cartridges banks are numbered in the order they appear
+in the image file, starting with 0."
+
+So far, he's built a prototype (old EPROM, dead-bug mounted logic ICs,
+hand-wired) and is working on a cleaner version, using a 99 cent flash
+chip, for production. The only cart shells we've been able to find are
+actually for the C=64, and will supposedly work on any Atari 8-bit except
+the 1200XL.
+
+...so:
+
+Bank 3 has the startup code, uncompressed title screen, title code,
+and code to copy stuff from the banks to RAM, and the tail-end of the
+code that needs to be copied. The main portion of the code gets split up
+into bank-sized chunks... but the last bank of code doesn't need to be
+copied to RAM: I use a custom linker script to have cl65 org the RODATA
+segment there, plus a new segment called HIGHCODE, which is executable
+code that will run directly from the cartridge. This bank stays selected
+while the game is running, so it also has the font in it.
+
+There are currently 2 full banks of code (numbers 0, 1) that need to be
+copied to RAM. The bank with RODATA and HIGHCODE is bank 2.
+
+Code in bank 3 will copy all the chunks to correct place in RAM... and
+I don't need to leave room for DOS or anything else, so the code can be
+ORGed at $0400 (romable_taimain.raw target in the Makefile does this).
+
+romable_taimain.raw is the code that's org'ed to $400, that gets copied
+to RAM. rodata.8000 is the code/data that is used directly from ROM,
+in bank 2.
+
+Currently, romable_taimain.raw is 17251 bytes. $0400 + 18739 means the
+code ends at $4763. The BSS is right after that, and is less than a
+page. The OS will place the GR.0 display list at $7c20, and the stack
+will grow down from there to $7a20 (except it never grows that much).
+
+Copying the game code to RAM causes a short delay at boot (about 1/3 sec).
+It's barely noticeable, and lots of cartridge games have similar delays.
+The copying code could maybe be optimized to speed it up a little,
+but it's probably not even worth the effort.
+
+Amusingly, the Taipan cart will work on a 32K 800. Not a 16K Atari though.
+24K might become possible, but currently isn't (AFAIK there never were
+any stock 24K Ataris anyway, they'd be 8K or 16K machines with a 3rd-party
+RAM upgrade, and exceedingly rare these days).
+
+bank 3: fixed bank
+$a000-$bxxx - title screen data, dl, menu code,
+              memory size checker, code to
+              copy romable_taimain to RAM.
+$bxxx-$bfff - tail end of romable_taimain.raw (around 1400 bytes)
+$bffa-$bfff - cart trailer
+
+banks 0, 1: full banks of romable_taimain code
+$8000-$9dff - 31 pages (7936 bytes, 7.75K) of code
+$9f00-$9fff - unused, filled with $ff
+
+bank 2: RODATA and HIGHCODE segments.
+        This bank stays enabled after copying is done.
+        currently all but 200-odd bytes are used.
+$8000-$9bff - up to 7K of code/data (28 pages)
+$9c00-$9fff - font (1K). The font has a nonzero byte at $9ffc,
+              so the OS doesn't think there's a cartridge here
+              if this bank happens to come up at boot.
+
+Unused areas are filled with $ff (this is the default state for both
+flash and EPROM). For the banks that map at $8000, this includes the
+cart trailer area. A non-zero byte (our $ff) at $9ffc tells the OS that a
+cart isn't inserted in the right slot, so it won't try to initialize/run
+our cart as a right cart. Only bank 3 (that maps as a left cart) has a
+valid cart trailer... according to cart.txt, every once in a while, bank
+3 might come up selected in the $8000 bank at power on. This shouldn't
+matter: it'll be in both bank areas, and if the OS tries to init it as
+a right cart, the init/run addresses will point to the left cart area.
+
+--
+
+Changes the game needed for a cart version: Not many.
+
+.org $400 for taimain.xex. It could be a little higher, but making it
+as low as possible allows room for bugfixes or new features (if I ever
+add any).
+
+the RODATA segment is org'ed to $8000 (see cartbank2.cfg).
+
+all of the game's asm code, and a small amount of the C code, goes in
+a new segment called HIGHCODE (see cartbank2.cfg).
+
+checkmem.s isn't needed any longer... though there is a new memory checker
+(in bank 3) that says "32K required" if someone tries it on a 16K machine.
+
+Exiting the game (N at "Play again?" prompt) reboots since there's no
+DOS to exit to. You end up at the title screen again.
+
+Pressing the Reset key does a coldstart (reboot) in the cart version.
+You end up at the title screen again.
+
+The title decompression is gone: it just displays the title screen DL and
+data straight from ROM. The menu help text and the tail end of the display
+list are in RAM though, so the menu can change them. Moving the end of
+the DL to RAM means one extra black (border-colored) scanline appears
+due to the DL jump instruction. This is the only visible difference
+between the cart and xex builds.
+
+The font is located in ROM, on a 1K boundary, so CHBAS can point
+to it, rather than $2000 like the xex version.
+
+num_buf and firm are located in the BSS rather than page 6 as they
+are in the .xex version.
+
+--
+
+What would be *really* slick: figure out a way to split the code up
+across banks and include bankswitching in the logic, so it runs from
+the cart and switches banks as needed. This would allow Taipan to run
+on a 16K or even an 8K 400/800!
+
+Can it be done? Surely. Can it be done without rewriting everything
+in asm? Probably. Do I want to? Not really.
+
+--
+
+A 5200 version should be possible. At the moment, the .xex version is
+just under 32K (excluding the memory-checker segment). The 5200 would
+need its own conio, since cc65's conio for 5200 uses a 20x24 GR.1 screen
+and doesn't support input at all. It would also needs its own bignum
+library, since the bigfloat one uses the OS's floating point ROM (which
+doesn't exist on the 5200). Probably will do a bigint48 bignum lib.
+
+The 5200 cart window is 32K, so no bankswitching would be
+required. There's only 16K of RAM, but that'll be plenty.
+
+The numeric keys on the controller would be used for all input. When
+entering a firm name, it'll work like texting on a regular phone keypad,
+press 2 for A, press it again for B, etc. The * and # keys will be
+backspace and enter. Not sure what to use for A-for-all and delete.
+
+--
+
+The cartridge label should look like a classic brown 1st-gen 400/800 cart,
+even if the cart shell itself doesn't.
+
+Yellow text:
+
+TAIPAN!
+Computer Game
+
+and a bogus serial number.. CXU000001 or such (U for Urchlay).
+
+The top should say LEFT CARTRIDGE.
+
+If there's going to be a printed manual, it should be based on the Apple II
+version's manual. If there was one. If I can find a copy.

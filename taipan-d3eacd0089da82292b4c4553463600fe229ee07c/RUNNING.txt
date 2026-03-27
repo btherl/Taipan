@@ -1,0 +1,82 @@
+Running Taipan on a real or emulated Atari
+------------------------------------------
+
+Even though this version of Taipan is written more-or-less in C,
+it's not portable to other platforms. You can't compile it for Linux
+or Windows. To run it, you have to use an Atari 8-bit computer, real
+or emulated.
+
+Disk Executable
+---------------
+
+The game binary is called "taipan.xex". It's a standard Atari DOS
+'binary load' file, which expects to be run with no cartridges
+inserted. It may or may not work with a cartridge in, depending on
+which cart (some don't allow disk boots, and it has to be an 8K cart,
+not >= 16K). On XL/XE machines, you don't have to hold down Option to
+disable BASIC. In fact, you shouldn't have to remove the BASIC cart on
+a 400/800 (but I haven't tested this recently).
+
+You can run it on a real Atari computer: any 400/800/XL/XE model should
+be fine, so long as it has at least 40K of RAM. Use a SIO2PC cable and
+software like Atariserver (Linux) or APE (Windows) to serve the game to
+the Atari. If you can come up with a way to actually copy it to a real
+floppy disk, you probably want a bootable DOS disk with Taipan renamed
+to AUTORUN.SYS. Other options are MyPicoDOS (supports fast SIO if your
+drive does) and Fenders 3-sector loader.
+
+It's also possible to run Taipan in an emulator, such as Atari800,
+Atari++, or Altirra. For Atari800, you should be able to do this:
+
+  atari800 -nobasic taipan.xex
+
+For atari++, use:
+
+  atari++ -image.1 taipan.xex
+
+For Altirra, try this:
+
+  Altirra /run taipan.xex
+
+For 64-bit builds of Altirra:
+
+  Altirra64 /run taipan.xex
+
+[Altirra instructions courtesy of MoparStephen, with thanks]
+
+
+Cartridge
+---------
+
+The cartridge image is a 32KB XEGS bankswitched cartridge (what
+Atari800 and Altirra call "type 12"). Unlike the .xex version, the
+cartridge will work on a 32KB Atari.
+
+Two ROM images are built:
+
+taipan.cart is a "tagged" cartridge image, for use with emulators that
+know how to read the cartridge type from the CAR header.
+
+taipan.rom is the raw ROM image, exactly 32KB in size. Use this with
+emulators that don't understand CAR headers. This is also what you'd
+use on real hardware. For burning to an EPROM, you'll need to build
+or scavenge a cartridge with the correct banking logic, and burn
+taipan.rom (the raw ROM image) to a 32KB chip. You could also use a
+multi-cart (flash or similar).
+
+The cartridge can be run in the Atari800 emulator thus:
+
+  atari800 taipan.cart
+
+For atari++, use the raw ROM image, since it doesn't fully support
+.cart images:
+
+  atari++ -carttype xegs -cartpath taipan.rom
+
+For Altirra, one of these should work:
+
+  Altirra taipan.cart
+  Altirra64 taipan.cart
+
+Coming soon: You will also be able to purchase a Taipan cartridge from
+the AtariAge store. Maybe.

@@ -1,0 +1,136 @@
+
+Note: This manual is nowhere near complete!
+
+User's Manual for Atari 8-bit Taipan
+------------------------------------
+
+To play Taipan, first load the game from disk or insert the
+cartridge. See RUNNING.txt for details on how to load the game.
+
+
+Gameplay Summary
+----------------
+
+Taipan is turn-based. Each turn consists of a trading phase (when your
+ship is in port) and a transport phase (when your ship is sailing to
+another port). If you're attacked by pirates during transport, there
+is also a combat phase.
+
+During trading, you can buy and sell cargo at any port. Hong Kong is
+your home port: that's where your bank and warehouse are located,
+so when you're in Hong Kong you have the option to Visit Bank and
+Transfer Cargo.
+
+Hong Kong is also where the shipyard is located. If your ship is
+damanged, repairs are available (for a price) when you arrive in
+Hong Kong.
+
+There's also a gentleman known as Elder Brother Wu in Hong Kong. He
+loans money and collects donations for the local church, and is
+rumored to have connections with Li Yuen's pirate gang.
+
+When you're ready to leave port, choose Quit Trading from the menu.
+You'll be asked for a destination, and then your ship will set sail.
+This is the transport phase of the turn.
+
+During transport, you might encounter a storm at sea. If this
+happens when your ship is heavily damaged, there's a chance your
+ship will sink, so make sure to keep your ship in good repair. Even
+a well-maintained ship can be blown off course (to some other port
+besides your chosen destination).
+
+You also might get attacked by pirates. If this happens, you enter the
+combat phase of the turn. Otherwise, you'll arrive in port and begin
+your next turn.
+
+Details
+-------
+
+Once the game is loaded, you'll see the title screen, with a picture
+of a sailing ship (a lorcha, to be exact). At the title screen, you
+can customize gameplay before starting the game, using these keystrokes:
+
+B - Change background color. This cycles through all 16 hues available
+    on the Atari.
+T - Change text brightness. Cycles through 4 levels, from bright to dark.
+S - Enable/disable sound. This controls the "whistle" alert sounds in the
+    game, but not the key click sound. On XL/XE machines, the keyclick
+    will be disabled; on 400/800 it will be enabled.
+Space or Return - Start the game. For the disk version, the rest of the
+    game will load from disk (once it's loaded, you can turn off the drive;
+    Taipan doesn't use it). For the cartridge version, the game starts
+    immediately.
+Escape - Shows help, listing the above keystrokes on the bottom line of the
+    screen. Each press of Escape cycles to the next keystroke.
+
+When the game starts, the first thing you'll do is "name your firm". This
+is the name of your trading company, and can be anything you like, up to
+22 characters. The name doesn't affect gameplay; it's just for fun.
+
+The next screen offers you the choice of starting with either:
+
+1 - Cash, and a debt (but no guns)
+2 - 5 guns, no cash, and no debt.
+
+Your ship has a cargo capacity of 60 units either way, but each gun
+takes up 10 units, so option 2 gives you only 10 units for carrying
+cargo. Later in the game, you'll get the options to buy guns and
+upgrade your ship to higher capacity.
+
+If you choose option 1, you can start trading immediately, but
+remember to pay back your debt to Elder Brother Wu (he lives in Hong
+Kong; go there to make payments). Very Bad Things can happen to those
+who ignore this advice. The debt has interest that accrues every turn,
+so don't wait too long. You'll also have to run if you get attacked
+(or throw cargo, once you've bought some): You won't have guns to
+fight back with, at first.
+
+With option 2, it takes longer to start trading. You'll have to sail
+around to different ports, waiting to be attacked by pirates. If you
+defeat them in battle, you'll collect plunder from them in the form
+of cash, which you can use to start trading. However, you won't get
+very rich with only 10 cargo units on your ship, so upgrade as soon
+as you get the offer!
+
+Once you've made the choice, the game proper begins. You'll start out in
+Hong Kong. Whenever you're in a port, the Status screen is displayed. This
+shows lots of information [todo, fill in]
+
+Trading in the world of Taipan works just like real life: buy low and sell high.
+There are 4 cargo types, in order from least expensive to most:
+
+General Cargo - this is the miscellaneous stuff that cargo ships
+carry. It might be raw materials (sugar, tar, coffee, pig iron), or
+finished goods (casks of wine, clothing, jewelry). To simplify gameplay,
+these are lumped together as one category.
+
+Arms - Weaponry. Muskets (flintlock and otherwise), swords, etc. You
+can't use these to fight other ships; they're just cargo, but
+commanding a better price than General Cargo.
+
+Silk - Bolts of raw silk cloth. Pretty expensive stuff.
+
+Opium - A highly addictive drug, but not without medical uses. It's
+risky to trade in opium becase it's illegal in most ports. However,
+the potential gains may be worth the risk.
+
+Combat
+------
+
+During combat, you have three choices: Fight, Run, or Throw Cargo. If
+your ship doesn't have any guns, don't bother trying to fight. Running
+away is always an option, but the enemy will chase you, so you can't
+always escape right away. Throw Cargo means you have your crew throw
+some of your cargo into the water, in hopes that it will distract the
+pirates or satisfy their greed, allowing you to get away safely.
+
+When the battle first starts, you choose between Fight, Run, or Throw
+Cargo. During the fight, you can change your orders at any time by
+pressing the key for the new order (f, r, or t).
+
+If you get impatient during combat, you can use "Turbo" mode:
+hold Shift when you press F or R (Fight or Run). This disables the
+animations and delays, so each combat round happens very quickly. If
+the fight starts going badly, you can press any key to exit Turbo mode
+and return to normal speed.
+

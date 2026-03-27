@@ -1,0 +1,312 @@
+For the .xex build (but not the cartridge), the title screen uses
+a crude form of compression, which I'll call ZRLE (zero-run length
+encoding). It's a special-purpose compression scheme I came up with,
+to meet the following requirements:
+
+- Must be able to compress the Taipan title screen by at least 33%
+  (66% compression ratio, where the decompress code is counted as part
+  of the compressed file size).
+
+- Must be able to decompress in less than 250 bytes of 6502 asm
+  code (2 single-density sectors on disk).
+
+- Must decompress title screen in less than 1/4 sec on the Atari.
+
+All 3 requirements are exceeded slightly: the screen is compressed at a
+60% ratio, the decompressor is around 160 bytes of object code, and it
+runs in approximately 1/5 of a second.
+
+Things that are NOT requirements: it doesn't need to compress anything
+else well, just the title screen. It turns out that it works pretty well
+for bitmapped graphics like the Atari uses, or any kind of file that's
+likely to have large areas of all 0 bytes, but e.g. it can't compress an
+ASCII or ATASCII text file at all (because there are pretty much never
+any null bytes in a human-readable text file).
+
+Apologia:
+---------
+
+I'm aware that cc65 has a zlib implementation, but it doesn't quite meet
+the requirements: it's slow, large (linking it adds 781 bytes to the
+executable size), and the best DEFLATE compression I could manage for
+my title screen was 2806 bytes (using 7z). Add to that the 781 bytes of
+zlib code and the other required libs for a C program, and I end up with
+something like a 65% compression ratio (since I'm counting the code size
+as part of the file size), and it takes 2/3 of a second to decompress. So,
+it meets one of my requirements, but not all of them. Which should not be
+taken as a criticism of cc65's zlib implementation: It's amazingly small,
+efficient, and easy to use. It's just that deflate is a general-purpose
+compression algorithm, and I thought I could do a better job with a
+purpose-built one... which I think I've done.
+
+I didn't know exomizer existed, before I started on my compression scheme.
+If I'd known, and if I'd tried it out, I probably would have just used
+it instead. It has a better compression ratio (55% for my title screen,
+including decomp code) and decompresses fast enough.
+
+Theory of operation:
+--------------------
+
+Unlike real RLE, ZRLE only compresses runs of 0-bytes. Non-zero bytes
+are stored as-is, not compressed at all. Also unlike real RLE, ZRLE
+won't work on arbitrary input data. Why?
+
+ZRLE relies on some byte values being unused in the input. In other words,
+if the file contains every byte value 0 to 255, it can't be compressed
+with ZRLE. There needs to be at least one unused value per length of
+null run found in the file, because the unused values are used as markers
+telling the decoder how long each run of 0-bytes is.
+
+There is no "escape" byte in ZRLE, or any sort of block structure. Each
+byte is either a byte of pixels, or a marker indicating a run of 0-bytes.
+
+In other words, if the input looks like:
+
+01 00 00 02 00 00 03 00 00 00 04
+
+...there are 2 lengths of zero-run: 2 and 3. The fact that there are
+two runs of length 2 doesn't affect the algorithm (in fact it helps
+the compression ratio). Here are the runs, illustrated in glorious
+ASCII art:
+
+01 00 00 02 00 00 03 00 00 00 04
+   \___/    \___/    \______/
+   run of   run of    run of
+  2 zeroes  2 zeroes  3 zeroes
+
+For each length of zero-run found in the file, an otherwise-unused byte
+is assigned as a marker for that length. The above input might be encoded
+as:
+
+01 05 02 05 03 06 04
+
+...where 05 represents a run of two zeroes, and 06 represents a run of
+three zeroes.
+
+This means there are no escape bytes, markers, or counts stored in
+the file. Each run of zero-bytes collapses into one byte of data,
+which we'll call a code value. All bytes that aren't code values, are
+just uncompressed data bytes, used as-is.
+
+If there aren't enough unused values, the encoder will fail, saying it's
+out of codes.
+
+But how can this be decoded?
+
+The encoder creates a table for the decoder to use, of course. The
+table is written to the file comptitle.s, along with the rest of the
+decoder code from comptitle.s.in. This means the decoder is specific to
+the encoded file, not general-purpose. If we weren't on such a limited
+system as the Atari 800, the table would be part of the output file,
+not the code (like the "dictionary" in a gzipped file, etc).
+
+Each byte value in the compressed data either represents itself (is a
+plain data value) or some number of consecutive zero bytes (is a code
+value). The table has an entry for each byte value 0-255 (conceptually
+anyway; see below), and if the byte value represents itself, the table
+entry will be zero. If it represents a zero-run, the table entry will
+be non-zero, and will be the number of bytes in the run.
+
+For a "run" of one zero-byte, the encoder doesn't bother to encode it as
+a run: a plain zero is stored in the output file instead. This doesn't
+affect the file size, but does save one encoded value.
+
+Here's the above example again:
+
+01 00 00 02 00 00 03 00 00 00 04
+
+It encoded to:
+
+01 05 02 05 03 06 04
+
+The table built into the decoder will look like:
+
+byte value | definition
+-----------+-----------
+01         | 0
+02         | 0
+03         | 0
+04         | 0
+05         | 2
+06         | 3
+
+This tells the decoder that 01, 02, 03 represent themselves (they're
+copied from compressed input to decompressed output as-is)... the value
+05 represents a run of 2 consecutive zeroes, and 06 represents a run
+of 3 zeroes.
+
+The decoder will look at the input (the compressed data), one byte at a
+time, and consult the table to decide what to do with each byte. "Output"
+here is the decompressed data, which you can think of as a list of bytes,
+which starts out empty.
+
+input| table lookup |                 |
+data | result       | action          | output after action is taken
+-----+--------------+-----------------+---------------------------------
+01   | 0            | append 01       | 01
+     |              |                 |
+05   | 2            | append 2 zeroes | 01 00 00
+     |              |                 |
+02   | 0            | append 02       | 01 00 00 02
+     |              |                 |
+05   | 2            | append 2 zeroes | 01 00 00 02 00 00
+     |              |                 |
+03   | 0            | append 03       | 01 00 00 02 00 00 03
+     |              |                 |
+06   | 3            | append 3 zeroes | 01 00 00 02 00 00 03 00 00 00
+     |              |                 |
+04   | 0            | append 04       | 01 00 00 02 00 00 03 00 00 00 04
+
+As you can see, the final output after the last byte of data is read,
+matches the original input exactly.
+
+In this dumb example, it's pretty obvious that the encoded data plus
+the table size is bigger than the original input, so the "compression"
+is actually making it bigger. But it serves to illustrate, I hope.
+
+The table lookup values are stored as one byte, so a run of up to 255
+consecutive zeroes can be stored as a single byte. A run of more than
+that could be stored as 2 or more runs in a row, but the current encoder
+just aborts if it encounters a run of 256 zeroes (Taipan doesn't need
+it so I didn't implement it).
+
+The astute reader will have noticed a that a table lookup result of 1,
+meaning a zero-run of length 1, is possible to encode, but useless
+(might as well just store the single zero as plain data), and including
+an entry in the table for 1 makes the table larger by one entry for
+no purpose. The actual encoder (see below) doesn't encode zero-runs
+of length 1, it just stores a 0 as-is.
+
+For Taipan, the title screen (newtitle.png) contains large black areas.
+A black pixel is a 0 bit. The title screen data ends up packed 8 pixels
+per byte (1 bit per pixel), so those black areas are represented by runs
+of consecutive zero bytes.
+
+Each row of pixels in the image has 256 bits, or 32 bytes. The bytes
+are arranged in consecutive order: the leftmost 8 visible pixels are the
+first byte of the first row... after enough bytes to fill up the row, the
+next byte in the file is the leftmost 8 pixels of the 2nd line, etc etc.
+
+The algorithm treats the input as a stream of bytes, and doesn't know
+nor care how they're arranged on the screen, but if you know how they're
+stored you can see that a black area at the right-hand end of one line
+is "joined" with a black area at the left-hand end of the next line,
+as far as the compression is concerned.
+
+Specifics:
+----------
+
+The original image newtitle.png is the authoritative source for the title
+screen that ends up being built into the game binary. Its resolution is
+256x184 pixels. If this image is ever modified, the Makefile will cause
+all the stuff mentioned below to be rebuilt.
+
+First, a script called newtitle.pl reads the PNG image and creates an
+Atari loadable file called titledata.xex. It contains a 6-byte Atari
+header followed by the pixel data, one bit per pixel. The pixel data
+is 5888 bytes. Formerly, before the compression scheme was invented,
+titledata.xex was used as-is in creating the game binary taipan.xex.
+
+The compression code is written in Perl, in the file titlecomp.pl. It
+reads titledata.xex, applies the compression, and writes a file called
+comptitle.dat, containing the raw compressed data (minus the table
+definition). It also creates an assembly source file comptitle.s,
+containing the table definition and the rest of the decoding code.
+
+If you look at titlecomp.pl, you'll see it takes an optional argument,
+forcing it to use a particular byte value as the first code value. This
+number is determined by:
+
+$ perl titlecomp.pl < titledata.dat
+200 unique byte values
+36 available run codes >= 128
+1st code 128, last 189, table size 62
+3437 bytes compressed data, 58.3% ratio
+used 25 codes
+
+The table size worked out to 62 bytes. We can likely do better than that,
+but the process isn't automated. The "used 25 codes" bit is important:
+we call titlecomp.pl with that number as an argument to its -l option:
+
+$ perl titlecomp.pl -l 25 < titledata.dat
+200 unique byte values
+36 available run codes >= 128
+133 57
+147 57
+148 62
+149 65
+151 64
+154 62
+162 57
+163 67
+164 71
+166 70
+== optimum firstcode value is 133
+
+So now we compress the file for real, using 133 as the first code:
+
+$ perl titlecomp.pl 133 < titledata.dat
+200 unique byte values
+36 available run codes >= 133
+1st code 133, last 189, table size 57
+3437 bytes compressed data, 58.3% ratio
+used 25 codes
+
+Plug the number 133 into the Makefile (under the comptitle.xex target) and
+we're done. Whew, that was a lot of work just to save 5 bytes... the good
+news is that this procedure only needs to be repeated if newtitle.png is
+edited. The other good news is, those 5 bytes wouldn't have hurt anything
+anyway. Worst case scenario, they would have added 1 sector to the file
+size (and made it take ever so slightly longer to load).
+
+Wait, what do I mean by smallest table size? Well, I said the table
+contains one entry for each byte value 0 to 255... This isn't really
+true. Byte values less than 128 *always* represent themselves, so I
+don't bother storing them in the table. Also, the perl script knows the
+lowest and highest numbered code values, so it only emits the portion
+of the table between these two numbers (and modifies the code to not do
+a table lookup, if it's outside the range). If you can read 6502
+assembly, looking at the code will make this much clearer.
+
+comptitle.s is then assembled, to create comptitle.xex.
+
+When comptitle.s is assembled, it includes the contents of comptitle.dat
+with an ".incbin", so the data ends up in comptitle.xex along with the
+table and decoder. This file contains 2 Atari binary load segments:
+the data + table + decoder, and an initialization segment telling the
+Atari to run the decoder subroutine immediately after loading.
+
+comptitle.xex ends up being the first part of the complete taipan.xex game
+binary, so after its init routine exits, the rest of the game continues
+to load. In particular, the next segment is another init routine that
+tells the Atari to actually display the decoded title screen data.
+
+Compression Ratio:
+------------------
+
+If we want to calculate the compression ratio, the size of comptitle.xex
+is the compressed file size, and the size of titledata.xex is the original
+file size:
+
+$ ls -l comptitle.xex titledata.xex 
+-rw-r--r-- 1 urchlay users 3602 Jan  6 02:08 comptitle.xex
+-rw-r--r-- 1 urchlay users 5894 Jan  6 01:55 titledata.xex
+
+The percentage is:
+
+$ perl -e 'printf "%.1f\n", 3602/5894*100'
+61.1
+
+Actually, we have to do the calculations in disk sectors. A standard Atari
+floppy disk holds 125 data bytes per sector (or less, but we assume full
+sectors because that's how taipan.xex is generated). It's impossible
+to read less than a full sector from the drive. So titledata.xex is 48
+sectors, and comptitle.xex is 29.
+
+What we really care about is loading time, not disk space: the title
+screen should be visible as soon as possible after the program starts
+loading (to give the user something to look at, while the huge bloated
+game code loads). Standard 810 or 1050 drives load around 10 sectors
+per second, we saved 19 sectors or around 2 seconds.  The decompression
+takes 1/5 of a second, so it's a net gain.
+

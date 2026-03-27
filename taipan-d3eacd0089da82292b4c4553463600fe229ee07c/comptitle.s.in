@@ -1,0 +1,128 @@
+;;; see titlecompression.txt to understand how this works!
+
+; cl65 -o comptitle.xex -t none comptitle.s
+
+; comptitle.s.in is used by titlecomp.pl, to generate comptitle.s.
+; __VARIABLE__ stuff is filled in by titlecomp.pl, q.v.
+; DON'T bother to edit comptitle.s (edit the .in file instead)!
+
+ .include "atari.inc"
+
+ ; size of uncompressed image, in bytes (but, needs to be
+ ; a multiple of $100).
+;imgsize = __SIZE__
+imgsize = $1700
+
+ ; these both need to be page-aligned. destination also needs
+ ; to be aligned on a 4K boundary.
+start = $8000
+;start = $9000
+;destination = $2400
+
+srcptr = FR0
+dstptr = FR0+2
+pagecount = FR0+4
+tmp = FR0+5
+
+ .word $ffff
+ .word start
+ .word end-1
+
+ .org start
+
+compdata:
+ .incbin "comptitle.dat"
+
+; table runs __FIRSTCODE__ to __LASTCODE__
+table:
+ __TABLE__
+
+ ; decompression code starts here
+init:
+ lda #0
+ sta SDMCTL ; turn off the screen. newtitle.s turns it back on.
+
+ ;;; for benchmarking only, remove!
+ ;sta RTCLOK
+ ;sta RTCLOK+1
+ ;sta RTCLOK+2
+
+ lda #>imgsize
+ sta pagecount
+ lda #>compdata
+ sta srcptr+1
+ lda #>destination
+ sta dstptr+1
+ lda #0
+ sta srcptr
+ sta dstptr
+ tay
+
+copyloop:
+ lda (srcptr),y
+ bpl storebyte  ; 0-127 always represent themselves
+ cmp #__LASTCODE__+1
+ bcs storebyte  ; anything above the last code represents itself
+ sta tmp
+ sec
+ sbc #__FIRSTCODE__
+ bcc notcode    ; anything below the 1st code represents itself
+ tax
+ lda table,x
+ beq notcode
+
+ ; got a zero-run code. A = number of bytes of zeroes to store.
+storezerorun:
+ sty tmp
+ tay
+ dey
+ lda #0
+ tax
+szloop:
+ sta (dstptr,x)
+ jsr incdest
+ beq done
+nohi2:
+ dey
+ bpl szloop
+
+ ldy tmp
+ clc
+ bcc storedone
+
+notcode:
+ lda tmp
+
+storebyte:
+ sty tmp
+ ldy #0
+ sta (dstptr),y
+ jsr incdest
+ beq done
+nohi:
+ ldy tmp
+
+storedone:
+ iny
+ bne copyloop
+ inc srcptr+1
+ bne copyloop ; always branch (since srcptr never wraps around to 0)
+
+done:
+ ;;; for benchmarking only, remove!
+ ;.byte $02 ; CIM, drops us to atari800 monitor
+ rts
+
+incdest:
+ inc dstptr
+ bne iddone
+ inc dstptr+1
+ dec pagecount
+iddone:
+ rts
+
+end:
+ .word INITAD
+ .word INITAD+1
+ .word init
+

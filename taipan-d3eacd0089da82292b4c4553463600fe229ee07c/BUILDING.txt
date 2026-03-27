@@ -1,0 +1,50 @@
+Build Requirements for Atari 8-bit Taipan:
+
+- cc65. At least version 2.15. 2.13.x and 2.14 are specifically known
+  not to work. To build the regular executable (taipan.xex), you can
+  use any version from 2.15 to 2.19 (latest as of this writing). If
+  you're still using cc65-2.14, it's about 8 years old, isn't it time
+  to upgrade?
+
+- make. I've used GNU make 3.82 and 4.1. I also occasionally test
+  with an old version of BSD make, but not often. If you can't get
+  BSD make to work for you, install gmake from ports/pkgsrc or whatever
+  your platform uses.
+
+- gcc. I've used versions 4.8.2 and 5.5.0, probably any version will do.
+  I've also tested with clang and pcc. Pretty much any C compiler
+  that produces native binaries for your platform should work. It's
+  used for various host tools (convfont.c, textcomp.c, mkcart.c,
+  gzip2deflate.c)
+
+- perl. I used version 5.18.1 and later upgraded to 5.22.2. Probably
+  any 5.x version will work.
+
+- perl's Image::Magick module (which in turn requires the C ImageMagick
+  library). I've used versions 6.8.6 and 6.9.4, probably any recent version
+  will do.
+
+- git. You don't exactly *need* this to build the code, but if you
+  have it, the git hash will be built into the binary and appear on
+  the title screen.
+
+- A UNIX/POSIX environment. At least, you need command like cat, cp, rm,
+  and a shell that does I/O redirection. Linux, BSD, and Mac OS X should
+  be fine. If you're on Windows, try Cygwin.
+
+If you plan to edit the port status screen, you'll need the Atari800
+emulator. It's also handy for actually playing the game, whether you
+build it or use the provided binary.
+
+
+Building:
+
+Hopefully you can just type "make" to create the taipan.xex binary. If
+it doesn't work, you're likely missing one or more of the requirements
+listed above.
+
+If you'd prefer a cartridge image, "make cart" will build both a raw image
+(taipan.rom) and an image with an Atari800 CART header (taipan.cart).
+
+Once you've compiled Taipan, see RUNNING.txt to find out what to do
+with the executable.

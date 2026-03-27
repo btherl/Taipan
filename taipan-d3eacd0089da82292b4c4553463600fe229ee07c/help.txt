@@ -1,0 +1,4 @@
+\B:Change BG Color       \E\s\c:more
+\T:Change Text Color     \E\s\c:more
+\S:Sound (now \O\N )       \E\s\c:more
+\S\p\a\c\e/\R\e\t\u\r\n:Start Game \E\s\c:more

@@ -1,0 +1,39 @@
+License Info for Atari 8-bit Taipan
+-----------------------------------
+
+The legal status of this is quite murky. The original game is still
+copyrighted, though quite a few clones of it have been made for
+various platforms over the years with no complaints from the copyright
+holder (whoever that actually is).
+
+This Atari port includes font and graphics data ripped straight from
+the original Apple game, plus more font data ripped from the Atari 800's
+OS ROM.
+
+The Linux port of taipan, according to its .lsm file, is GPL (version
+uspecified). It's very obviously a derivative work of the Apple
+BASIC version, so I'm not sure it was really legal to release as
+GPL. But it's been out there for decades unchallenged... My C code is
+definitely a derivative work of the Linux port, so it's GPL also. The
+assembly code and host tools (convfont, mkcart, etc) are my own work,
+and I release them under the GPL (version 2).
+
+I'm not sure how to handle binary redistributions. Most people are
+just going to grab the taipan.xex file and use it, and it'll end up in
+various Atari archives. If I *don't* provide a binary, *nobody but me*
+will ever play this game (seriously, there aren't a lot of Atari 8-bit
+gamers who also would know how to set up a build environment for cc65,
+or even be interested in trying).
+
+Since the Atari is such a limited platform, I can't really include
+e.g. clickable (or even copy/pastable) links pointing to the
+source. Including the text of the GPL in the binary is impossible,
+or at least impractical: the GPLv2 license is around 18KB in size, or
+approximately half the usable memory in an Atari, or 2/3 the size
+of the existing Taipan binary.
+
+I hate to be this way but... I'm going to just allow binary
+redistribution, unless/until the author of the Linux Taipan C game
+complains about it. And when he does, I'm going to ask him if he
+actually got permission from the author of the Apple BASIC version to
+release his derivative work as GPL.

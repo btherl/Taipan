@@ -1,0 +1,103 @@
+; explosion seen when we're hit by enemy fire.
+; this draws something that looks a bit like TV static, only
+; it's a lot more regular and less random. it somewhat approximates
+; the apple version's explosion, but not all that closely.
+
+ .export _explosion
+ .include "atari.inc"
+ .importzp tmp1, tmp2
+ .import _jsleep
+
+static_loop_count = tmp1
+
+; extern void explosion(void);
+; {
+_explosion:
+
+ ldy #3 ; explosion_loop counter, counts 3 2 1
+
+;   {
+@explosion_loop:
+ lda #$03 ; static_loop runs 3 times
+ sta static_loop_count
+
+;     {
+@static_loop:
+ ldx #0         ; jsleep(2)
+ lda #$02
+ jsr _jsleep
+
+ ldx #2
+
+;         {
+;           {
+; let the top part of the screen display normally.
+; garbage begins to display on gr.0 line 8 (the one above the tops
+; of the top row of lorchas).
+@wait4scanline:
+ lda VCOUNT
+ cmp #(4+8)*4
+ bne @wait4scanline
+;           }
+
+;           {
+; load a different random font address on every scanline.
+; CHBASE is the hardware address, not the OS shadow!
+; This isn't as random as I'd like, because ANTIC ignores the
+; bottom 9 bits for GR.0: fonts are 1K and start on a 1K boundary,
+; so the code below picks one of 32 possible "fonts".
+; The LSR below limits us to the first 32K of memory, because:
+; - setting the font address to $d4 - $d7 causes ANTIC to read from
+;   the CCNTL (cart control) area at $d5xx, which makes SpartaDOS X
+;   spontaneously bankswitch (crashing the Atari).
+; - addresses $e0 - $e3 would be the ROM font, which doesn't look
+;   like static. On an XL/XE, $cc - $cf are the international
+;   font too.
+; - reading from the I/O chips in the $d000 area doesn't seem like
+;   a safe thing to do (though it might be OK).
+; If the 'sta WSYNC' were removed, we'd be switching fonts a lot
+; more than once per scanline... but ANTIC only seems to pay attention
+; to CHBASE at the start of a GR.0 modeline, so it's wasted effort.
+
+@randfont:
+ sta WSYNC
+ lda RANDOM
+ lsr ; avoid reading upper 32K of address space
+ sta CHBASE
+ lda VCOUNT
+ cmp #(4+23)*4
+ bne @randfont ; stop garbage 2 lines after the bottom row of lorchas
+;           }
+
+; temporarily restore ROM font pointer, so the rest of the frame will
+; display normal spaces.
+ lda #$e0
+ sta CHBASE
+
+ lda RTCLOK+2
+;           {
+; wait for start of next TV frame.
+; OS will restore hw CHBASE reg from CHBAS shadow.
+@wait4frame:
+cmp RTCLOK+2
+ beq @wait4frame
+;           }
+
+ dex
+ bne @wait4scanline
+;       }
+
+ dec static_loop_count
+ bne @static_loop
+;     }
+
+ ldx #0         ; jsleep(10)
+ lda #$0a
+ jsr _jsleep
+
+ dey
+ bne @explosion_loop ; we're done if Y==0
+;   }
+
+ rts
+; }

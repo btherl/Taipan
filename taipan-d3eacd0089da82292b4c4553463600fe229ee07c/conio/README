@@ -1,0 +1,27 @@
+This is a modified conio. It doesn't draw a cursor at all.
+
+More particularly, the standard cc65 conio always draws a cursor, whether
+the cursor is enabled or not. When it's disabled, the cursor is drawn
+as a space character.
+
+Also, the cputc() here no longer requires \r\n to move the cursor
+to the start of the next line. \n alone does it, and \r isn't
+treated specially (it's just a ctrl-R, prints a graphics character).
+
+The cputcxy() routine has been deleted, since taipan doesn't use it.
+
+Benefits of doing this:
+
+- Faster and smoother screen updates
+- Slightly smaller code (100-odd bytes)
+- No more "cursor ghosts" at timed prompts
+- No need for a hide_cursor() function
+- print_msg() from textdecomp.s is simplified, it no longer has
+  to print a carriage return every time it sees a newline in a
+  compressed message.
+- In taipan.c, cputs("foo\r\n") no longer requires the \r, saves
+  one byte per string.
+
+Disadvantage: Have to draw the cursor myself when needed. It turns out
+that only agetc() needs to do this, so not a big deal. Also had to
+add an agetc_no_cursor() for timed_getch() to use.

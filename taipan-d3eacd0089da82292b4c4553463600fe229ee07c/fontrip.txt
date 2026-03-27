@@ -1,0 +1,41 @@
+
+process of ripping the font was something like...
+
+look at a screenshot of the Apple 2 version, pick a byte that occurs on
+2 successive lines in a couple of the characters (I chose the 10100000
+that shows up in capital C and O).
+
+write perl script to find occurrences of 2 of that byte (findfont.pl)
+and print offsets of each one.
+
+use bitmapdump.pl to eyeball the file at those locations, until I found
+the letter C, then look up & down to find where the visible characters
+start and end. Use dd to grab just those bytes into another file.
+
+..except, the above was fruitless until I got the idea to search for the
+byte with its bits reversed (00000101). Turns out, the font is stored
+in the disk image with the bits reversed. Maybe if I knew the Apple
+architecture, I'd have already known that?
+
+Anyway. To create an atari font, I mapped out the order the characters
+appear in the dump, and wrote convfont.c to overlay them onto the Atari
+ROM font (created from atariosb.rom with dd)... and for some reason,
+a few of the characters have vertical bars in the rightmost position,
+caused by bit 7 (in the original reversed format) being set. convfont.c
+just zeroes those out as needed.
+
+The end result is taifont.xex, containing 1024 bytes of data to be
+loaded at $BB00.
+
+To get it to work with a cc65 program, I had to create a linker script
+(custom.cfg). Ran this:
+
+ld65 --dump-config atari > custom.cfg
+
+Then edited it... all I changed was the ending address, which is
+now $B7FF (one byte below the font's load address). After compiling a
+taipan.xex with this config, I append taifont.xex and taipan.xex to make
+taipantext.xex (the finished game).
+
+The only thing the C code needs to do is POKE(756, 0xbb) in main()
+before printing any text.

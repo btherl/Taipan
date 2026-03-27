@@ -1,0 +1,23 @@
+Bug List for Atari 8-bit Taipan
+-------------------------------
+
+- The "negative interest" bug is currently missing, due to using
+  unsigned values for debt. Plus, it's cheating. I'm undecided
+  whether or not to use a bignum for debt; if I do, it will be
+  possible to have negative debt.
+
+- Not really a bug, but, the interest calculation for debt is slightly
+  different, due to using integer math. Very small debt amounts will grow
+  much faster than they should, then stabilize and converge towards the
+  correct values over time. This only happens when you have less than
+  10 in debt, which (at least for me) is a pretty rare situation.
+
+- A few things in the screen layout are slightly off compared to
+  the Apple version. Would really like to get it exact.
+
+- The 'Please limit your firm name to 22 characters' prompt is missing.
+  The Apple version actually allows you to type all you want until you
+  press Enter. This port works like the Linux version: as soon as you type
+  the 22nd character, it acts like you pressed Enter after it. A good
+  compromise might be to allow up to 22 characters, then any keypress
+  other than backspace or enter would show the "please limit" prompt.

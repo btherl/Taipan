@@ -1,0 +1,31 @@
+/* bignum implementation for little-endian (LSB-first) 6-byte integers.
+	Only constants and the bignum/bugnump data types need
+	be defined here. See bignum.h for API. */
+
+#define bignum(x) char x[6]
+#define bignump char *
+
+/****** constants ******/
+/* zero */
+#define BIG_0 { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 }
+
+/* bank interest rate is 0.5%, or .005, or 1/200 */
+#define BIG_200 { 0xc8, 0x00, 0x00, 0x00, 0x00, 0x00 }
+
+/* bignum 100, used for score calculations in final_stats() */
+#define BIG_100 { 0x64, 0x00, 0x00, 0x00, 0x00, 0x00 }
+
+/* one thousand, one million, one billion, one trillion
+   used by cprintfancy_big() */
+
+#define BIG_1K   { 0xe8, 0x03, 0x00, 0x00, 0x00, 0x00 }
+
+#define BIG_1M   { 0x40, 0x42, 0x0f, 0x00, 0x00, 0x00 }
+
+#define BIG_1B   { 0x00, 0xca, 0x9a, 0x3b, 0x00, 0x00 }
+
+#define BIG_1T   { 0x00, 0x10, 0xa5, 0xd4, 0xe8, 0x00 }
+
+/* max value for a ulong, 2**32-1 */
+#define BIG_MAX_ULONG { 0xff, 0xff, 0xff, 0xff, 0x00, 0x00 }
+

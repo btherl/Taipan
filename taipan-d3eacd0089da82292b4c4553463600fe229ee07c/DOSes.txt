@@ -1,0 +1,77 @@
+
+The intended target for the .xex version of Taipan is really a 48K 800
+with an 810 drive and DOS 2.0S. However, most people use something else
+these days.
+
+There are only two XL/XE specific things in Taipan:
+
+- The checkmem code attempts to disable built-in BASIC if
+  it's enabled, which won't work on an 800 (you get a "remove cartridge"
+  message instead). Most .xex file games won't work with a BASIC cart in,
+  so I don't consider this a problem (and at least Taipan fails gracefully
+  instead of splattering the screen with ANTIC gibberish).
+
+- Keyclicks are disabled on XL/XE, with POKE 731,1 (because the Apple II
+  version has no keyclick). This doesn't work on an 800, but doesn't
+  hurt anything either: You just get the game with keyclicks enabled,
+  which at least one of my testers prefers anyway.
+
+Unfortunately, the wide variety of Atari DOSes, both ancient and modern,
+plus the various new bits of hardware (MyIDE, Atarimax Flash cart, etc)
+leads to a compatibility nightmare. The rest of this file is a list of
+DOSes (and other loaders), and their compatibility with Taipan.
+
+At this point, all the "obvious" reasons for load failure have been
+addressed. Loaders that fail now probably do so for hard-to-diagnose
+reasons, or else because MEMLO is too high. Taipan loads at $2000,
+which should *not* be a problem for any useful Atari DOS.
+
+I've gone to this much trouble with testing because (a) there used to
+be some real issues, and (b) because inevitably, someone is going to
+find a DOS or loader that can't load it. I'm going to point to this
+documentation, and tell them their DOS/loader is broken, not my game.
+
+Tested on actual hardware:
+
+- Atari DOS 2.0S: success
+- Atari DOS 2.5: success
+- MyDOS 4.55 (floppy): success
+- MyDOS 4.55 (with MyIDE): success
+- SpartaDOS X: success, with "X" command (works with MIO enabled too)
+- SIDE2: success (older Taipan build though, need to get results for latest)
+- APE loader: success
+- DOS XL 2.30: success
+- Micro SpartaDOS 2.2 and 4.6: success.
+- RealDOS build 0032: success (even with MIO active and TDLINE running!)
+- Atarimax flash cart EXE loader: success
+- SpartaDOS 3.2dx: success when loading from floppy, hard disk, or
+                   MIO RAMdisk. Fails when attempting to load from APE
+                   emulated drive under this DOS (which I suspect isn't
+                   Taipan's fault).
+
+Tested on emulators:
+
+- atari800 3.1.0 direct xex loader: success
+- atari++ direct xex loader: success
+- altirra direct xex loader: success
+- SpartaDOS 3.2g and 3.2d on atari800: success (unexpectedly so)
+- MyDOS 4.50 (floppy) on atari800: success
+- SpartaDOS 1.1 on atari800: success (with STANDARD.SYS kernel).
+                             I doubt that exiting the game will
+                             work, as MEMLO is $2300 on this DOS.
+- BeweDOS 1.30: success.
+- MyPicoDOS 4.03 on atari800: success
+- Fenders 3-sector loader on atari800: success
+- Atari DOS 3.0 on atari800: success
+- Top DOS 1.5 on atari800: success
+- "DOS 2.6f" on atari800: success
+- Smart DOS 6.1d on atari800: success
+- Super DOS 2.9 on atari800: failure. MEMLO is $35c1 on this DOS,
+                             *way* too high!
+
+Note: all the oddball DOSes at the end of the list are ones I really
+used to run at various different times, in the old days. All the tests
+with atari800, other than the direct xex loading, were done with SIO
+patching disabled. On some of the DOSes, exiting the program may not work
+(answering N to the "play again?" prompt); I didn't test this with all
+of them. It at least works on 2.0S, 2.5, MyDOS, and SpartaDOS X.

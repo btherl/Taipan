@@ -1,0 +1,7 @@
+#!/usr/bin/perl -w
+
+use bytes;
+print chr($_) for (0xff, 0xff, 0x40, 0xbc, 0xff, 0xbf);
+undef $/;
+$_ = <>;
+print $_;

@@ -1,0 +1,236 @@
+Notes for Atari 8-bit Taipan
+----------------------------
+
+The Atari executable file format allows for concatenating executables.
+The result is still a valid executable. I use this to load the splash
+screen and custom font directly into memory before the main program loads.
+The Makefile documents how all this works, but it might seem pretty
+hairy if you're new to the Atari, C, Makefiles, and/or Perl.
+
+The Apple version of the game was expected to be run on a monochrome
+monitor. Like many other ports from the Apple to the Atari, there will
+be color artifacts when using a composite monitor. If this bothers you,
+you have several choices:
+
+- At the title screen, press B and T to adjust the background and text
+  colors. Different combinations will have more or less pronounced
+  artifacts.
+
+- Use a monochrome monitor. Zero artifacting, but you can't change the
+  colors of course.
+
+- Use a color monitor monitor with S-Video (separate chroma/luma)
+  inputs. This will greatly reduce or even eliminate color artifacting.
+
+- If you're stuck with composite or RF, try turning the color knob all
+  the way down (and the contrast as high as you can stand it).
+
+- In emulators, you can just disable artifacting.
+
+On PAL systems, the ship explosions and sinking animations will be 20%
+slower, and the prompt timeouts will be 20% longer (1 sec => 1.2 sec). I
+don't think this is a real issue (it's not like Taipan is a fast-paced
+arcade game).
+
+
+Deliberate differences between the Apple II and Atari ports:
+
+1. Turbo mode, in combat. See GAMEPLAY.txt.
+
+2. The Atari version is noticeably faster than the Apple version on II+ or
+   IIe. This is because it's written in C and assembly, not interpreted
+   BASIC. A IIgs on the other hand...
+
+3. "Press ESC for help" rather than ESC to start. Starting the game is
+   done with the space bar or return key.
+
+4. I made it possible to disable the sound, since it's kinda repetitive
+   and annoying, plus the game "freezes" while sounds are playing (no
+   threading on Atari!) which slows down gameplay.
+
+5. Added a way to change the background color and text brightness. Only
+   4 brightness levels, but all 16 Atari hues are available.
+
+6. The "do you wish me to go to:" prompt is different:
+   - It shows the ports' numbers in inverse video, except for the port
+     you're currently at (to let you know that's an invalid choice).
+   - You can press Enter to abort, in case you hit Q by accident. This
+     just returns you to the port status screen.
+
+7. Prompts that only accept one character no longer require pressing Enter.
+   Gameplay is more streamlined this way. Apple and Linux are inconsistent:
+   some prompts need Enter, some don't. In the Atari port, the only prompts
+   that require Enter are:
+   - naming your firm
+   - entering an amount of cash or items (but not if you hit A for "all")
+
+8. "We have 5 guns" is in an inverse video box. I think it looks nicer, and
+   it matches the "You can afford 5" inverse video box on the trading
+   screen.
+
+9. The + that indicates more ships offscreen is inverse video. I find
+   that I don't notice it's there, if it's normal video.
+
+10. Current seaworthiness is always displayed during combat, rather than
+    being overwritten with status messages. This is really important for
+    Turbo combat mode, but a nice enhancement for regular combat too.
+
+11. "You're ship is overloaded" => "Your ship is overloaded". Sorry,
+    grammar nazi.
+
+12. Updating the port status screen, and text printing in general, happens
+    faster and cleaner-looking, due to using C and asm rather than BASIC,
+    and also because the static parts of the screen aren't redrawn unless
+    they need to be. (Grammar nazi? That's a run-on sentence...)
+
+13. Apple uses floating point, no practical limit on cash/bank/debt.
+    Atari currently uses 32-bit unsigned longs for cash and debt,
+    though the bank is floating point. This leads to these gameplay
+    changes:
+
+    - If you try to make a sale, take out a loan, or withdraw from the bank
+      an amount that would put you over 4.3 billion cash, you get a
+      message "you cannot carry so much cash", and the transaction is
+      aborted.
+
+    - If your debt goes above 2 billion, you die and the game is over.
+
+    Making cash a floating point value is possible, but not worth the
+    effort as it's a *terrible* idea to carry billions (or even millions)
+    of cash around, due to the possibility of getting robbed. By the time
+    someone plays the game long enough to earn billions in cash, he'll know
+    to leave most of it in the bank, not carry it around.
+
+14. On Apple, price of General Cargo isn't always an integer (e.g. 6.5).
+    Due to item #13 above, it's always an integer on Atari. I just don't
+    think it adds anything to the game, and it would be a lot of work to
+    implement.
+
+15. On Apple, dead enemy ships sink one scanline at a time.
+    On Atari, it's one character (8 scanlines). Both platforms have
+    multiple sinking speeds, but the Atari speeds are faster.
+
+16. When entering numeric amounts and the firm name, the Atari Shift-Delete
+    key works as expected.
+
+17. When entering numeric amounts, pressing K or M inserts 3 or 6 zeroes.
+    This means you can type e.g. 100,000 as 100K, and 10,000,000 as 10M.
+
+18. When playing on an 800, the standard Atari keyclicks will be heard.
+    Disabling these on an 800 is non-trivial. On XL/XE machines, they are
+    disabled to mimic the Apple version.
+
+19. One prompt has been removed: "Limit your firm name to 22
+    characters" is gone (instead, you just can't type more than
+    the limit).
+
+20. The game doesn't beep at you when you enter something incorrect. This
+    is a stylistic decision (I hate error beeps). It does play the "bad
+    joss" sound in a few places instead (e.g. trying to enter an empty
+    firm name).
+
+21. The cartridge version of the game has in-game help, if you press the
+    ? key. So far this is only partly implemented.
+
+22. On the combat screen, the ship graphics are different: the ship is
+    1 pixel narrower than the Apple version, and the whole aspect ratio
+    is different due to hardware differences (Atari monochrome pixels are
+    taller than they are wide). Also, the damage to enemy ships isn't
+    exactly the same (but it's close enough IMO).
+
+23. The "Do you have business with Elder Brother Wu?" and "Will ye be
+    wanting repairs?" prompts show the default answer (N and Y,
+    respectively) the user gets if he presses Enter.
+
+24. On Apple, the firm name is drawn in a different font from the rest of
+    the game text. On Atari, it's the same font, in inverse video.
+
+25. On Apple, the maximum firm name length is 22 characters. On Atari,
+    it's 24.
+
+26. On the Atari, when you press R for "Retire", you are prompted "Are you
+    sure?". This is because it's *really annoying* to retire by accident,
+    when you meant to press T for "Transfer Cargo".
+
+Differences between the Apple II original and Linux port:
+
+1. Linux has an 80-column screen layout, Apple is 40.
+2. Apple version uses a custom font (actually, two, but I'm ignoring that).
+3. Apple has sound, Linux does not.
+4. Apple has graphical title screen, Linux has ASCII art.
+5. Apple has graphical ships during battles, Linux has ASCII art.
+6. On Apple, price of General Cargo isn't always an integer (e.g. 6.5).
+   As a consequence, the cash and bank amounts aren't always ints either.
+7. On Apple, some Y/N prompts (like 'Do you have business with Elder Brother
+   Wu') you can press Enter for No. Linux port waits until you hit Y or N.
+8. On Apple, ships show damage (get holes in them) as they get shot up.
+9. On Linux, you can overpay McHenry (though you get no benefit from it).
+   On Apple, payment amount gets clamped to the repair price, so you can
+   e.g. be asked to pay 50,000 when you have 70,000 and safely enter A
+   (you'll end up 100% repaired and still have 20,000 cash).
+10. On Apple, dead enemy ships sink one scanline at a time, and there are
+    at least 2 sinking speeds. On Linux, it's one character at a time.
+
+The plan for the Atari port is to mimic the Apple version as closely as
+possible... except #6 above. It doesn't really add anything to the game,
+and it complicates the code more than I want to deal with. Also #10
+will probably not happen (to me, the slow ship-sinking of the Apple
+version is annoying anyway).
+
+Right now, items 1, 2, 3, 4, 5, 7, 8, and 9 are implemented Apple-style;
+and 6, 10 are Linux-style.
+
+Future Ideas:
+
+- A 5200 version. Most of the existing code will work there, but there's
+  no keyboard, have to use the keypad on the joystick. Y/N prompts could
+  use 1/0 and/or the side buttons, naming the firm would go away (just
+  hardcode "Atari, Inc" or somesuch as the firm name), entering amounts
+  would use the keypad (# and * for A and Enter, maybe the side buttons
+  for K and M). Cargo types might be 1 for General Cargo, 2 for Arms,
+  etc (have to display that on screen), and have "1-Fight, 2-Run, 3-Throw
+  Cargo" in combat.
+
+- Seen on a web version of Taipan played on a phone: A Turbo option for
+  combat. Basically you press T to skip all the delays. It's still
+  possible to change your orders in mid-fight, but you have to be
+  quick. My implementation of this will make Turbo a toggle, not sure
+  if the web version does that. There will be some kind of indicator
+  "Press T for Turbo", which changes to "Turbo mode: Press T for normal",
+  something like that.
+
+I may do a "Taipan Plus" at some point. The regular Taipan game will be
+faithful to the original, and the Plus version could have some or all of:
+
+- More ports to dock at, some of which might have their own warehouses,
+  repair yards, etc.
+
+- More trade goods, not all of which are available at all ports.
+
+- Actual market trends, rather than a base price + random number. There
+  might be news events that cause prices to go up/down (e.g. Arms are
+  up at Saigon because there's a gang war in progress, Opium is up at
+  some port but the chances of getting busted are higher). This feature
+  actually exists in Art Canfil's TRS-80 Taipan "version 10".
+
+- Ability to control a fleet of ships. Each one will either be a cargo
+  ship or a warship.
+
+- A "Turbo Combat" feature like one of the phone versions I've seen. You
+  set your orders and hit Turbo, and it finishes the fight instantly,
+  but you can't change your mind about your orders (fight until you win
+  or die, or run until you escape or die).
+
+- Special missions. Someone at some port needs you to transport documents
+  or whatever, to some other port... you will almost certainly be attacked
+  by whoever's trying to get the documents though.
+
+- Rival trading companies. Their activities can influence prices, and
+  you can fight them and possibly salvage actual cargo.
+
+- Variable passage of time. Distant ports take longer to get to. Also,
+  winds or ship damage can slow you down.
+
+I dunno how many of the above will fit in the Atari's RAM. Probably have
+to rewrite the whole game from scratch in assembly before adding features.
+

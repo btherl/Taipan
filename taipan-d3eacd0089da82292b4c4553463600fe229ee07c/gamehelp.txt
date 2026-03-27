@@ -1,0 +1,76 @@
+#######################################
+# buy()
+# sell()
+# transfer(), to whouse
+# transfer(), from whouse
+# visit_bank(), deposit
+# visit_bank(), withdraw
+# elder_brother_wu() repay
+# elder_brother_wu() borrow
+# mchenry() amount
+Type the amount, then press Return.
+Press A for 'All'.
+Press K to insert three zeroes, or
+M for six zeroes.
+Press Return alone to abort
+########################################
+# port_choices()
+Type the number of the port you wish
+to sail to, or press Return to abort.
+########################################
+# port status menu (non-hongkong)
+Type the letter of your choice:
+B: Buy cargo, S: Sell cargo.
+Q: Quit trading: End this turn and sail
+   to another port.
+The warehouse and bank are only
+available at Hong Kong.
+########################################
+# port status menu (hongkong)
+Type the letter of your choice:
+B: Buy cargo, S: Sell cargo.
+Q: Quit trading: End this turn and sail
+   to another port.
+V: Visit bank (deposit,withdraw).
+T: Transfer cargo to,from warehouse.
+R: Retire: End the game and receive
+   your final score and rank.
+The warehouse and bank are only
+available at Hong Kong. You may retire
+only if your cash and bank account total
+a million or more.
+########################################
+# name_firm()
+Enter the name of your trading firm.
+This doesn't affect gameplay: it's just
+for fun. Use backspace to correct typos.
+Press Return when you're done.
+########################################
+# sea_battle()
+You're under attack! Your choices:
+F: Fight. Requires at least one gun.
+T: Throw cargo. You must have cargo.
+R: Run. You can always try to run.
+Press Shift F or Shift R for 'turbo'.
+You can press F,T,R at any time, to
+change your orders.
+########################################
+# elder_brother_wu()
+Elder Brother Wu is the loan shark.
+If you have debt, you can pay it now. He
+may also loan you money.
+########################################
+# li_yuen_extortion(): not really needed
+########################################
+# cash_or_guns(): not really needed
+########################################
+# mchenry() y/n: not really needed
+########################################
+# new_gun()
+Press Y for yes or N for no.
+Each gun takes up ten cargo hold units.
+########################################
+# new_ship()
+Press Y for yes or N for no.
+All your cargo and guns will be
+transferred to the new ship.

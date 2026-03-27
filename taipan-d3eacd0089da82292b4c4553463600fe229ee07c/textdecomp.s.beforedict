@@ -1,0 +1,86 @@
+
+; text decompressor for taipan.
+; text is packed 6 bits per character. see textcomp.c
+; for details.
+
+ .include "atari.inc"
+ .export _print_msg
+ .import _cputc
+
+ srcptr = FR1
+ outbyte = FR0 ; decoded 6-bit byte
+ bitcount = FR0+1 ; counts 8..1, current bit in inbyte
+ inbyte = FR0+2
+ ysave = FR0+3
+
+ .rodata
+table: ; outbyte values 53..63
+ .byte ' ', '!', '%', ',', '.', '?', ':', 39, 40, 41, $9b
+ tablesize = * - table
+
+ .ifdef CART_TARGET
+  .segment "HIGHCODE"
+ .else
+  .code
+ .endif
+
+; extern void __fastcall__ print_msg(char *msg);
+_print_msg:
+ sta srcptr
+ stx srcptr+1
+ lda #0
+ sta outbyte
+ ldy #$ff ; since we increment it first thing...
+
+ ldx #6 ; counts 6..1, current bit in outbyte
+@nextbyte:
+ iny
+ lda #8
+ sta bitcount
+ lda (srcptr),y
+ sta inbyte
+@bitloop:
+ asl inbyte
+ rol outbyte
+ dex
+ beq @decode ; got 6 bits
+ dec bitcount
+ bne @bitloop
+ beq @nextbyte
+
+@decode:
+ lda outbyte
+ bne @notend
+ rts ; 0 = end of message
+
+@notend:
+ cmp #27
+ bcs @notlower
+ adc #'a'-1 ; 1-26 are a-z
+ bne @printit
+
+@notlower:
+ cmp #52
+ bcs @notupper
+ adc #38 ; 27-52 are A-Z
+ bne @printit
+
+@notupper:
+ sbc #53 ; 53-63 are table lookups
+ tax
+ lda table,x
+
+@printit:
+ sty ysave ; _cputc trashes Y
+ jsr _cputc
+ ldy ysave
+ lda #0
+ sta outbyte
+ ldx #6
+ dec bitcount
+ beq @nextbyte
+ bne @bitloop
+
+ decodersize = * - _print_msg
+
+ .out .sprintf("print_msg() is %d bytes", decodersize + tablesize)

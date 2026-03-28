@@ -101,16 +101,17 @@ end
 function CombatEngine.fight(state, combat)
   reconcileEnemyTotal(combat)
 
-  if state.guns == 0 then
-    return { sunk = 0, fleeCount = 0, noGuns = true }
-  end
-
-  -- Ensure grid is populated before firing
+  -- Check for no remaining enemies first (before guns check, so victory is
+  -- detected even when the player has no guns)
   if CombatEngine.onScreenCount(combat) == 0 then
     if combat.enemyTotal == 0 then
       combat.outcome = "victory"
     end
     return { sunk = 0, fleeCount = 0 }
+  end
+
+  if state.guns == 0 then
+    return { sunk = 0, fleeCount = 0, noGuns = true }
   end
 
   local sunk = 0

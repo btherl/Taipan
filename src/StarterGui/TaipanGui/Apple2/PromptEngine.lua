@@ -28,12 +28,7 @@ local function pad(s, width)
   return s
 end
 
-local function seg(segments)
-  return { segments = segments }
-end
-
 local function fmt(n)
-  -- Format number with commas
   local s = tostring(math.floor(n))
   local result = ""
   local count = 0
@@ -53,7 +48,7 @@ local function statusLines(state)
   table.insert(lines, { text = string.format("Cash:%-11s Debt:%s",
     fmt(state.cash), fmt(state.debt)), color = AMBER })
   table.insert(lines, { text = string.format("Bank:%-11s Guns:%d",
-    fmt(state.bankBalance), state.guns), color = AMBER })
+	fmt(state.bankBalance), state.guns), color = AMBER })
   local sw = math.max(0, 100 - math.floor((state.damage or 0) / (state.shipCapacity or 1) * 100))
   table.insert(lines, { text = string.format("Hold: %d/%d  Damage: %d%%",
     state.holdSpace or 0, state.shipCapacity or 0, 100 - sw), color = AMBER })
@@ -74,49 +69,37 @@ local function priceLines(state)
 end
 
 local function atPortMenu(state)
-  -- Build the action menu based on what is available
   local isHK = (state.currentPort == HONG_KONG)
   local nw    = (state.cash or 0) + (state.bankBalance or 0) - (state.debt or 0)
   local canRetire = isHK and nw >= 1000000
-
-  -- Line 1 (all ports): Buy, Sell, Travel
   local menuLines = { "(B)uy  (S)ell  (T)ravel" }
-
-  -- Line 2 (Hong Kong only): Warehouse, Bank
   if isHK then
     table.insert(menuLines, "(W)arehouse  (K)Bank")
   end
-
-  -- Line 3 (all ports): Settings, Quit/Retire
   local line3Parts = {}
   if canRetire then
     table.insert(line3Parts, "(R)etire")
   end
   table.insert(line3Parts, "(P)Settings  (Q)uit")
   table.insert(menuLines, table.concat(line3Parts, "  "))
-
   local validKeys = {"B", "S", "T", "P", "Q"}
   if isHK then
     table.insert(validKeys, "W")
     table.insert(validKeys, "K")
   end
   if canRetire then table.insert(validKeys, "R") end
-
   return menuLines, validKeys
 end
 
--- Scene: AtPort
 local function sceneAtPort(state, actions, localSceneCb)
   local lines = {}
   for _, l in ipairs(statusLines(state)) do table.insert(lines, l) end
   for _, l in ipairs(priceLines(state)) do table.insert(lines, l) end
   table.insert(lines, { text = "", color = AMBER })
-
   local menuLines, validKeys = atPortMenu(state)
   for _, ml in ipairs(menuLines) do
     table.insert(lines, { text = ml, color = GREEN })
   end
-
   local promptDef = {
     type = "key",
     keys = validKeys,
@@ -142,7 +125,6 @@ local function sceneAtPort(state, actions, localSceneCb)
   return lines, promptDef
 end
 
--- Scene: Travel port selector
 local function sceneTravel(state, actions, localSceneCb)
   local lines = {}
   for _, l in ipairs(statusLines(state)) do table.insert(lines, l) end
@@ -156,7 +138,6 @@ local function sceneTravel(state, actions, localSceneCb)
     end
   end
   table.insert(lines, { text = "  [C] Cancel", color = DIM })
-
   return lines, {
     type = "key",
     keys = validKeys,
@@ -175,30 +156,31 @@ local function sceneTravel(state, actions, localSceneCb)
   }
 end
 
--- Scene: StartChoice
 local function sceneStartChoice(_state, actions, _localSceneCb)
   local lines = {
-    { text = "TAIPAN!",                                          color = AMBER },
-    { text = "",                                                  color = AMBER },
-    { text = "Elder Brother Wu says:",                           color = AMBER },
-    { text = "\"Do you have a firm, or a ship?\"",               color = AMBER },
-    { text = "",                                                  color = AMBER },
-    { text = "[F] FIRM -- $400 cash, $5000 debt",   color = GREEN },
-    { text = "[S] SHIP -- 5 guns, no cash or debt", color = GREEN },
+    { text = "Do you want to start . . .", color = AMBER },
+    { text = "", color = AMBER },
+	{ text = "  1) With cash (and a debt)", color = AMBER },
+	{ text = "", color = AMBER },
+	{ text = string.rep(" ", 16) .. ">> or <<", color = AMBER},
+	{ text = "", color = AMBER },
+	{ text = "  2) With five guns and no cash", color = AMBER },
+	{ text = string.rep(" ", 16) .. "(But no debt!)", color = AMBER},
+	{ text = "", color = AMBER },
+	{ text = string.rep(" ", 10) .. "?", color = AMBER},
   }
   return lines, {
     type = "key",
-    keys = {"F", "S"},
-    label = "(F)irm  (S)hip",
+    keys = {"1", "2"},
+    label = "Debt or Cash",
     onKey = function(key, _s, _a)
-      if key == "F" then actions.chooseStart("cash")
-      elseif key == "S" then actions.chooseStart("guns")
+      if key == "1" then actions.chooseStart("cash")
+      elseif key == "2" then actions.chooseStart("guns")
       end
     end,
   }
 end
 
--- Scene: GameOver
 local function sceneGameOver(state, actions, _localSceneCb)
   local reason = state.gameOverReason or "unknown"
   local lines = {
@@ -218,7 +200,6 @@ local function sceneGameOver(state, actions, _localSceneCb)
   end
   table.insert(lines, { text = "", color = AMBER })
   table.insert(lines, { text = "(R)estart", color = GREEN })
-
   return lines, {
     type = "key",
     keys = {"R"},
@@ -227,7 +208,6 @@ local function sceneGameOver(state, actions, _localSceneCb)
   }
 end
 
--- Scene: Settings sub-prompt
 local function sceneSettings(state, actions, localSceneCb)
   local currentMode = state.uiMode or "modern"
   local lines = {
@@ -250,13 +230,12 @@ local function sceneSettings(state, actions, localSceneCb)
       elseif key == "A" and currentMode ~= "apple2" then
         actions.setUIMode("apple2")
       else
-        if localSceneCb then localSceneCb(nil) end  -- already current, cancel
+        if localSceneCb then localSceneCb(nil) end
       end
     end,
   }
 end
 
--- Scene: Quit confirmation
 local function sceneQuitConfirm(_state, actions, localSceneCb)
   local lines = {
     { text = "Quit game? (Y/N)", color = AMBER },
@@ -275,35 +254,27 @@ local function sceneQuitConfirm(_state, actions, localSceneCb)
   }
 end
 
--- Scene: Combat
 local function sceneCombat(state, actions, localSceneCb)
   local combat = state.combat
   local total   = combat and combat.enemyTotal or 0
   local grid    = combat and combat.grid or {}
   local sw = math.max(0, 100 - math.floor((state.damage or 0) / (state.shipCapacity or 1) * 100))
-
-  -- Render enemy grid as ASCII: # = ship present, . = empty slot
   local gridStr = ""
   for i = 1, 10 do
     gridStr = gridStr .. (grid[i] ~= nil and "#" or ".")
   end
-
   local lines = {
-    { text = string.format("BATTLE!!%sSW: %d%%", string.rep(" ", 22), sw),
-      color = RED },
+    { text = string.format("BATTLE!!%sSW: %d%%", string.rep(" ", 22), sw), color = RED },
     { text = string.format("Enemy ships: %d remaining", total), color = AMBER },
-    { text = "[" .. gridStr .. "]", color = GREEN },
+    { text = string.format("[%s]%sGuns:%3d", gridStr, string.rep(" ", 18), state.guns), color = GREEN },
     { text = "", color = AMBER },
     { text = "(F)ight  (R)un  (T)hrow cargo overboard", color = GREEN },
   }
-
-  -- Include current cargo for throw context
   for i = 1, 4 do
     if (state.shipCargo[i] or 0) > 0 then
       table.insert(lines, { text = string.format("  %s: %d units", GOOD_NAMES[i], state.shipCargo[i]), color = AMBER })
     end
   end
-
   return lines, {
     type = "key",
     keys = {"F", "R", "T"},
@@ -318,11 +289,9 @@ local function sceneCombat(state, actions, localSceneCb)
   }
 end
 
--- Scene: Combat throw - select which good to throw
 local function sceneCombatThrowGood(state, actions, localSceneCb)
   local lines = {
     { text = "Throw which cargo overboard?", color = AMBER },
-    { text = " (1)Opium (2)Silk (3)Arms (4)General", color = GREEN },
   }
   for i = 1, 4 do
     if (state.shipCargo[i] or 0) > 0 then
@@ -330,7 +299,6 @@ local function sceneCombatThrowGood(state, actions, localSceneCb)
     end
   end
   table.insert(lines, { text = "  [C] Cancel", color = DIM })
-
   return lines, {
     type = "key",
     keys = {"1","2","3","4","O","S","A","G","C"},
@@ -342,7 +310,6 @@ local function sceneCombatThrowGood(state, actions, localSceneCb)
         local idx = GOOD_KEY_MAP[key] or tonumber(key)
         if idx and idx >= 1 and idx <= 4 then
           if (state.shipCargo[idx] or 0) <= 0 then
-            -- No cargo of that type, stay on selection
             if localSceneCb then localSceneCb("combat_throw_good") end
           else
             if localSceneCb then localSceneCb("combat_throw_amt_" .. idx) end
@@ -353,17 +320,15 @@ local function sceneCombatThrowGood(state, actions, localSceneCb)
   }
 end
 
--- Scene: Combat throw - enter amount
 local function sceneCombatThrowAmount(state, actions, localSceneCb, goodIdx)
   local goodName = GOOD_NAMES[goodIdx]
   local maxQty   = state.shipCargo[goodIdx] or 0
   local lines = {
     { text = string.format("Throw %s (max %d, A=all):", goodName, maxQty), color = AMBER },
-    { text = "Amount (Esc=cancel): ", color = GREEN },
   }
   return lines, {
     type = "type",
-    typePlaceholder = "Amount (A=all): ",
+    typePlaceholder = "Amount: ",
     onType = function(text, _s, _a)
       if text == "" then
         if localSceneCb then localSceneCb("combat_throw_good") end
@@ -385,15 +350,13 @@ local function sceneCombatThrowAmount(state, actions, localSceneCb, goodIdx)
   }
 end
 
--- Scene: ShipOffers (HK only)
 local function sceneShipOffers(state, actions, localSceneCb)
   local offer = state.shipOffer
   local lines = {
     { text = "[ HONG KONG -- SHIP OFFERS ]", color = AMBER },
     { text = "", color = AMBER },
   }
-  local keys = {"D"}  -- D = Done always available
-
+  local keys = {"D"}
   if offer and offer.upgradeOffer then
     table.insert(lines, { text = string.format("Upgrade ship (+50 tons) for %s", fmt(offer.upgradeOffer.cost)), color = GREEN })
     table.insert(lines, { text = "(U)pgrade  (N)o thanks", color = GREEN })
@@ -413,11 +376,10 @@ local function sceneShipOffers(state, actions, localSceneCb)
     table.insert(lines, { text = string.format("Repair: %s/pt  SW:%d%%  Dmg:%d",
       fmt(offer.repairRate), sw, math.floor(state.damage or 0)), color = AMBER })
     table.insert(lines, { text = "(R)epair -- enter amount, A=all", color = GREEN })
-    table.insert(keys, "R")  -- R enters repair type-mode (handled in onKey)
+    table.insert(keys, "R")
   end
   table.insert(lines, { text = "", color = AMBER })
   table.insert(lines, { text = "(D)one", color = AMBER })
-
   return lines, {
     type = "key",
     keys = keys,
@@ -429,14 +391,12 @@ local function sceneShipOffers(state, actions, localSceneCb)
       elseif key == "X" then actions.declineGun()
       elseif key == "D" then actions.shipPanelDone()
       elseif key == "R" then
-        -- Enter repair amount -- localSceneCb switches to "repair" sub-scene
         if localSceneCb then localSceneCb("repair") end
       end
     end,
   }
 end
 
--- Scene: WuSession (automatic on HK arrival)
 local function sceneWuSession(state, actions, localSceneCb)
   local maxRepay  = math.min(state.debt or 0, state.cash or 0)
   local maxBorrow = 2 * (state.cash or 0)
@@ -446,17 +406,13 @@ local function sceneWuSession(state, actions, localSceneCb)
     { text = string.format("Borrow max:%s", fmt(maxBorrow)), color = AMBER },
     { text = "",                                     color = AMBER },
   }
-
   if state.liYuenOfferCost then
     table.insert(lines, { text = string.format("Li Yuen asks %s for protection", fmt(state.liYuenOfferCost)), color = GREEN })
     table.insert(lines, { text = "(L)i Yuen", color = GREEN })
   end
-
   table.insert(lines, { text = "(P)ay debt  (B)orrow  (Q)Leave Wu", color = GREEN })
-
   local keys = {"P", "B", "Q"}
   if state.liYuenOfferCost then table.insert(keys, "L") end
-
   return lines, {
     type = "key",
     keys = keys,
@@ -475,7 +431,6 @@ local function sceneWuSession(state, actions, localSceneCb)
   }
 end
 
--- Sub-scenes: BuySell
 local function sceneBuySell(state, actions, localSceneCb, isBuy)
   local verb = isBuy and "buy" or "sell"
   local lines = {}
@@ -499,7 +454,6 @@ local function sceneBuySell(state, actions, localSceneCb, isBuy)
     table.insert(lines, { text = string.format("  [%d] %s (avail: %d)", i, GOOD_NAMES[i], available), color = AMBER })
   end
   table.insert(lines, { text = "  [C] Cancel", color = DIM })
-
   return lines, {
     type = "key",
     keys = {"1","2","3","4","O","S","A","G","C"},
@@ -510,7 +464,6 @@ local function sceneBuySell(state, actions, localSceneCb, isBuy)
       else
         local idx = GOOD_KEY_MAP[key] or tonumber(key)
         if idx and idx >= 1 and idx <= 4 then
-          -- Guard: check if the player has anything to sell (or can afford to buy)
           local price = (state.currentPrices or {})[idx] or 0
           local maxQty
           if isBuy then
@@ -524,7 +477,6 @@ local function sceneBuySell(state, actions, localSceneCb, isBuy)
             maxQty = state.shipCargo[idx] or 0
           end
           if maxQty <= 0 then
-            -- Nothing available -- stay on good-selection, re-render with message
             if localSceneCb then localSceneCb(isBuy and "buy" or "sell") end
           else
             if localSceneCb then localSceneCb(isBuy and ("buy_good_"..idx) or ("sell_good_"..idx)) end
@@ -550,18 +502,14 @@ local function sceneBuySellAmount(state, actions, localSceneCb, goodIdx, isBuy)
     maxQty = state.shipCargo[goodIdx] or 0
   end
   local verb = isBuy and "buy" or "sell"
-
   local lines = {
     { text = string.format("%s %s at %s", verb:upper(), goodName, fmt(price)), color = AMBER },
-    { text = string.format("Max %d, A=all. Esc=cancel", maxQty), color = AMBER },
-    { text = "Amount: ", color = GREEN },
+    { text = string.format("Max %d, A=all.", maxQty), color = AMBER },
   }
-
   return lines, {
     type = "type",
-    typePlaceholder = "Amount (A=all): ",
+    typePlaceholder = "Amount: ",
     onType = function(text, _s, _a)
-      -- Empty input or explicit cancel -> return to good selection
       if text == "" then
         if localSceneCb then localSceneCb(isBuy and "buy" or "sell") end
         return nil
@@ -577,7 +525,7 @@ local function sceneBuySellAmount(state, actions, localSceneCb, goodIdx, isBuy)
       if qty > maxQty then return string.format("You can only %s %d units", verb, maxQty) end
       if isBuy then actions.buyGoods(goodIdx, math.floor(qty))
       else           actions.sellGoods(goodIdx, math.floor(qty)) end
-      if localSceneCb then localSceneCb(nil) end  -- cleared on success; StateUpdate will re-render
+      if localSceneCb then localSceneCb(nil) end
       return nil
     end,
   }
@@ -597,14 +545,12 @@ local function sceneBank(state, actions, localSceneCb)
     onKey = function(key, _s, _a)
       if key == "D" then
         if (state.cash or 0) <= 0 then
-          -- Nothing to deposit -- stay on bank menu
           if localSceneCb then localSceneCb("bank") end
         else
           if localSceneCb then localSceneCb("bank_deposit") end
         end
       elseif key == "W" then
         if (state.bankBalance or 0) <= 0 then
-          -- Nothing to withdraw -- stay on bank menu
           if localSceneCb then localSceneCb("bank") end
         else
           if localSceneCb then localSceneCb("bank_withdraw") end
@@ -621,11 +567,10 @@ local function sceneBankAmount(state, actions, localSceneCb, isDeposit)
   local verb = isDeposit and "deposit" or "withdraw"
   local lines = {
     { text = string.format("%s (max %s, A=all):", verb:upper(), fmt(maxAmt)), color = AMBER },
-    { text = "Amount: ", color = GREEN },
   }
   return lines, {
     type = "type",
-    typePlaceholder = "Amount (A=all): ",
+    typePlaceholder = "Amount: ",
     onType = function(text, _s, _a)
       if text == "" then
         if localSceneCb then localSceneCb("bank") end
@@ -661,7 +606,6 @@ local function sceneWarehouse(state, actions, localSceneCb)
   end
   table.insert(lines, { text = "", color = AMBER })
   table.insert(lines, { text = "(T)o WH  (F)rom WH  (C)ancel", color = GREEN })
-
   return lines, {
     type = "key",
     keys = {"T", "F", "C"},
@@ -686,7 +630,6 @@ local function sceneWarehouseGood(state, actions, localSceneCb, isToWarehouse)
     table.insert(lines, { text = string.format("  [%d] %s (%d avail)", i, GOOD_NAMES[i], avail), color = AMBER })
   end
   table.insert(lines, { text = "  [C] Cancel", color = DIM })
-
   return lines, {
     type = "key",
     keys = {"1","2","3","4","O","S","A","G","C"},
@@ -713,7 +656,7 @@ local function sceneWarehouseAmount(state, actions, localSceneCb, goodIdx, isToW
   }
   return lines, {
     type = "type",
-    typePlaceholder = "Amount (A=all): ",
+    typePlaceholder = "Amount: ",
     onType = function(text, _s, _a)
       if text == "" then
         if localSceneCb then localSceneCb(isToWarehouse and "wh_to" or "wh_from") end
@@ -746,10 +689,10 @@ local function sceneWuAmount(state, actions, localSceneCb, isRepay)
   }
   return lines, {
     type = "type",
-    typePlaceholder = "Amount (A=all): ",
+    typePlaceholder = "Amount: ",
     onType = function(text, _s, _a)
       if text == "" then
-        if localSceneCb then localSceneCb(nil) end  -- back to Wu menu (server-driven)
+        if localSceneCb then localSceneCb(nil) end
         return nil
       end
       local amt
@@ -783,10 +726,10 @@ local function sceneRepairAmount(state, actions, localSceneCb)
   }
   return lines, {
     type = "type",
-    typePlaceholder = "Amount (A=max): ",
+    typePlaceholder = "Amount: ",
     onType = function(text, _s, _a)
       if text == "" then
-        if localSceneCb then localSceneCb(nil) end  -- back to ship offers
+        if localSceneCb then localSceneCb(nil) end
         return nil
       end
       local amt
@@ -804,9 +747,7 @@ local function sceneRepairAmount(state, actions, localSceneCb)
   }
 end
 
--- Main entry point
 function PromptEngine.processState(state, localScene, actions, localSceneCb)
-  -- Determine scene (priority order)
   if state.gameOver then
     return sceneGameOver(state, actions, localSceneCb)
   end
@@ -831,7 +772,6 @@ function PromptEngine.processState(state, localScene, actions, localSceneCb)
     if localScene == "wu_borrow" then return sceneWuAmount(state, actions, localSceneCb, false) end
     return sceneWuSession(state, actions, localSceneCb)
   end
-  -- Sub-scenes
   if localScene == "bank"         then return sceneBank(state, actions, localSceneCb) end
   if localScene == "bank_deposit"  then return sceneBankAmount(state, actions, localSceneCb, true) end
   if localScene == "bank_withdraw" then return sceneBankAmount(state, actions, localSceneCb, false) end
@@ -859,12 +799,9 @@ function PromptEngine.processState(state, localScene, actions, localSceneCb)
   if localScene == "travel"       then return sceneTravel(state, actions, localSceneCb) end
   if localScene == "settings"     then return sceneSettings(state, actions, localSceneCb) end
   if localScene == "quit_confirm" then return sceneQuitConfirm(state, actions, localSceneCb) end
-  -- StartChoice: fires when startChoice is nil (pre-choice), including the initial
-  -- update({}) call from the bootstrapper before ChooseStart has been sent.
   if state.startChoice == nil and (state.turnsElapsed or 1) == 1 and (state.destination or 0) == 0 then
     return sceneStartChoice(state, actions, localSceneCb)
   end
-  -- Default: AtPort
   return sceneAtPort(state, actions, localSceneCb)
 end
 

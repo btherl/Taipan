@@ -213,8 +213,9 @@ function CombatPanel.new(parent, onFight, onRun, onThrow)
     if sw > 60 then swLabel.TextColor3 = GREEN
     elseif sw >= 30 then swLabel.TextColor3 = AMBER
     else swLabel.TextColor3 = RED end
-    local total = state.combat.enemyTotal or 0
-    enemyCountLabel.Text = "Enemy ships: " .. total .. " remaining"
+	local total = state.combat.enemyTotal or 0
+	local guns = state.guns or 0
+    enemyCountLabel.Text = "Enemy ships: " .. total .. " remaining, Guns: " .. guns
     local grid = state.combat.grid or {}
     for i = 1, 10 do
       local slot = grid[i]

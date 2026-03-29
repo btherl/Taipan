@@ -57,12 +57,12 @@ local function validQty(q)
   return type(q) == "number" and q > 0 and math.floor(q) == q
 end
 
-Remotes.ChooseStart.OnServerEvent:Connect(function(player, startChoice)
+Remotes.ChooseStart.OnServerEvent:Connect(function(player, startChoice, firmName)
   if startChoice ~= "cash" and startChoice ~= "guns" then startChoice = "cash" end
   if playerStates[player] then return end           -- already initialised (returning player) or double-fire guard
 
   -- New player: start a fresh game
-  local state = GameState.newGame(startChoice)
+  local state = GameState.newGame(startChoice, firmName)
   state.currentPrices = PriceEngine.calculatePrices(state.basePrices, state.currentPort)
   state.holdSpace = state.shipCapacity
     - state.shipCargo[1] - state.shipCargo[2]

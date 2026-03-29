@@ -53,14 +53,18 @@ function Apple2Interface.new(screenGui, actions)
       end
     )
 
-    term.clear()
-    for _, line in ipairs(lines) do
-      if type(line) == "table" and line.segments then
-        term.print(line)               -- segmented multi-font line
-      elseif type(line) == "table" then
-        term.print(line.text, line.color)
-      else
-        term.print(line, nil)
+    if lines.rows then
+      term.setRows(lines.rows)         -- direct-layout scene (e.g. firm name box)
+    else
+      term.clear()
+      for _, line in ipairs(lines) do
+        if type(line) == "table" and line.segments then
+          term.print(line)             -- segmented multi-font line
+        elseif type(line) == "table" then
+          term.print(line.text, line.color)
+        else
+          term.print(line, nil)
+        end
       end
     end
 

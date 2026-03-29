@@ -79,7 +79,8 @@ function ModernInterface.new(screenGui, actions)
     function() actions.declineGun() end,
     function() actions.shipPanelDone() end
   )
-  local startPanel = StartPanel.new(root, function(choice)
+  local startPanel = StartPanel.new(root, function(choice, firmName)
+    actions.setFirmName(firmName)
     actions.chooseStart(choice)
     actions.requestState()
   end)

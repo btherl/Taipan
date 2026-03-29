@@ -3,7 +3,8 @@
 -- Pure logic: no Roblox service calls except require.
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local Constants = require(ReplicatedStorage.shared.Constants)
+local Constants   = require(ReplicatedStorage.shared.Constants)
+local BoxDrawing  = require(ReplicatedStorage.Text.BoxDrawing)
 
 local HONG_KONG  = Constants.HONG_KONG
 local PORT_NAMES = Constants.PORT_NAMES
@@ -152,6 +153,47 @@ local function sceneTravel(state, actions, localSceneCb)
           if localSceneCb then localSceneCb(nil) end
         end
       end
+    end,
+  }
+end
+
+local FIRM_INPUT_ROW = 14  -- terminal row where the firm name cursor is rendered
+
+local function buildFirmInputRow(displayStr)
+  return { segments = {
+    { text = string.char(129), color = AMBER, font = "TaipanThickFont" },  -- │ left border
+    { text = "     Firm: ",   color = AMBER },                             -- 11 chars
+    { text = displayStr,      color = AMBER, font = "TaipanThickFont" },   -- 23 chars (22+cursor)
+    { text = "    ",          color = AMBER },                             -- 4 spaces padding
+    { text = string.char(129), color = AMBER, font = "TaipanThickFont" },  -- │ right border
+  }}
+end
+
+local function sceneFirmName(_state, actions, localSceneCb)
+  -- Initial cursor display: "_" followed by 22 spaces (maxLength=22)
+  local initDisplay = "_" .. string.rep(" ", 22)
+  local rows = {
+    [8]  = BoxDrawing.boxTop(40, AMBER),
+    [9]  = BoxDrawing.boxRow(40, "", AMBER),
+    [10] = BoxDrawing.boxRow(40, "     Taipan,", AMBER),
+    [11] = BoxDrawing.boxRow(40, "", AMBER),
+    [12] = BoxDrawing.boxRow(40, " What will you name your", AMBER),
+    [13] = BoxDrawing.boxRow(40, "", AMBER),
+    [14] = buildFirmInputRow(initDisplay),
+    [15] = BoxDrawing.boxRow(40, "           ----------------------", AMBER),
+    [16] = BoxDrawing.boxRow(40, "", AMBER),
+    [17] = BoxDrawing.boxBottom(40, AMBER),
+  }
+  return { rows = rows }, {
+    type            = "type",
+    typePlaceholder = "",
+    maxLength       = 22,
+    _inputRow       = FIRM_INPUT_ROW,
+    _buildInputRow  = buildFirmInputRow,
+    onType = function(text, _s, _a)
+      actions.setFirmName(text)
+      if localSceneCb then localSceneCb("start_choice") end
+      return nil
     end,
   }
 end
@@ -806,7 +848,10 @@ function PromptEngine.processState(state, localScene, actions, localSceneCb)
   if localScene == "settings"     then return sceneSettings(state, actions, localSceneCb) end
   if localScene == "quit_confirm" then return sceneQuitConfirm(state, actions, localSceneCb) end
   if state.startChoice == nil and (state.turnsElapsed or 1) == 1 and (state.destination or 0) == 0 then
-    return sceneStartChoice(state, actions, localSceneCb)
+    if localScene == "start_choice" then
+      return sceneStartChoice(state, actions, localSceneCb)
+    end
+    return sceneFirmName(state, actions, localSceneCb)
   end
   return sceneAtPort(state, actions, localSceneCb)
 end

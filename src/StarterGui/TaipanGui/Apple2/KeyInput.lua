@@ -174,7 +174,14 @@ function KeyInput.new(screenGui)
         resetBlink()
 
         local function updateDisplay()
-          if terminal then terminal.showInputLine(placeholder .. buildDisplayStr()) end
+          if terminal then
+            local displayStr = buildDisplayStr()
+            if promptDef._buildInputRow and promptDef._inputRow then
+              terminal.showInputAt(promptDef._inputRow, promptDef._buildInputRow(displayStr))
+            else
+              terminal.showInputLine(placeholder .. displayStr)
+            end
+          end
         end
 
         updateDisplay()

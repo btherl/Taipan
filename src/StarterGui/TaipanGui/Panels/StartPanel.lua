@@ -35,9 +35,36 @@ function StartPanel.new(parent, onChoose)
   prompt.TextWrapped = true
   prompt.ZIndex = 30
   prompt.Parent = frame
+  local nameLabel = Instance.new("TextLabel")
+  nameLabel.Size = UDim2.new(0.8, 0, 0, 20)
+  nameLabel.Position = UDim2.new(0.1, 0, 0, 163)
+  nameLabel.BackgroundTransparency = 1
+  nameLabel.Text = "Your firm name (optional):"
+  nameLabel.TextColor3 = AMBER
+  nameLabel.Font = Enum.Font.RobotoMono
+  nameLabel.TextSize = 11
+  nameLabel.TextXAlignment = Enum.TextXAlignment.Left
+  nameLabel.ZIndex = 30
+  nameLabel.Parent = frame
+  local nameBox = Instance.new("TextBox")
+  nameBox.Size = UDim2.new(0.8, 0, 0, 32)
+  nameBox.Position = UDim2.new(0.1, 0, 0, 183)
+  nameBox.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+  nameBox.BorderColor3 = AMBER
+  nameBox.BorderSizePixel = 1
+  nameBox.Text = ""
+  nameBox.PlaceholderText = "(optional)"
+  nameBox.TextColor3 = GREEN
+  nameBox.PlaceholderColor3 = Color3.fromRGB(80, 80, 80)
+  nameBox.Font = Enum.Font.RobotoMono
+  nameBox.TextSize = 13
+  nameBox.ZIndex = 30
+  nameBox.ClearTextOnFocus = false
+  nameBox.MaxVisibleGraphemes = 22
+  nameBox.Parent = frame
   local cashBtn = Instance.new("TextButton")
   cashBtn.Size = UDim2.new(0.8, 0, 0, 88)
-  cashBtn.Position = UDim2.new(0.1, 0, 0, 175)
+  cashBtn.Position = UDim2.new(0.1, 0, 0, 227)
   cashBtn.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
   cashBtn.BorderColor3 = AMBER
   cashBtn.BorderSizePixel = 1
@@ -50,7 +77,7 @@ function StartPanel.new(parent, onChoose)
   cashBtn.Parent = frame
   local gunsBtn = Instance.new("TextButton")
   gunsBtn.Size = UDim2.new(0.8, 0, 0, 88)
-  gunsBtn.Position = UDim2.new(0.1, 0, 0, 275)
+  gunsBtn.Position = UDim2.new(0.1, 0, 0, 327)
   gunsBtn.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
   gunsBtn.BorderColor3 = AMBER
   gunsBtn.BorderSizePixel = 1
@@ -70,7 +97,7 @@ function StartPanel.new(parent, onChoose)
     cashBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
     gunsBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
     prompt.Text = "Loading..."
-    onChoose(startChoice)
+    onChoose(startChoice, nameBox.Text or "")
   end
   cashBtn.Activated:Connect(function() choose("cash") end)
   gunsBtn.Activated:Connect(function() choose("guns") end)

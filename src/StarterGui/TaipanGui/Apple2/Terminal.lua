@@ -150,6 +150,26 @@ function Terminal.new(displayOrder)
     syncRow(ROWS)
   end
 
+  -- Writes to any row without scrolling. Accepts string or segmented table.
+  function term.showInputAt(row, content)
+    if row < 1 or row > ROWS then return end
+    if type(content) == "table" then
+      buffer[row] = content
+    else
+      buffer[row] = { text = content or "", color = GREEN }
+    end
+    syncRow(row)
+  end
+
+  -- Assigns rows directly from a keyed table (for precise-layout scenes).
+  -- Unspecified rows default to empty.
+  function term.setRows(rowTable)
+    for i = 1, ROWS do
+      buffer[i] = rowTable[i] or { text = "", color = GREEN }
+    end
+    redrawAll()
+  end
+
   function term.setRowColor(row, color)
     if row < 1 or row > ROWS then return end
     if buffer[row].segments then

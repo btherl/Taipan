@@ -5,7 +5,7 @@
 local PersistenceEngine = {}
 
 local SCALAR_FIELDS = {
-  "startChoice", "cash", "debt", "bankBalance",
+  "startChoice", "firmName", "cash", "debt", "bankBalance",
   "shipCapacity", "guns", "damage", "pirateBase",
   "currentPort", "month", "year", "turnsElapsed",
   "liYuenProtection", "wuWarningGiven", "bankruptcyCount",

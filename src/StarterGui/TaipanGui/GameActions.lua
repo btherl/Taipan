@@ -3,8 +3,11 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Remotes = require(ReplicatedStorage.Remotes)
 
+local pendingFirmName = ""
+
 return {
-  chooseStart    = function(choice) Remotes.ChooseStart:FireServer(choice) end,
+  setFirmName    = function(name) pendingFirmName = name or "" end,
+  chooseStart    = function(choice) Remotes.ChooseStart:FireServer(choice, pendingFirmName) end,
   buyGoods       = function(g, q)   Remotes.BuyGoods:FireServer(g, q) end,
   sellGoods      = function(g, q)   Remotes.SellGoods:FireServer(g, q) end,
   travelTo       = function(dest)   Remotes.TravelTo:FireServer(dest) end,

@@ -9,7 +9,8 @@ local GameState = {}
 
 -- Creates a fresh game state for one player.
 -- startChoice: "cash" (default) or "guns"
-function GameState.newGame(startChoice)
+-- firmName: optional string, player's firm name
+function GameState.newGame(startChoice, firmName)
   local isCash = (startChoice ~= "guns")
 
   local state = {
@@ -67,6 +68,7 @@ function GameState.newGame(startChoice)
     gameOver         = false,  -- true when ship sinks; client shows game over screen
     combat           = nil,    -- combat sub-table when in combat, nil otherwise
     startChoice      = startChoice,   -- ADD: raw start type for save/load round-trips
+    firmName         = type(firmName) == "string" and firmName or "",
     seenTutorial     = false,         -- ADD: set true after first HK tutorial fires
     uiMode = nil,   -- nil = not yet chosen; "modern" or "apple2" once set
 

@@ -33,26 +33,17 @@ function KeyInput.new(screenGui)
   local CURSOR_CHAR    = "_"
   local BLINK_HALF     = 0.265  -- half of 0.53s Apple II cursor cycle
 
-  -- Build display string with cursor baked in
+  -- Build display string with cursor baked in.
+  -- Always returns exactly (fieldLen + 1) characters so Text:Update() never
+  -- sees a length change — prevents sprite destroy/create and position staling.
   local function buildDisplayStr()
-    if cursorPos > #typeBuf then
-      -- Cursor is at append position (after last char)
-      if cursorVisible then
-        return typeBuf .. CURSOR_CHAR
-      else
-        return typeBuf .. " "
-      end
-	else
-      -- Cursor is within existing text
-	  local before = typeBuf:sub(1, cursorPos - 1)
-	  -- We add a space to keep lengths consistent with when cursor is displayed
-	  local after  = typeBuf:sub(cursorPos + 1) .. " "
-      if cursorVisible then
-        return before .. CURSOR_CHAR .. after
-      else
-        return before .. typeBuf:sub(cursorPos, cursorPos) .. after
-      end
-    end
+    local fieldLen = maxLength or #typeBuf
+    local padded = typeBuf
+    while #padded < fieldLen + 1 do padded = padded .. " " end
+    local before = padded:sub(1, cursorPos - 1)
+    local atCur  = cursorVisible and CURSOR_CHAR or padded:sub(cursorPos, cursorPos)
+    local after  = padded:sub(cursorPos + 1)
+    return before .. atCur .. after
   end
 
   -- Reset cursor blink to visible (call on any keypress)

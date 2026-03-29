@@ -106,21 +106,9 @@ end
 function Text:Update(DeltaTime)
 	if not self.CanUpdate then return end
 
-	for i = 1, #self.Sprites do
-		--self.Sprites[i].Instance.BackgroundTransparency = 0
-		self.Sprites[i].Stroke = self.Stroke
-		self.Sprites[i].StrokeColor3 = self.StrokeColor3
-
-		self.Sprites[i]:UpdateSprite(DeltaTime)
-
-		if self.Sprites[i].Instance.Parent ~= self.Parent then
-			self.Sprites[i].Instance.Parent = self.Parent
-		end
-
-		self.Sprites[i].Instance.ImageColor3 = self.TextColor3
-	end
-
-	-- Update Text
+	-- Update text first: adjust sprite count, glyph data, and virtual positions.
+	-- This must run before the render loop so UpdateSprite flushes the correct
+	-- positions to Instance.Position in the same frame (fixes one-frame flash).
 	if self.Text ~= self.OldText then
 		local old_length = string.len(self.OldText)
 		self.OldText = self.Text
@@ -212,6 +200,21 @@ function Text:Update(DeltaTime)
 
 			current_x += x_advance * self.TextSize
 		end
+	end
+
+	-- Render: propagate settings and flush virtual positions to Instance.Position.
+	-- Runs after text update so new positions are always written in the same frame.
+	for i = 1, #self.Sprites do
+		self.Sprites[i].Stroke = self.Stroke
+		self.Sprites[i].StrokeColor3 = self.StrokeColor3
+
+		self.Sprites[i]:UpdateSprite(DeltaTime)
+
+		if self.Sprites[i].Instance.Parent ~= self.Parent then
+			self.Sprites[i].Instance.Parent = self.Parent
+		end
+
+		self.Sprites[i].Instance.ImageColor3 = self.TextColor3
 	end
 end
 

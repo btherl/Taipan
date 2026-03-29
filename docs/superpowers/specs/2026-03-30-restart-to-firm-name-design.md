@@ -9,7 +9,9 @@ After any game ending (ship sunk, quit, or retired), the RESTART button currentl
 
 ## Goal
 
-After any game-over, both the Apple II and Modern UI return to the firm name screen, exactly as on a fresh first launch. The player re-enters a firm name and re-picks their start type before the new game begins.
+After any game-over (sunk, quit, or retired), both the Apple II and Modern UI return to the firm name screen. The player re-enters (or keeps) a firm name and re-picks their start type before the new game begins.
+
+**Note on "fresh launch" similarity:** The firm name text box retains whatever the player typed in the previous game (it is not cleared on restart). This is an intentional UX choice — returning to retype the same name is annoying. The behaviour differs from a true first launch (where the box is empty) but is preferred.
 
 ## Approach
 
@@ -25,14 +27,16 @@ Chosen because it keeps the server-authoritative, state-driven pattern intact. N
 
 #### RestartGame handler
 
-Replaces the current handler, which built a full new game state from `prevStartChoice`. The new handler builds a minimal **lobby state** and pushes it:
+Replaces the current handler (which built a full new game from `prevStartChoice`). The new handler fires a minimal **lobby state** directly to the client, then **sets `playerStates[player] = nil`**. This has two effects:
+
+- All existing per-handler guards (`if type(state) ~= "table" then return end`) already reject `nil`, so no handler (BuyGoods, TravelTo, SetUIMode, etc.) can act on a stale or incomplete state. No handler changes needed.
+- `playerStates[player] = nil` means `PlayerRemoving` skips the DataStore save (its guard is `if type(state) == "table" then savePlayer(...) end`), so the lobby is never persisted.
 
 ```lua
 Remotes.RestartGame.OnServerEvent:Connect(function(player)
   local state = playerStates[player]
   if type(state) ~= "table" or not state.gameOver then return end
-  playerStates[player] = {
-    _isLobby     = true,
+  local lobbyState = {
     startChoice  = nil,
     gameOver     = false,
     turnsElapsed = 1,
@@ -40,40 +44,40 @@ Remotes.RestartGame.OnServerEvent:Connect(function(player)
     uiMode       = state.uiMode,
     seenTutorial = state.seenTutorial,
   }
-  pushState(player)
+  -- Push the lobby state directly (bypasses pushState's table guard),
+  -- then nil the slot so all existing handler guards block correctly.
+  Remotes.StateUpdate:FireClient(player, lobbyState)
+  playerStates[player] = nil
 end)
 ```
 
-The `_isLobby` flag is used only server-side (DataStore save guard). The client never reads it.
-
 #### ChooseStart guard
 
-Changed from "block if any state exists" to "block if a real game is in progress":
+Changed from "block if any truthy value in slot" to "block if a real game is in progress":
 
 ```lua
 local existing = playerStates[player]
-if type(existing) == "boolean" then return end          -- sentinel during async load
 if type(existing) == "table" and existing.startChoice ~= nil then return end
--- nil (new player) or lobby state → allowed through
+-- nil → new player or post-restart → allowed through
 ```
 
-This lets `ChooseStart` create a fresh game from either a nil slot (brand new player) or a lobby-state slot (restarting player). The rest of the `ChooseStart` handler is unchanged.
+This lets `ChooseStart` create a fresh game after restart (`playerStates[player]` is nil). The rest of the handler is unchanged.
 
-#### PlayerRemoving save guard
+The original guard `if playerStates[player] then return end` blocked any truthy value. This project does not use a boolean sentinel in `playerStates` (no `= true` is set before the DataStore load in `PlayerAdded`), so the guard simplification is safe.
 
-Skips the DataStore save when the player disconnects during the lobby (no serialisable game to preserve):
+**Note on PlayerAdded race:** The `PlayerAdded` handler runs a `task.spawn` DataStore load with no boolean sentinel — `playerStates[player]` is nil during the async window. This race pre-existed the current change (the original guard `if playerStates[player] then return end` also falls through when the slot is nil). The risk (a returning player fires ChooseStart during the ~1-second load window) is accepted as-is; the InterfacePicker → firm name screen sequence makes this window practically unreachable.
 
-```lua
-if type(state) == "table" and not state._isLobby then
-  savePlayer(player, state)
-end
-```
+**Note on `SetUIMode` during lobby:** If the player fires `SetUIMode` between the game ending and clicking RESTART, `pendingModes[player]` is updated but the old `state.uiMode` is snapshotted into `lobbyState`. The pushed lobby state may carry a slightly stale `uiMode`. This is a very narrow race, accepted as-is; `ChooseStart` consumes `pendingModes[player]` when building the real game state, so the correct mode is applied before any gameplay begins.
+
+The two lines `Remotes.StateUpdate:FireClient(player, lobbyState)` and `playerStates[player] = nil` execute sequentially in a single Roblox event handling coroutine. Roblox's single-threaded event model means no other handler coroutine can interleave between them; `FireClient` queues the message to the client but does not yield or allow other server events to run.
 
 ---
 
 ### 2. Apple II — `Apple2Interface.lua`
 
-One addition to `adapter.update`: reset `localScene` to nil when a lobby state arrives, so any lingering local scene from the previous game does not block the firm name scene:
+One addition to `adapter.update`: reset `localScene` to nil when a lobby state arrives, so any lingering local scene from the previous game does not block the firm name scene.
+
+The lobby state satisfies none of the `SERVER_SCENES` checks (gameOver=false, combat=nil, shipOffer=nil, inWuSession=false), so `isServerDriven` returns false and `localScene` is not reset by the existing code. The new branch handles this:
 
 ```lua
 function adapter.update(state)
@@ -95,7 +99,7 @@ if state.startChoice == nil and (state.turnsElapsed or 1) == 1 and (state.destin
 end
 ```
 
-The lobby state satisfies all three conditions.
+The lobby state satisfies all three conditions (`turnsElapsed=1, destination=0`).
 
 ---
 
@@ -103,7 +107,7 @@ The lobby state satisfies all three conditions.
 
 #### StartPanel.lua
 
-Change `panel.hide()` from destroying the frame to hiding it, and add `panel.show()`:
+Change `panel.hide()` from destroying the frame to hiding it, and add `panel.show()`. The `show()` method must also reset the `chosen` flag and restore button appearance, so the panel is fully interactive again after a restart:
 
 ```lua
 function panel.hide()
@@ -111,19 +115,39 @@ function panel.hide()
 end
 
 function panel.show()
+  chosen = false
+  cashBtn.Active = true
+  gunsBtn.Active = true
+  cashBtn.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+  gunsBtn.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+  prompt.Text = "Elder Brother Wu says:\n\"Do you have a firm, or a ship?\""
   frame.Visible = true
 end
 ```
 
-Both methods are idempotent. The name text box retains its value between hide/show cycles, so the player sees a blank-or-previous name on restart (the box starts empty on first construction; they can clear and retype).
+Both `hide()` and `show()` are idempotent. The name text box retains its value between cycles (intentional — see Goal). The button reset colour `Color3.fromRGB(20, 20, 20)` must match the constructor's initial `BackgroundColor3`; if that constant is changed in the constructor it must be updated in `show()` too.
+
+`StartPanel` is constructed with `frame.Visible = true`. The `hide()` change (Visible=false instead of Destroy) is safe for all call paths:
+- **New player first launch:** StartPanel visible from construction → player picks start → `adapter.update(state)` with `startChoice` set → `startPanel.hide()` → Visible=false ✓
+- **Restart flow:** lobby state arrives → `startPanel.show()` (already may be visible, idempotent) ✓
+- **Returning player (saved game):** first `adapter.update` has `startChoice` set → `startPanel.hide()` → Visible=false ✓
 
 #### ModernInterface.lua
 
-In `adapter.update`, detect the lobby state and show `StartPanel` instead of updating the game panels:
+In `adapter.update`, detect the lobby state and show `StartPanel` instead of updating game panels. Also clean up the settings overlay if it is open (it would otherwise linger behind the StartPanel):
 
 ```lua
 function adapter.update(state)
+  -- Lobby state: startChoice is nil (a real game always has startChoice set).
+  -- `not state.gameOver` is a defensive belt-and-suspenders check; in practice
+  -- gameOver states always have startChoice set, so this branch is only reached
+  -- via a genuine lobby state.
   if state.startChoice == nil and not state.gameOver then
+    if settingsOverlay then
+      settingsOverlay:Destroy()
+      settingsOverlay = nil
+    end
+    settingsBtn.Visible = false
     startPanel.show()
     return   -- state is incomplete; skip all panel updates
   end
@@ -139,22 +163,25 @@ The early return prevents `portPanel.update`, `statusStrip.update`, etc. from be
 ## Data Flow
 
 ```
-Player clicks RESTART (any ending)
+Player clicks RESTART (any ending: sunk / quit / retired)
   → actions.restartGame()
-  → server RestartGame: creates lobby state, pushState
-  → client StateUpdate: state.startChoice == nil, state.gameOver == false
+  → server RestartGame: fires lobbyState directly to client, sets playerStates[player] = nil
 
   Apple II path:
-    adapter.update → localScene = nil → render
-    PromptEngine: startChoice==nil → sceneFirmName ✓
+    adapter.update(lobbyState)
+    → startChoice == nil → localScene = nil
+    → render → PromptEngine: startChoice==nil → sceneFirmName ✓
 
   Modern path:
-    adapter.update → startChoice==nil → startPanel.show(), return ✓
+    adapter.update(lobbyState)
+    → startChoice == nil → startPanel.show(), return ✓
 
-Player enters firm name, picks start
-  → actions.setFirmName(name), actions.chooseStart(choice)
-  → server ChooseStart: lobby state present but startChoice==nil → allowed
-  → creates real game state → pushState
+Player enters firm name, picks start (firm name screen → start choice screen)
+  → StartPanel.onChoose(choice, firmName) [Modern] or sceneFirmName.onType + sceneStartChoice.onKey [Apple II]
+  → actions.setFirmName(firmName) stores name in GameActions.pendingFirmName
+  → actions.chooseStart(choice) fires ChooseStart:FireServer(choice, pendingFirmName)
+  → server ChooseStart: playerStates[player] is nil → allowed
+  → creates real game state (GameState.newGame with firmName) → pushState
   → normal game begins ✓
 ```
 
@@ -164,10 +191,10 @@ Player enters firm name, picks start
 
 | File | Change |
 |---|---|
-| `src/ServerScriptService/GameService.server.lua` | RestartGame handler, ChooseStart guard, PlayerRemoving save guard |
-| `src/StarterGui/TaipanGui/Apple2Interface.lua` | `adapter.update`: reset localScene on lobby state |
-| `src/StarterGui/TaipanGui/Panels/StartPanel.lua` | `panel.hide()` → Visible=false; add `panel.show()` |
-| `src/StarterGui/TaipanGui/ModernInterface.lua` | `adapter.update`: early-return + startPanel.show() for lobby state |
+| `src/ServerScriptService/GameService.server.lua` | RestartGame handler (lobby push + nil slot); ChooseStart guard |
+| `src/StarterGui/TaipanGui/Apple2Interface.lua` | `adapter.update`: reset localScene when `startChoice == nil` |
+| `src/StarterGui/TaipanGui/Panels/StartPanel.lua` | `panel.hide()` → Visible=false; add `panel.show()` with `chosen` reset |
+| `src/StarterGui/TaipanGui/ModernInterface.lua` | `adapter.update`: early-return + startPanel.show() + overlay cleanup |
 
 `PromptEngine.lua`, `GameState.lua`, `PersistenceEngine.lua`, and all other panels: **no changes.**
 
@@ -177,7 +204,9 @@ Player enters firm name, picks start
 
 | Scenario | Behaviour |
 |---|---|
-| Player disconnects during lobby state | `PlayerRemoving` skips save (`_isLobby=true`); on reconnect, DataStore has the old game-over save, which is loaded and shown as game-over; player clicks Restart again → lobby → firm name |
-| ChooseStart double-fire during lobby | Second call: `existing.startChoice` is now set → blocked ✓ |
-| Returning player (saved game) | DataStore load has `startChoice` set → never enters lobby path ✓ |
-| Interface switch during lobby | `SetUIMode` still fires; state arrives; `startChoice==nil` → correct interface shows firm name ✓ |
+| Player disconnects during lobby (playerStates nil) | `PlayerRemoving` guard `type(state) == "table"` fails → no save. DataStore retains the last **departure** save (not the game-over state, which is only saved on disconnect). On reconnect: if the last departure save was mid-game, the player resumes from that turn; if DataStore has a game-over save (player previously disconnected during game-over), the player sees game-over again and can restart. If no prior save exists at all (first-ever game), DataStore returns nil → no StateUpdate pushed → client shows InterfacePicker as a fresh player ✓ |
+| ChooseStart double-fire during lobby | First call sets real state with startChoice; second call: `existing.startChoice ~= nil` → blocked ✓ |
+| Returning player (saved game) | DataStore load has `startChoice` set → `ChooseStart` guard blocks; never enters lobby path ✓ |
+| SetUIMode during lobby (nil slot) | Handler guard `type(state) ~= "table"` returns early; `pendingModes[player]` is set. The existing `ChooseStart` handler already consumes `pendingModes[player]` when building the real game state, so the correct uiMode is applied ✓ |
+| BuyGoods / TravelTo / any other handler during lobby | Guard `type(state) ~= "table"` returns early (slot is nil) ✓ |
+| Settings overlay open when game ends and player restarts | `adapter.update` lobby branch destroys overlay before showing StartPanel ✓ |

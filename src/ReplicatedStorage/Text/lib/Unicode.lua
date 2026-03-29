@@ -105,4 +105,16 @@ return {
 	["‹"] = 8249;
 	["›"] = 8250;
 	["※"] = 8260;
+
+	-- Box drawing glyphs (TaipanThickFont)
+	[string.char(129)] = 129;  -- vertical bar
+	[string.char(136)] = 136;  -- divider left
+	[string.char(137)] = 137;  -- divider right
+	[string.char(141)] = 141;  -- top horizontal
+	[string.char(154)] = 154;  -- bottom horizontal
+	[string.char(156)] = 156;  -- bottom-left corner
+	[string.char(157)] = 157;  -- divider horizontal
+	[string.char(158)] = 158;  -- bottom-right corner
+	[string.char(187)] = 187;  -- top-left corner
+	[string.char(189)] = 189;  -- top-right corner
 };

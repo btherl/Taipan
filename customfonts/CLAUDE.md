@@ -5,7 +5,9 @@ Taipan uses two fonts, TaipanStandardFont and TaipanThickFont
 TaipanStandardFont is used for almost all text in the game.
 
 TaipanThickFont is used for the Firm name, and also has glyphs used for drawing boxes.
-It also has glyphs for showing enemy ships, though we may simply use large sprites for these.
+Firm name was not implemented when this was written, it will be implemented later.
+
+TaipanThickFont also has glyphs for showing enemy ships, though we may simply use large sprites for these.
 
 ## Drawing boxes with fonts
 

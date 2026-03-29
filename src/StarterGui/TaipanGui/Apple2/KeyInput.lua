@@ -22,8 +22,44 @@ function KeyInput.new(screenGui)
   local mobileButtons  = {}   -- active mobile TextButton instances
   local mobileFrame    = nil  -- container for mobile buttons
   local typeBuf        = ""
+  local cursorPos      = 1    -- 1-based position in buffer (1 to #typeBuf+1)
+  local cursorVisible  = true
+  local cursorTimer    = 0
+  local maxLength      = nil  -- nil = unlimited
   local typeUpdateConn = nil  -- RenderStepped for mobile TextBox mirror
+  local blinkConn      = nil  -- RenderStepped for cursor blink
   local hiddenBox      = nil  -- hidden TextBox for mobile keyboard
+
+  local CURSOR_CHAR    = "_"
+  local BLINK_HALF     = 0.265  -- half of 0.53s Apple II cursor cycle
+
+  -- Build display string with cursor baked in
+  local function buildDisplayStr()
+    if cursorPos > #typeBuf then
+      -- Cursor is at append position (after last char)
+      if cursorVisible then
+        return typeBuf .. CURSOR_CHAR
+      else
+        return typeBuf .. " "
+      end
+	else
+      -- Cursor is within existing text
+	  local before = typeBuf:sub(1, cursorPos - 1)
+	  -- We add a space to keep lengths consistent with when cursor is displayed
+	  local after  = typeBuf:sub(cursorPos + 1) .. " "
+      if cursorVisible then
+        return before .. CURSOR_CHAR .. after
+      else
+        return before .. typeBuf:sub(cursorPos, cursorPos) .. after
+      end
+    end
+  end
+
+  -- Reset cursor blink to visible (call on any keypress)
+  local function resetBlink()
+    cursorTimer = 0
+    cursorVisible = true
+  end
 
   -- Clean up all active listeners and mobile UI
   local function cleanup()
@@ -32,8 +68,13 @@ function KeyInput.new(screenGui)
     if mobileFrame then mobileFrame:Destroy(); mobileFrame = nil end
     mobileButtons = {}
     if typeUpdateConn then typeUpdateConn:Disconnect(); typeUpdateConn = nil end
+    if blinkConn then blinkConn:Disconnect(); blinkConn = nil end
     if hiddenBox then hiddenBox:Destroy(); hiddenBox = nil end
     typeBuf = ""
+    cursorPos = 1
+    cursorVisible = true
+    cursorTimer = 0
+    maxLength = nil
   end
 
   -- Build mobile virtual key buttons for "key" mode
@@ -107,6 +148,7 @@ function KeyInput.new(screenGui)
 
     elseif promptDef.type == "type" then
       local placeholder = promptDef.typePlaceholder or "> "
+      maxLength = promptDef.maxLength  -- nil = unlimited
 
       if isMobile then
         -- Hidden TextBox triggers native on-screen keyboard
@@ -135,9 +177,26 @@ function KeyInput.new(screenGui)
           end)
         )
       else
-        -- Desktop: capture character-by-character
+        -- Desktop: capture character-by-character with blinking cursor
         local terminal = promptDef._terminal
-        if terminal then terminal.showInputLine(placeholder) end
+        cursorPos = 1
+        resetBlink()
+
+        local function updateDisplay()
+          if terminal then terminal.showInputLine(placeholder .. buildDisplayStr()) end
+        end
+
+        updateDisplay()
+
+        -- Cursor blink timer
+        blinkConn = RunService.RenderStepped:Connect(function(dt)
+          cursorTimer = cursorTimer + dt
+          if cursorTimer >= BLINK_HALF then
+            cursorVisible = not cursorVisible
+            cursorTimer = 0
+            updateDisplay()
+          end
+        end)
 
         table.insert(connections,
           UserInputService.InputBegan:Connect(function(input, gameProcessed)
@@ -145,24 +204,50 @@ function KeyInput.new(screenGui)
             if input.KeyCode == Enum.KeyCode.Return then
               local submitted = typeBuf
               typeBuf = ""
+              cursorPos = 1
+              resetBlink()
               if terminal then terminal.showInputLine(placeholder) end
               local err = promptDef.onType(submitted, state, actions)
               if err and promptDef._onError then promptDef._onError(err) end
             elseif input.KeyCode == Enum.KeyCode.Escape then
-              -- Escape in type mode submits empty string (cancel)
               typeBuf = ""
+              cursorPos = 1
+              resetBlink()
               if terminal then terminal.showInputLine(placeholder) end
               local err = promptDef.onType("", state, actions)
               if err and promptDef._onError then promptDef._onError(err) end
+            elseif input.KeyCode == Enum.KeyCode.Left then
+              if cursorPos > 1 then cursorPos = cursorPos - 1 end
+              resetBlink()
+              updateDisplay()
+            elseif input.KeyCode == Enum.KeyCode.Right then
+              if cursorPos <= #typeBuf then cursorPos = cursorPos + 1 end
+              resetBlink()
+              updateDisplay()
             elseif input.KeyCode == Enum.KeyCode.Backspace then
-              typeBuf = typeBuf:sub(1, -2)
-              if terminal then terminal.showInputLine(placeholder .. typeBuf) end
+              if cursorPos > 1 then
+                typeBuf = typeBuf:sub(1, cursorPos - 2) .. typeBuf:sub(cursorPos)
+                cursorPos = cursorPos - 1
+              end
+              resetBlink()
+              updateDisplay()
             else
               local char = input.KeyCode.Name
               if NUMKEY_MAP[char] then char = NUMKEY_MAP[char] end
               if #char == 1 then
-                typeBuf = typeBuf .. char
-                if terminal then terminal.showInputLine(placeholder .. typeBuf) end
+                if cursorPos <= #typeBuf then
+                  -- Overwrite mode: replace char at cursor position
+                  typeBuf = typeBuf:sub(1, cursorPos - 1) .. char .. typeBuf:sub(cursorPos + 1)
+                  cursorPos = cursorPos + 1
+                else
+                  -- Append mode: add char at end (if under maxLength)
+                  if not maxLength or #typeBuf < maxLength then
+                    typeBuf = typeBuf .. char
+                    cursorPos = cursorPos + 1
+                  end
+                end
+                resetBlink()
+                updateDisplay()
               end
             end
           end)

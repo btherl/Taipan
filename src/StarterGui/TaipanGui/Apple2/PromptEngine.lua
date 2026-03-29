@@ -329,6 +329,7 @@ local function sceneCombatThrowAmount(state, actions, localSceneCb, goodIdx)
   return lines, {
     type = "type",
     typePlaceholder = "Amount: ",
+    maxLength = 8,
     onType = function(text, _s, _a)
       if text == "" then
         if localSceneCb then localSceneCb("combat_throw_good") end
@@ -509,6 +510,7 @@ local function sceneBuySellAmount(state, actions, localSceneCb, goodIdx, isBuy)
   return lines, {
     type = "type",
     typePlaceholder = "Amount: ",
+    maxLength = 8,
     onType = function(text, _s, _a)
       if text == "" then
         if localSceneCb then localSceneCb(isBuy and "buy" or "sell") end
@@ -571,6 +573,7 @@ local function sceneBankAmount(state, actions, localSceneCb, isDeposit)
   return lines, {
     type = "type",
     typePlaceholder = "Amount: ",
+    maxLength = 8,
     onType = function(text, _s, _a)
       if text == "" then
         if localSceneCb then localSceneCb("bank") end
@@ -657,6 +660,7 @@ local function sceneWarehouseAmount(state, actions, localSceneCb, goodIdx, isToW
   return lines, {
     type = "type",
     typePlaceholder = "Amount: ",
+    maxLength = 8,
     onType = function(text, _s, _a)
       if text == "" then
         if localSceneCb then localSceneCb(isToWarehouse and "wh_to" or "wh_from") end
@@ -690,6 +694,7 @@ local function sceneWuAmount(state, actions, localSceneCb, isRepay)
   return lines, {
     type = "type",
     typePlaceholder = "Amount: ",
+    maxLength = 8,
     onType = function(text, _s, _a)
       if text == "" then
         if localSceneCb then localSceneCb(nil) end
@@ -727,6 +732,7 @@ local function sceneRepairAmount(state, actions, localSceneCb)
   return lines, {
     type = "type",
     typePlaceholder = "Amount: ",
+    maxLength = 8,
     onType = function(text, _s, _a)
       if text == "" then
         if localSceneCb then localSceneCb(nil) end

@@ -202,12 +202,16 @@ local function sceneStartChoice(_state, actions, _localSceneCb)
   local lines = {
     { text = "Do you want to start . . .", color = AMBER },
     { text = "", color = AMBER },
+    { text = "", color = AMBER },
 	{ text = "  1) With cash (and a debt)", color = AMBER },
+	{ text = "", color = AMBER },
 	{ text = "", color = AMBER },
 	{ text = string.rep(" ", 16) .. ">> or <<", color = AMBER},
 	{ text = "", color = AMBER },
+	{ text = "", color = AMBER },
 	{ text = "  2) With five guns and no cash", color = AMBER },
 	{ text = string.rep(" ", 16) .. "(But no debt!)", color = AMBER},
+	{ text = "", color = AMBER },
 	{ text = "", color = AMBER },
 	{ text = string.rep(" ", 10) .. "?", color = AMBER},
   }

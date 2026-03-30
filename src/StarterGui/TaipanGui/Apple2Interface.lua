@@ -88,6 +88,8 @@ function Apple2Interface.new(screenGui, actions)
     -- Server-driven scenes clear localScene
     if isServerDriven(state) then
       localScene = nil
+    elseif state.startChoice == nil then  -- lobby state: reset to firm name screen
+      localScene = nil
     end
 
     render(state, localScene)

@@ -63,11 +63,11 @@ if type(existing) == "table" and existing.startChoice ~= nil then return end
 
 This lets `ChooseStart` create a fresh game after restart (`playerStates[player]` is nil). The rest of the handler is unchanged.
 
-The original guard `if playerStates[player] then return end` blocked any truthy value. This project does not use a boolean sentinel in `playerStates` (no `= true` is set before the DataStore load in `PlayerAdded`), so the guard simplification is safe.
+The original guard `if playerStates[player] then return end` blocked any truthy value. This project does not use a boolean sentinel in `playerStates` (no `= true` is set before the DataStore load in `PlayerAdded`), so the guard simplification is safe. If a non-table truthy value were ever placed in the slot (e.g. a future boolean sentinel), the new guard would fall through and allow `ChooseStart` to run; implementers should be aware of this if sentinel usage is ever added.
 
 **Note on PlayerAdded race:** The `PlayerAdded` handler runs a `task.spawn` DataStore load with no boolean sentinel — `playerStates[player]` is nil during the async window. This race pre-existed the current change (the original guard `if playerStates[player] then return end` also falls through when the slot is nil). The risk (a returning player fires ChooseStart during the ~1-second load window) is accepted as-is; the InterfacePicker → firm name screen sequence makes this window practically unreachable.
 
-**Note on `SetUIMode` during lobby:** If the player fires `SetUIMode` between the game ending and clicking RESTART, `pendingModes[player]` is updated but the old `state.uiMode` is snapshotted into `lobbyState`. The pushed lobby state may carry a slightly stale `uiMode`. This is a very narrow race, accepted as-is; `ChooseStart` consumes `pendingModes[player]` when building the real game state, so the correct mode is applied before any gameplay begins.
+**Note on `SetUIMode` during lobby:** If the player fires `SetUIMode` between the game ending and clicking RESTART, `pendingModes[player]` is updated but the old `state.uiMode` is snapshotted into `lobbyState`. The pushed lobby state may carry a slightly stale `uiMode`, meaning the firm name screen itself could render in the previous interface mode. This is accepted as-is (very narrow race, one frame of wrong mode at most); `ChooseStart` consumes `pendingModes[player]` when building the real game state, so the correct mode is applied for all gameplay.
 
 The two lines `Remotes.StateUpdate:FireClient(player, lobbyState)` and `playerStates[player] = nil` execute sequentially in a single Roblox event handling coroutine. Roblox's single-threaded event model means no other handler coroutine can interleave between them; `FireClient` queues the message to the client but does not yield or allow other server events to run.
 
@@ -107,9 +107,13 @@ The lobby state satisfies all three conditions (`turnsElapsed=1, destination=0`)
 
 #### StartPanel.lua
 
-Change `panel.hide()` from destroying the frame to hiding it, and add `panel.show()`. The `show()` method must also reset the `chosen` flag and restore button appearance, so the panel is fully interactive again after a restart:
+Change `panel.hide()` from destroying the frame to hiding it, and add `panel.show()`. The `show()` method must also reset the `chosen` flag and restore button appearance, so the panel is fully interactive again after a restart.
+
+Define the default button colour as a local constant shared between the constructor and `show()`, to prevent silent drift:
 
 ```lua
+local BUTTON_DEFAULT_COLOR = Color3.fromRGB(20, 20, 20)  -- add near top of StartPanel.new
+
 function panel.hide()
   frame.Visible = false
 end
@@ -118,14 +122,14 @@ function panel.show()
   chosen = false
   cashBtn.Active = true
   gunsBtn.Active = true
-  cashBtn.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
-  gunsBtn.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+  cashBtn.BackgroundColor3 = BUTTON_DEFAULT_COLOR
+  gunsBtn.BackgroundColor3 = BUTTON_DEFAULT_COLOR
   prompt.Text = "Elder Brother Wu says:\n\"Do you have a firm, or a ship?\""
   frame.Visible = true
 end
 ```
 
-Both `hide()` and `show()` are idempotent. The name text box retains its value between cycles (intentional — see Goal). The button reset colour `Color3.fromRGB(20, 20, 20)` must match the constructor's initial `BackgroundColor3`; if that constant is changed in the constructor it must be updated in `show()` too.
+The constructor must also use `BUTTON_DEFAULT_COLOR` for `cashBtn.BackgroundColor3` and `gunsBtn.BackgroundColor3`. `show()` is safe to call on a panel that has never been hidden (buttons were never clicked, `chosen` is already false — the resets are idempotent). Both `hide()` and `show()` are idempotent. The name text box retains its value between cycles (intentional — see Goal).
 
 `StartPanel` is constructed with `frame.Visible = true`. The `hide()` change (Visible=false instead of Destroy) is safe for all call paths:
 - **New player first launch:** StartPanel visible from construction → player picks start → `adapter.update(state)` with `startChoice` set → `startPanel.hide()` → Visible=false ✓
@@ -178,7 +182,8 @@ Player clicks RESTART (any ending: sunk / quit / retired)
 
 Player enters firm name, picks start (firm name screen → start choice screen)
   → StartPanel.onChoose(choice, firmName) [Modern] or sceneFirmName.onType + sceneStartChoice.onKey [Apple II]
-  → actions.setFirmName(firmName) stores name in GameActions.pendingFirmName
+  → actions.setFirmName(firmName) ALWAYS called first with whatever is in the name box
+    (even if empty — this clears any stale pendingFirmName from a previous game)
   → actions.chooseStart(choice) fires ChooseStart:FireServer(choice, pendingFirmName)
   → server ChooseStart: playerStates[player] is nil → allowed
   → creates real game state (GameState.newGame with firmName) → pushState
@@ -204,7 +209,7 @@ Player enters firm name, picks start (firm name screen → start choice screen)
 
 | Scenario | Behaviour |
 |---|---|
-| Player disconnects during lobby (playerStates nil) | `PlayerRemoving` guard `type(state) == "table"` fails → no save. DataStore retains the last **departure** save (not the game-over state, which is only saved on disconnect). On reconnect: if the last departure save was mid-game, the player resumes from that turn; if DataStore has a game-over save (player previously disconnected during game-over), the player sees game-over again and can restart. If no prior save exists at all (first-ever game), DataStore returns nil → no StateUpdate pushed → client shows InterfacePicker as a fresh player ✓ |
+| Player disconnects during lobby (playerStates nil) | `PlayerRemoving` guard fails → no save. DataStore unchanged. On reconnect, three sub-cases: **(a)** Last save was mid-game (player never disconnected during game-over) → player resumes that mid-game turn. **(b)** Player had previously disconnected while viewing the game-over screen (game-over table was saved by that earlier disconnect) → game-over state loads → player sees game-over again and can restart. **(c)** No prior save at all (first-ever game) → DataStore returns nil → no StateUpdate pushed → client shows InterfacePicker as a fresh player ✓ |
 | ChooseStart double-fire during lobby | First call sets real state with startChoice; second call: `existing.startChoice ~= nil` → blocked ✓ |
 | Returning player (saved game) | DataStore load has `startChoice` set → `ChooseStart` guard blocks; never enters lobby path ✓ |
 | SetUIMode during lobby (nil slot) | Handler guard `type(state) ~= "table"` returns early; `pendingModes[player]` is set. The existing `ChooseStart` handler already consumes `pendingModes[player]` when building the real game state, so the correct uiMode is applied ✓ |

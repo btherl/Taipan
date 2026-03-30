@@ -26,6 +26,7 @@ Players.CharacterAutoLoads = false
 
 local playerStates: {[Player]: any} = {}
 local pendingModes: {[Player]: string} = {}
+local pendingTutorialSeen: {[Player]: boolean} = {}
 
 local function savePlayer(player, state)
   if RunService:IsStudio() then return end
@@ -70,8 +71,15 @@ Remotes.ChooseStart.OnServerEvent:Connect(function(player, startChoice, firmName
     - state.shipCargo[1] - state.shipCargo[2]
     - state.shipCargo[3] - state.shipCargo[4]
     - state.guns * 10
-  -- state.seenTutorial is already false (set by GameState.newGame)
-  state.pendingTutorial = true  -- fires tutorial on first HK arrival; not in newGame
+  if pendingTutorialSeen[player] ~= nil then
+    state.seenTutorial = pendingTutorialSeen[player]
+    if not pendingTutorialSeen[player] then
+      state.pendingTutorial = true  -- tutorial not yet seen; fires on first HK arrival
+    end
+    pendingTutorialSeen[player] = nil
+  else
+    state.pendingTutorial = true  -- new player; fires tutorial on first HK arrival
+  end
   if pendingModes[player] then
     state.uiMode = pendingModes[player]
     pendingModes[player] = nil
@@ -378,6 +386,7 @@ Remotes.RestartGame.OnServerEvent:Connect(function(player)
     uiMode       = state.uiMode,
     seenTutorial = state.seenTutorial,
   }
+  pendingTutorialSeen[player] = state.seenTutorial
   Remotes.StateUpdate:FireClient(player, lobbyState)
   playerStates[player] = nil
 end)
@@ -674,6 +683,7 @@ Players.PlayerRemoving:Connect(function(player)
   end
   playerStates[player] = nil
   pendingModes[player] = nil
+  pendingTutorialSeen[player] = nil
 end)
 
 Remotes.SetUIMode.OnServerEvent:Connect(function(player, mode)

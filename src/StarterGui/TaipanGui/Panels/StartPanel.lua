@@ -3,6 +3,7 @@ local StartPanel = {}
 local AMBER = Color3.fromRGB(200, 180, 80)
 local GREEN = Color3.fromRGB(140, 200, 80)
 function StartPanel.new(parent, onChoose)
+  local BUTTON_DEFAULT_COLOR = Color3.fromRGB(20, 20, 20)
   local frame = Instance.new("Frame")
   frame.Name = "StartPanel"
   frame.Size = UDim2.new(1, 0, 1, 0)
@@ -10,7 +11,7 @@ function StartPanel.new(parent, onChoose)
   frame.BackgroundColor3 = Color3.fromRGB(10, 10, 10)
   frame.BorderSizePixel = 0
   frame.ZIndex = 30
-  frame.Visible = true
+  frame.Visible = false
   frame.Parent = parent
   local title = Instance.new("TextLabel")
   title.Size = UDim2.new(1, -20, 0, 50)
@@ -65,7 +66,7 @@ function StartPanel.new(parent, onChoose)
   local cashBtn = Instance.new("TextButton")
   cashBtn.Size = UDim2.new(0.8, 0, 0, 88)
   cashBtn.Position = UDim2.new(0.1, 0, 0, 227)
-  cashBtn.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+  cashBtn.BackgroundColor3 = BUTTON_DEFAULT_COLOR
   cashBtn.BorderColor3 = AMBER
   cashBtn.BorderSizePixel = 1
   cashBtn.Text = "FIRM\n$400 cash · $5,000 debt · no guns"
@@ -78,7 +79,7 @@ function StartPanel.new(parent, onChoose)
   local gunsBtn = Instance.new("TextButton")
   gunsBtn.Size = UDim2.new(0.8, 0, 0, 88)
   gunsBtn.Position = UDim2.new(0.1, 0, 0, 327)
-  gunsBtn.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+  gunsBtn.BackgroundColor3 = BUTTON_DEFAULT_COLOR
   gunsBtn.BorderColor3 = AMBER
   gunsBtn.BorderSizePixel = 1
   gunsBtn.Text = "SHIP\n5 guns · no cash · no debt"
@@ -103,7 +104,16 @@ function StartPanel.new(parent, onChoose)
   gunsBtn.Activated:Connect(function() choose("guns") end)
   local panel = {}
   function panel.hide()
-    if frame and frame.Parent then frame:Destroy() end
+    frame.Visible = false
+  end
+  function panel.show()
+    chosen = false
+    cashBtn.Active = true
+    gunsBtn.Active = true
+    cashBtn.BackgroundColor3 = BUTTON_DEFAULT_COLOR
+    gunsBtn.BackgroundColor3 = BUTTON_DEFAULT_COLOR
+    prompt.Text = "Elder Brother Wu says:\n\"Do you have a firm, or a ship?\""
+    frame.Visible = true
   end
   return panel
 end

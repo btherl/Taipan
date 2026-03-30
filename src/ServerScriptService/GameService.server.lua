@@ -59,7 +59,9 @@ end
 
 Remotes.ChooseStart.OnServerEvent:Connect(function(player, startChoice, firmName)
   if startChoice ~= "cash" and startChoice ~= "guns" then startChoice = "cash" end
-  if playerStates[player] then return end           -- already initialised (returning player) or double-fire guard
+  local existing = playerStates[player]
+  if type(existing) == "table" and existing.startChoice ~= nil then return end
+  -- nil slot (new player or post-restart) → allowed through
 
   -- New player: start a fresh game
   local state = GameState.newGame(startChoice, firmName)
@@ -365,22 +367,19 @@ end)
 Remotes.RestartGame.OnServerEvent:Connect(function(player)
   local state = playerStates[player]
   if type(state) ~= "table" or not state.gameOver then return end
-  local wasTutorialSeen = state.seenTutorial  -- preserve so tutorial doesn't replay
-  local prevStartChoice = state.startChoice or "cash"  -- preserve original start choice
-  local prevUIMode = state.uiMode                      -- preserve interface mode
-  local newState = GameState.newGame(prevStartChoice)
-  newState.currentPrices = PriceEngine.calculatePrices(newState.basePrices, newState.currentPort)
-  newState.holdSpace = newState.shipCapacity
-    - newState.shipCargo[1] - newState.shipCargo[2]
-    - newState.shipCargo[3] - newState.shipCargo[4]
-    - newState.guns * 10
-  newState.seenTutorial = wasTutorialSeen
-  newState.uiMode = prevUIMode
-  if not wasTutorialSeen then
-    newState.pendingTutorial = true  -- tutorial still pending; fires on first HK arrival
-  end
-  playerStates[player] = newState
-  pushState(player)
+  -- Push a minimal lobby state so the client shows the firm name screen.
+  -- Then nil the slot: all existing handler guards (type ~= "table") block
+  -- game actions during lobby, and PlayerRemoving skips the DataStore save.
+  local lobbyState = {
+    startChoice  = nil,
+    gameOver     = false,
+    turnsElapsed = 1,
+    destination  = 0,
+    uiMode       = state.uiMode,
+    seenTutorial = state.seenTutorial,
+  }
+  Remotes.StateUpdate:FireClient(player, lobbyState)
+  playerStates[player] = nil
 end)
 
 local function combatTruncateDamage(state)

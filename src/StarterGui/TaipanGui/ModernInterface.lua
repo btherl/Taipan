@@ -164,7 +164,17 @@ function ModernInterface.new(screenGui, actions)
   local adapter = {}
 
   function adapter.update(state)
-    startPanel.hide()  -- idempotent: destroys frame on first call, no-op thereafter
+    -- Lobby state: startChoice is nil (a real game always has startChoice set).
+    if state.startChoice == nil and not state.gameOver then
+      if settingsOverlay then
+        settingsOverlay:Destroy()
+        settingsOverlay = nil
+      end
+      settingsBtn.Visible = false
+      startPanel.show()
+      return
+    end
+    startPanel.hide()
     portPanel.update(state)
     statusStrip.update(state)
     inventoryPanel.update(state)

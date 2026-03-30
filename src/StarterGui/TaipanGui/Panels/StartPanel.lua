@@ -11,7 +11,7 @@ function StartPanel.new(parent, onChoose)
   frame.BackgroundColor3 = Color3.fromRGB(10, 10, 10)
   frame.BorderSizePixel = 0
   frame.ZIndex = 30
-  frame.Visible = false
+  frame.Visible = true
   frame.Parent = parent
   local title = Instance.new("TextLabel")
   title.Size = UDim2.new(1, -20, 0, 50)

@@ -42,6 +42,7 @@ local function fmt(n)
 end
 
 local BLACK = Color3.new(0, 0, 0)
+-- Abbreviated good names for the 26-char inner box (Constants.GOOD_NAMES[4] is "General Cargo", too long)
 local SHORT_GOOD_NAMES = { "Opium", "Silk", "Arms", "General" }
 
 -- Right-justify string to width (add spaces on left)
@@ -71,7 +72,7 @@ local function fmtBig(n)
     end
     return result
   end
-  local II = math.floor(math.log(n) / math.log(10))
+  local II = math.floor(math.log(n) / math.log(10) + 1e-9)
   local IJ = math.floor(II / 3) * 3
   local disp = string.format("%.2f", n / (10 ^ IJ)):sub(1, 4)
   if disp:sub(-1) == "." then disp = disp:sub(1, -2) end
@@ -164,7 +165,7 @@ local function buildPortRows(state)
   -- Inner helper: warehouse good row 26 chars: left 12 (good+qty) + right 14 (label/value right-justified)
   local function whInner(goodIdx, qty, rightText)
     local name = SHORT_GOOD_NAMES[goodIdx]
-    local left = pad("   " .. pad(name, 7) .. tostring(qty), 12)
+    local left = pad("   " .. pad(name, 7) .. tostring(qty), 12):sub(1, 12)
     local right = lpad(tostring(rightText), 14)
     return (left .. right):sub(1, INNER_W)
   end

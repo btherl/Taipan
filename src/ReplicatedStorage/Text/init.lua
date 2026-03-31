@@ -220,8 +220,8 @@ function Text:Update(DeltaTime)
 
 		local inst = self.Sprites[i].Instance
 		if self.Inverted then
-			inst.ImageColor3            = self.BackgroundColor3
-			inst.BackgroundColor3       = self.TextColor3
+			inst.ImageColor3            = Color3.new(0, 0, 0)
+			inst.BackgroundColor3       = self.BackgroundColor3
 			inst.BackgroundTransparency = 0
 		else
 			inst.ImageColor3            = self.TextColor3

@@ -41,6 +41,55 @@ local function fmt(n)
   return "$" .. result
 end
 
+local BLACK = Color3.new(0, 0, 0)
+local SHORT_GOOD_NAMES = { "Opium", "Silk", "Arms", "General" }
+
+-- Right-justify string to width (add spaces on left)
+local function lpad(s, width)
+  s = tostring(s)
+  while #s < width do s = " " .. s end
+  return s
+end
+
+-- Center string in `width` chars with space padding (truncates if over)
+local function centerStr(s, width)
+  local len = #s
+  if len >= width then return s:sub(1, width) end
+  local left = math.floor((width - len) / 2)
+  return string.rep(" ", left) .. s .. string.rep(" ", width - len - left)
+end
+
+-- Format number without $ prefix: plain comma int under 1M, "X.XX Suffix" above
+local function fmtBig(n)
+  n = math.floor(math.max(0, n))
+  if n < 1000000 then
+    local s, result, count = tostring(n), "", 0
+    for i = #s, 1, -1 do
+      if count > 0 and count % 3 == 0 then result = "," .. result end
+      result = s:sub(i, i) .. result
+      count += 1
+    end
+    return result
+  end
+  local II = math.floor(math.log(n) / math.log(10))
+  local IJ = math.floor(II / 3) * 3
+  local disp = string.format("%.2f", n / (10 ^ IJ)):sub(1, 4)
+  if disp:sub(-1) == "." then disp = disp:sub(1, -2) end
+  local suffix = ({"Thousand","Million","Billion","Trillion"})[IJ/3] or "?"
+  return disp .. " " .. suffix
+end
+
+-- Ship status: returns (statusText, isInverted)
+-- sw = 100 - damage/shipCapacity*100 (0=destroyed, 100=perfect)
+local function shipStatus(state)
+  local sw = math.max(0, 100 - math.floor((state.damage or 0) / (state.shipCapacity or 1) * 100))
+  local label = (sw >= 100 and "Perfect") or (sw >= 80 and "Prime") or
+                (sw >= 60 and "Good")    or (sw >= 40 and "Fair")  or
+                (sw >= 20 and "Poor")    or "Critical"
+  local inverted = sw < 40
+  return label .. ": " .. tostring(sw), inverted
+end
+
 local function statusLines(state)
   local lines = {}
   local portName = PORT_NAMES[state.currentPort] or "?"
@@ -92,14 +141,161 @@ local function atPortMenu(state)
   return menuLines, validKeys
 end
 
+local function buildPortRows(state)
+  local rows = {}
+  local VERT  = string.char(129)
+  local THICK = "TaipanThickFont"
+  local BOX_W   = 28
+  local INNER_W = 26
+  local RIGHT_W = 12
+
+  -- Derived values
+  local firmName      = state.firmName or "TAIPAN"
+  local portName      = PORT_NAMES[state.currentPort] or "Hong Kong"
+  local monthName     = MONTH_NAMES[state.month] or "Jan"
+  local yearStr       = tostring(state.year or 1860)
+  local wh            = state.warehouseCargo or {0,0,0,0}
+  local warehouseUsed = state.warehouseUsed or 0
+  local vacant        = Constants.WAREHOUSE_CAPACITY - warehouseUsed
+  local sc            = state.shipCargo or {0,0,0,0}
+  local holdSpace     = state.holdSpace or 0
+  local overloaded    = holdSpace < 0
+
+  -- Inner helper: warehouse good row 26 chars: left 12 (good+qty) + right 14 (label/value right-justified)
+  local function whInner(goodIdx, qty, rightText)
+    local name = SHORT_GOOD_NAMES[goodIdx]
+    local left = pad("   " .. pad(name, 7) .. tostring(qty), 12)
+    local right = lpad(tostring(rightText), 14)
+    return (left .. right):sub(1, INNER_W)
+  end
+
+  -- Inner helper: hold good row 26 chars: good+qty, rest spaces
+  local function holdInner(goodIdx, qty)
+    return pad("   " .. pad(SHORT_GOOD_NAMES[goodIdx], 7) .. tostring(qty), INNER_W):sub(1, INNER_W)
+  end
+
+  -- Build a segmented row: │inner│ + right-column segments
+  local function boxRowSegs(innerText, rightSegs)
+    local segs = {
+      { text = VERT,                                       color = AMBER, font = THICK },
+      { text = pad(innerText, INNER_W):sub(1, INNER_W),   color = AMBER },
+      { text = VERT,                                       color = AMBER, font = THICK },
+    }
+    for _, s in ipairs(rightSegs) do table.insert(segs, s) end
+    return { segments = segs }
+  end
+
+  -- Row 1: firm name centered over 40 cols
+  rows[1] = { text = centerStr("Firm: " .. firmName .. ", Hong Kong", 40), color = AMBER }
+
+  -- Row 2: box top border (28 wide), no right content
+  rows[2] = { segments = {{ text = BoxDrawing.topString(BOX_W), color = AMBER, font = THICK }}}
+
+  -- Row 3: warehouse header + "Date" label
+  rows[3] = boxRowSegs("Hong Kong Warehouse", {{ text = "    Date    ", color = AMBER }})
+
+  -- Row 4: Opium in warehouse + date (with inverted month)
+  -- Right col: " 15 " + INVERTED(monthName) + " " + yearStr = 4+3+1+4 = 12 chars
+  rows[4] = boxRowSegs(
+    whInner(1, wh[1], "In use:"),
+    {
+      { text = " 15 ",    color = AMBER },
+      { text = monthName, color = AMBER, inverted = true, backgroundColor = BLACK },
+      { text = " " .. yearStr, color = AMBER },
+    }
+  )
+
+  -- Row 5: Silk in warehouse + warehouse used value (right col empty)
+  rows[5] = boxRowSegs(
+    whInner(2, wh[2], warehouseUsed),
+    {{ text = string.rep(" ", RIGHT_W), color = AMBER }}
+  )
+
+  -- Row 6: Arms in warehouse + "Location" label
+  rows[6] = boxRowSegs(
+    whInner(3, wh[3], "Vacant:"),
+    {{ text = "  Location  ", color = AMBER }}
+  )
+
+  -- Row 7: General in warehouse + inverted location name
+  -- Location centered in 8 chars (matching "Location" label width) if <=8; left-aligned if longer
+  local locDisp = (#portName <= 8) and centerStr(portName, 8) or portName
+  rows[7] = boxRowSegs(
+    whInner(4, wh[4], vacant),
+    {
+      { text = "  ",     color = AMBER },
+      { text = locDisp,  color = AMBER, inverted = true, backgroundColor = BLACK },
+      { text = string.rep(" ", math.max(0, RIGHT_W - 2 - #locDisp)), color = AMBER },
+    }
+  )
+
+  -- Row 8: box divider (├──...──┤), no right content
+  rows[8] = { segments = {{ text = BoxDrawing.dividerString(BOX_W), color = AMBER, font = THICK }}}
+
+  -- Row 9: Hold/Guns header + "Debt" label
+  -- If overloaded, "Overload" shown inverted instead of holdSpace number
+  if not overloaded then
+    local gunsStr = "Guns " .. tostring(state.guns or 0)
+    local holdStr = "Hold " .. tostring(holdSpace)
+    local inner9  = pad(holdStr .. string.rep(" ", math.max(1, INNER_W - #holdStr - #gunsStr)) .. gunsStr, INNER_W):sub(1, INNER_W)
+    rows[9] = boxRowSegs(inner9, {{ text = "    Debt    ", color = AMBER }})
+  else
+    local gunsStr = "Guns " .. tostring(state.guns or 0)
+    local spaces  = math.max(1, INNER_W - 5 - 8 - #gunsStr)
+    rows[9] = { segments = {
+      { text = VERT,                          color = AMBER, font = THICK },
+      { text = "Hold ",                       color = AMBER },
+      { text = "Overload",                    color = AMBER, inverted = true, backgroundColor = BLACK },
+      { text = string.rep(" ", spaces),       color = AMBER },
+      { text = pad(gunsStr, INNER_W - 5 - 8 - spaces), color = AMBER },
+      { text = VERT,                          color = AMBER, font = THICK },
+      { text = "    Debt    ",                color = AMBER },
+    }}
+  end
+
+  -- Row 10: Opium in hold + inverted debt value (centered in 12-char right col)
+  local debtStr = fmtBig(state.debt or 0)
+  local dPad    = math.floor((RIGHT_W - #debtStr) / 2)
+  rows[10] = boxRowSegs(holdInner(1, sc[1]), {
+    { text = string.rep(" ", dPad),                               color = AMBER },
+    { text = debtStr,                                              color = AMBER, inverted = true, backgroundColor = BLACK },
+    { text = string.rep(" ", math.max(0, RIGHT_W - dPad - #debtStr)), color = AMBER },
+  })
+
+  -- Row 11: Silk in hold, right col empty
+  rows[11] = boxRowSegs(holdInner(2, sc[2]), {{ text = string.rep(" ", RIGHT_W), color = AMBER }})
+
+  -- Row 12: Arms in hold + "Ship status" label
+  rows[12] = boxRowSegs(holdInner(3, sc[3]), {{ text = " Ship status", color = AMBER }})
+
+  -- Row 13: General in hold + ship status (inverted when sw < 40, full 11-char block)
+  local statusText, statusInv = shipStatus(state)
+  local statusDisp = centerStr(statusText, 11)
+  rows[13] = boxRowSegs(holdInner(4, sc[4]), {
+    { text = " ",        color = AMBER },
+    { text = statusDisp, color = AMBER, inverted = statusInv, backgroundColor = statusInv and BLACK or nil },
+  })
+
+  -- Row 14: box bottom border (└──...──┘), no right content
+  rows[14] = { segments = {{ text = BoxDrawing.bottomString(BOX_W), color = AMBER, font = THICK }}}
+
+  -- Row 15: Cash and Bank (right-aligned)
+  local cashStr = "Cash:" .. fmtBig(state.cash or 0)
+  local bankStr = "Bank:" .. fmtBig(state.bankBalance or 0)
+  rows[15] = { text = cashStr .. string.rep(" ", math.max(1, 40 - #cashStr - #bankStr)) .. bankStr, color = AMBER }
+
+  -- Row 16: separator line
+  rows[16] = { text = string.rep("_", 40), color = AMBER }
+
+  return rows
+end
+
 local function sceneAtPort(state, actions, localSceneCb)
-  local lines = {}
-  for _, l in ipairs(statusLines(state)) do table.insert(lines, l) end
-  for _, l in ipairs(priceLines(state)) do table.insert(lines, l) end
-  table.insert(lines, { text = "", color = AMBER })
+  local rows = buildPortRows(state)
+  rows[17] = { text = "", color = AMBER }
   local menuLines, validKeys = atPortMenu(state)
-  for _, ml in ipairs(menuLines) do
-    table.insert(lines, { text = ml, color = GREEN })
+  for i, ml in ipairs(menuLines) do
+    rows[17 + i] = { text = ml, color = GREEN }
   end
   local promptDef = {
     type = "key",
@@ -123,7 +319,7 @@ local function sceneAtPort(state, actions, localSceneCb)
       end
     end,
   }
-  return lines, promptDef
+  return { rows = rows }, promptDef
 end
 
 local function sceneTravel(state, actions, localSceneCb)

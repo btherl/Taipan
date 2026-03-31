@@ -334,6 +334,8 @@ function Sprite:UpdateImage()
 				(StrokeOffsets[i].Y * self.Size.Y) / self.ScreenSize.Y
 			)
 			instance.ZIndex = self.Instance.ZIndex - 1
+			instance.BackgroundColor3 = self.Instance.BackgroundColor3
+			instance.BackgroundTransparency = self.Instance.BackgroundTransparency
 		end
 	end
 end

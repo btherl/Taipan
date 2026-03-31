@@ -100,9 +100,11 @@ function Terminal.new(displayOrder)
       end
 
       local obj = current[j]
-      obj.Text       = s.text or ""
-      obj.TextColor3 = s.color or GREEN
-      obj.Position   = Vector2.new(xPos, (i - 1) * ROW_HEIGHT)
+      obj.Text            = s.text or ""
+      obj.TextColor3      = s.color or GREEN
+      obj.Inverted        = s.inverted or false
+      obj.BackgroundColor3 = s.backgroundColor or Color3.new(0, 0, 0)
+      obj.Position        = Vector2.new(xPos, (i - 1) * ROW_HEIGHT)
 
       xPos = xPos + #(s.text or "") * CHAR_WIDTH
     end

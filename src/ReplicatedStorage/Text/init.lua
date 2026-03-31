@@ -54,6 +54,9 @@ function Text.new(font_name, automatic_update)
 		TextColor3 = Color3.new(1, 1, 1);
 		StrokeColor3 = Color3.new(0, 0, 0);
 
+		Inverted = false;
+		BackgroundColor3 = Color3.new(0, 0, 0);
+
 		ZIndex = 1;
 
 		Position = Vector2.new(0, 0);
@@ -205,7 +208,8 @@ function Text:Update(DeltaTime)
 	-- Render: propagate settings and flush virtual positions to Instance.Position.
 	-- Runs after text update so new positions are always written in the same frame.
 	for i = 1, #self.Sprites do
-		self.Sprites[i].Stroke = self.Stroke
+		-- Suppress stroke when inverted: opaque background blocks make stroke offsets look wrong.
+		self.Sprites[i].Stroke = self.Inverted and false or self.Stroke
 		self.Sprites[i].StrokeColor3 = self.StrokeColor3
 
 		self.Sprites[i]:UpdateSprite(DeltaTime)
@@ -214,7 +218,15 @@ function Text:Update(DeltaTime)
 			self.Sprites[i].Instance.Parent = self.Parent
 		end
 
-		self.Sprites[i].Instance.ImageColor3 = self.TextColor3
+		local inst = self.Sprites[i].Instance
+		if self.Inverted then
+			inst.ImageColor3            = self.BackgroundColor3
+			inst.BackgroundColor3       = self.TextColor3
+			inst.BackgroundTransparency = 0
+		else
+			inst.ImageColor3            = self.TextColor3
+			inst.BackgroundTransparency = 1
+		end
 	end
 end
 

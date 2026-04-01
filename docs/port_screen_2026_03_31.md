@@ -36,9 +36,9 @@ The Firm name and firm location are static, it always shows Hong Kong.
 
 The month from the date is always inverted, black text on white background.
 
-Location and debt are also inverted text.
+Location and debt are also inverted text.  The value is inverted, the titles "Location" and "Debt" are not.  Only the text itself is inverted, not any of the surrounding whitespace.
 
-Ship status is in inverted text once below a specific level. (TBC)
+Ship status is in inverted text once 39% or lower (details below).
 
 Ship status is centered, but when it is inverted, then the entire block is inverted, 11 characters in total.  Not just the text.
 
@@ -68,6 +68,10 @@ Numbers under 1 million are whosn as plain integers.
 1 million and above are shown with 3-4 significant digits plus a suffix (Thousand, Million, Billion, Trillion)
 
 Refer to BASIC_ANNOTATED.txt for full details
+
+## Hold
+
+This shows the amount of hold space available.  Essentially this is (ship hold minus guns * 10).  If the ship is overloaded, it displays "Overload" in inverted text, instead of a number.
 
 ## Bottom panel
 

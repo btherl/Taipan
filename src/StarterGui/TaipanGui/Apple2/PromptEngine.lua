@@ -41,8 +41,6 @@ local function fmt(n)
   return "$" .. result
 end
 
-local BLACK = Color3.new(0, 0, 0)
-local WHITE = Color3.new(1, 1, 1)
 -- Abbreviated good names for the 26-char inner box (Constants.GOOD_NAMES[4] is "General Cargo", too long)
 local SHORT_GOOD_NAMES = { "Opium", "Silk", "Arms", "General" }
 
@@ -202,7 +200,7 @@ local function buildPortRows(state)
     whInner(1, wh[1], "In use:"),
     {
       { text = " 15 ",    color = AMBER },
-      { text = monthName, color = AMBER, inverted = true, backgroundColor = WHITE },
+      { text = monthName, color = AMBER, inverted = true },
       { text = " " .. yearStr, color = AMBER },
     }
   )
@@ -226,7 +224,7 @@ local function buildPortRows(state)
     whInner(4, wh[4], vacant),
     {
       { text = "  ",     color = AMBER },
-      { text = locDisp,  color = AMBER, inverted = true, backgroundColor = WHITE },
+      { text = locDisp,  color = AMBER, inverted = true },
       { text = string.rep(" ", math.max(0, RIGHT_W - 2 - #locDisp)), color = AMBER },
     }
   )
@@ -247,7 +245,7 @@ local function buildPortRows(state)
     rows[9] = { segments = {
       { text = VERT,                          color = AMBER, font = THICK },
       { text = "Hold ",                       color = AMBER },
-      { text = "Overload",                    color = AMBER, inverted = true, backgroundColor = WHITE },
+      { text = "Overload",                    color = AMBER, inverted = true },
       { text = string.rep(" ", spaces),       color = AMBER },
       { text = pad(gunsStr, INNER_W - 5 - 8 - spaces), color = AMBER },
       { text = VERT,                          color = AMBER, font = THICK },
@@ -260,7 +258,7 @@ local function buildPortRows(state)
   local dPad    = math.floor((RIGHT_W - #debtStr) / 2)
   rows[10] = boxRowSegs(holdInner(1, sc[1]), {
     { text = string.rep(" ", dPad),                               color = AMBER },
-    { text = debtStr,                                              color = AMBER, inverted = true, backgroundColor = WHITE },
+    { text = debtStr,                                              color = AMBER, inverted = true },
     { text = string.rep(" ", math.max(0, RIGHT_W - dPad - #debtStr)), color = AMBER },
   })
 
@@ -275,7 +273,7 @@ local function buildPortRows(state)
   local statusDisp = centerStr(statusText, 11)
   rows[13] = boxRowSegs(holdInner(4, sc[4]), {
     { text = " ",        color = AMBER },
-    { text = statusDisp, color = AMBER, inverted = statusInv, backgroundColor = statusInv and WHITE or BLACK },
+    { text = statusDisp, color = AMBER, inverted = statusInv },
   })
 
   -- Row 14: box bottom border (└──...──┘), no right content

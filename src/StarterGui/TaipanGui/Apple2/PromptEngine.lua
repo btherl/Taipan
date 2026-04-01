@@ -145,8 +145,8 @@ local function buildPortRows(state)
   local rows = {}
   local VERT  = string.char(129)
   local THICK = "TaipanThickFont"
-  local BOX_W   = 28
-  local INNER_W = 26
+  local BOX_W   = 28  -- Width of Warehouse box and Hold box, on status screen
+  local INNER_W = 26  -- Inside width of boxes
   local RIGHT_W = 12
 
   -- Derived values
@@ -164,17 +164,17 @@ local function buildPortRows(state)
   -- Inner helper: warehouse good row 26 chars: left 12 (good+qty) + right 14 (label/value right-justified)
   local function whInner(goodIdx, qty, rightText)
     local name = SHORT_GOOD_NAMES[goodIdx]
-    local left = pad("   " .. pad(name, 7) .. tostring(qty), 12):sub(1, 12)
-    local right = lpad(tostring(rightText), 14)
+    local left = pad("   " .. pad(name, 7) .. " " .. tostring(qty), 12):sub(1, 12)
+    local right = lpad(tostring(rightText), 13)
     return (left .. right):sub(1, INNER_W)
   end
 
   -- Inner helper: hold good row 26 chars: good+qty, rest spaces
   local function holdInner(goodIdx, qty)
-    return pad("   " .. pad(SHORT_GOOD_NAMES[goodIdx], 7) .. tostring(qty), INNER_W):sub(1, INNER_W)
+    return pad("   " .. pad(SHORT_GOOD_NAMES[goodIdx], 7) .. " " .. tostring(qty), INNER_W):sub(1, INNER_W)
   end
 
-  -- Build a segmented row: │inner│ + right-column segments
+  -- Build a segmented row: �inner� + right-column segments
   local function boxRowSegs(innerText, rightSegs)
     local segs = {
       { text = VERT,                                       color = AMBER, font = THICK },
@@ -229,25 +229,27 @@ local function buildPortRows(state)
     }
   )
 
-  -- Row 8: box divider (├──...──┤), no right content
+  -- Row 8: box divider (+--...--�), no right content
   rows[8] = { segments = {{ text = BoxDrawing.dividerString(BOX_W), color = AMBER, font = THICK }}}
 
   -- Row 9: Hold/Guns header + "Debt" label
   -- If overloaded, "Overload" shown inverted instead of holdSpace number
   if not overloaded then
     local gunsStr = "Guns " .. tostring(state.guns or 0)
-    local holdStr = "Hold " .. tostring(holdSpace)
-    local inner9  = pad(holdStr .. string.rep(" ", math.max(1, INNER_W - #holdStr - #gunsStr)) .. gunsStr, INNER_W):sub(1, INNER_W)
+	local holdStr = "Hold " .. tostring(holdSpace)
+	local holdPadStr = pad(holdStr, 15)
+	local gunPadStr = pad(gunsStr, 11)
+    local inner9  = holdPadStr .. gunsStr
     rows[9] = boxRowSegs(inner9, {{ text = "    Debt    ", color = AMBER }})
   else
-    local gunsStr = "Guns " .. tostring(state.guns or 0)
-    local spaces  = math.max(1, INNER_W - 5 - 8 - #gunsStr)
+	local gunsStr = "Guns " .. tostring(state.guns or 0)
+	local gunPadStr = pad(gunsStr, 11)
     rows[9] = { segments = {
       { text = VERT,                          color = AMBER, font = THICK },
       { text = "Hold ",                       color = AMBER },
       { text = "Overload",                    color = AMBER, inverted = true },
-      { text = string.rep(" ", spaces),       color = AMBER },
-      { text = pad(gunsStr, INNER_W - 5 - 8 - spaces), color = AMBER },
+      { text = string.rep(" ", 2),            color = AMBER },
+      { text = gunPadStr,                     color = AMBER },
       { text = VERT,                          color = AMBER, font = THICK },
       { text = "    Debt    ",                color = AMBER },
     }}
@@ -276,7 +278,7 @@ local function buildPortRows(state)
     { text = statusDisp, color = AMBER, inverted = statusInv },
   })
 
-  -- Row 14: box bottom border (└──...──┘), no right content
+  -- Row 14: box bottom border (+--...--+), no right content
   rows[14] = { segments = {{ text = BoxDrawing.bottomString(BOX_W), color = AMBER, font = THICK }}}
 
   -- Row 15: Cash and Bank (right-aligned)
@@ -353,20 +355,19 @@ local function sceneTravel(state, actions, localSceneCb)
   }
 end
 
-local FIRM_INPUT_ROW = 14  -- terminal row where the firm name cursor is rendered
+local FIRM_INPUT_ROW = 14
 
 local function buildFirmInputRow(displayStr)
   return { segments = {
-    { text = string.char(129), color = AMBER, font = "TaipanThickFont" },  -- │ left border
-    { text = "     Firm: ",   color = AMBER },                             -- 11 chars
-    { text = displayStr,      color = AMBER, font = "TaipanThickFont" },   -- 23 chars (22+cursor)
-    { text = "    ",          color = AMBER },                             -- 4 spaces padding
-    { text = string.char(129), color = AMBER, font = "TaipanThickFont" },  -- │ right border
+    { text = string.char(129), color = AMBER, font = "TaipanThickFont" },
+    { text = "     Firm: ",   color = AMBER },
+    { text = displayStr,      color = AMBER, font = "TaipanThickFont" },
+    { text = "    ",          color = AMBER },
+    { text = string.char(129), color = AMBER, font = "TaipanThickFont" },
   }}
 end
 
 local function sceneFirmName(_state, actions, localSceneCb)
-  -- Initial cursor display: "_" followed by 22 spaces (maxLength=22)
   local initDisplay = "_" .. string.rep(" ", 22)
   local rows = {
     [8]  = BoxDrawing.boxTop(40, AMBER),
@@ -397,8 +398,8 @@ end
 local function sceneStartChoice(_state, actions, _localSceneCb)
   local lines = {
     { text = "Do you want to start . . .", color = AMBER },
-    { text = "", color = AMBER },
-    { text = "", color = AMBER },
+	{ text = "", color = AMBER },
+	{ text = "", color = AMBER },
 	{ text = "  1) With cash (and a debt)", color = AMBER },
 	{ text = "", color = AMBER },
 	{ text = "", color = AMBER },

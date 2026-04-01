@@ -220,7 +220,7 @@ function Text:Update(DeltaTime)
 
 		local inst = self.Sprites[i].Instance
 		if self.Inverted then
-			inst.ImageColor3            = Color3.new(0, 0, 0)
+			inst.ImageColor3            = Color3.new(1, 1, 1)  -- white: preserve black glyphs from spritesheet as-is
 			inst.BackgroundColor3       = self.BackgroundColor3
 			inst.BackgroundTransparency = 0
 		else

@@ -52,11 +52,37 @@ local function lpad(s, width)
 end
 
 -- Center string in `width` chars with space padding (truncates if over)
-local function centerStr(s, width)
+local function centerStr(s:string, width:number)
   local len = #s
   if len >= width then return s:sub(1, width) end
   local left = math.floor((width - len) / 2)
   return string.rep(" ", left) .. s .. string.rep(" ", width - len - left)
+end
+
+-- Center an arbitrary list of segments (each a table with .text and optional fields)
+-- within `width` chars. Returns a new list with a leading space-segment prepended and
+-- a trailing space-segment appended (omitted if the content already fills the width).
+-- Each segment pair is { text=string, ...rest } where ...rest carries color/font/etc.
+local function centerSeg(width, ...)
+  local segs = ...
+  local totalLen = 0
+  for _, seg in ipairs(segs) do
+    totalLen = totalLen + #seg.text
+  end
+  if totalLen >= width then return segs end
+  local leftPad  = math.floor((width - totalLen) / 2)
+  local rightPad = width - totalLen - leftPad
+  local result = {}
+  if leftPad > 0 then
+    table.insert(result, { text = string.rep(" ", leftPad) })
+  end
+  for _, seg in ipairs(segs) do
+    table.insert(result, seg)
+  end
+  if rightPad > 0 then
+    table.insert(result, { text = string.rep(" ", rightPad) })
+  end
+  return result
 end
 
 -- Format number without $ prefix: plain comma int under 1M, "X.XX Suffix" above
@@ -186,9 +212,13 @@ local function buildPortRows(state)
   end
 
   -- Row 1: firm name centered over 40 cols
-  local firmStr = "Firm: " .. firmName .. ", Hong Kong"
-  local firmCentered = centerStr(firmStr, 40)
-  rows[1] = { text = firmCentered, color = AMBER }
+  local firmSeg = {
+    {text = "Firm: ", color = AMBER},
+    {text = firmName, color = AMBER, font = "TaipanThickFont"},
+    {text = ", Hong Kong", color = AMBER}
+  }
+  local firmSegCentered = centerSeg(40, firmSeg)
+  rows[1] = { segments = firmSegCentered }
 
   -- Row 2: box top border (28 wide), no right content
   rows[2] = { segments = {{ text = BoxDrawing.topString(BOX_W), color = AMBER, font = THICK }}}

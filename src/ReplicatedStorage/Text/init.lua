@@ -209,7 +209,7 @@ function Text:Update(DeltaTime)
 	-- Runs after text update so new positions are always written in the same frame.
 	for i = 1, #self.Sprites do
 		-- Suppress stroke when inverted: opaque background blocks make stroke offsets look wrong.
-		self.Sprites[i].Stroke = self.Inverted and false or self.Stroke
+		self.Sprites[i].Stroke = if self.Inverted then false else self.Stroke
 		self.Sprites[i].StrokeColor3 = self.StrokeColor3
 
 		self.Sprites[i]:UpdateSprite(DeltaTime)

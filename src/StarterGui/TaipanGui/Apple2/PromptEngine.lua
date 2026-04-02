@@ -87,7 +87,7 @@ local function shipStatus(state)
                 (sw >= 60 and "Good")    or (sw >= 40 and "Fair")  or
                 (sw >= 20 and "Poor")    or "Critical"
   local inverted = sw < 40
-  return label .. ": " .. tostring(sw), inverted
+  return label .. ":" .. tostring(sw), inverted
 end
 
 local function statusLines(state)
@@ -164,7 +164,7 @@ local function buildPortRows(state)
   -- Inner helper: warehouse good row 26 chars: left 12 (good+qty) + right 14 (label/value right-justified)
   local function whInner(goodIdx, qty, rightText)
     local name = SHORT_GOOD_NAMES[goodIdx]
-    local left = pad("   " .. pad(name, 7) .. " " .. tostring(qty), 12):sub(1, 12)
+    local left = pad("   " .. pad(name, 7) .. " " .. tostring(qty), 13):sub(1, 13)
     local right = lpad(tostring(rightText), 13)
     return (left .. right):sub(1, INNER_W)
   end
@@ -186,7 +186,9 @@ local function buildPortRows(state)
   end
 
   -- Row 1: firm name centered over 40 cols
-  rows[1] = { text = centerStr("Firm: " .. firmName .. ", Hong Kong", 40), color = AMBER }
+  local firmStr = "Firm: " .. firmName .. ", Hong Kong"
+  local firmCentered = centerStr(firmStr, 40)
+  rows[1] = { text = firmCentered, color = AMBER }
 
   -- Row 2: box top border (28 wide), no right content
   rows[2] = { segments = {{ text = BoxDrawing.topString(BOX_W), color = AMBER, font = THICK }}}
@@ -207,7 +209,7 @@ local function buildPortRows(state)
 
   -- Row 5: Silk in warehouse + warehouse used value (right col empty)
   rows[5] = boxRowSegs(
-    whInner(2, wh[2], warehouseUsed),
+    whInner(2, wh[2], pad(warehouseUsed, 6)),
     {{ text = string.rep(" ", RIGHT_W), color = AMBER }}
   )
 
@@ -221,7 +223,7 @@ local function buildPortRows(state)
   -- Location centered in 8 chars (matching "Location" label width) if <=8; left-aligned if longer
   local locDisp = (#portName <= 8) and centerStr(portName, 8) or portName
   rows[7] = boxRowSegs(
-    whInner(4, wh[4], vacant),
+    whInner(4, wh[4], pad(vacant, 6)),
     {
       { text = "  ",     color = AMBER },
       { text = locDisp,  color = AMBER, inverted = true },
@@ -284,7 +286,9 @@ local function buildPortRows(state)
   -- Row 15: Cash and Bank (right-aligned)
   local cashStr = "Cash:" .. fmtBig(state.cash or 0)
   local bankStr = "Bank:" .. fmtBig(state.bankBalance or 0)
-  rows[15] = { text = cashStr .. string.rep(" ", math.max(1, 40 - #cashStr - #bankStr)) .. bankStr, color = AMBER }
+  local cashPadStr = pad(cashStr, 20)
+  local bankPadStr = pad(bankStr, 20)
+  rows[15] = { text = cashPadStr .. bankPadStr, color = AMBER }
 
   -- Row 16: separator line
   rows[16] = { text = string.rep("_", 40), color = AMBER }

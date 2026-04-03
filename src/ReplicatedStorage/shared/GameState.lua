@@ -29,7 +29,7 @@ function GameState.newGame(startChoice, firmName)
     guns         = isCash and Constants.CASH_START_GUNS or Constants.GUNS_START_GUNS,
     pirateBase   = isCash and Constants.CASH_START_BP   or Constants.GUNS_START_BP,
 
-    -- Cargo: index 1=Opium, 2=Silk, 3=Arms, 4=General Cargo
+    -- Cargo: index 1=Spices, 2=Silk, 3=Arms, 4=General Cargo
     shipCargo      = {0, 0, 0, 0},   -- ST(2,J)
     warehouseCargo = {0, 0, 0, 0},   -- ST(1,J)
     warehouseUsed  = 0,               -- WS; capacity is Constants.WAREHOUSE_CAPACITY (fixed, not per-player)

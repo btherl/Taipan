@@ -1,12 +1,8 @@
 -- GlitchLayer.lua
--- Stub overlay for future CRT glitch effects (scan lines, phosphor bloom, etc.).
--- The frame exists so Apple2Interface can hand it to a future implementation
--- without structural changes.
-
+-- Stub overlay for future CRT glitch effects.
 local GlitchLayer = {}
 
 function GlitchLayer.new(terminalGui)
-  -- terminalGui is the ScreenGui returned by Text.GetTextGUI()
   local frame = Instance.new("Frame")
   frame.Name = "GlitchLayer"
   frame.Size = UDim2.fromScale(1, 1)

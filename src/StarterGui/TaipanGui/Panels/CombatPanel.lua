@@ -5,7 +5,7 @@ local AMBER = Color3.fromRGB(200, 180, 80)
 local RED   = Color3.fromRGB(220, 80, 80)
 local GREEN = Color3.fromRGB(140, 200, 80)
 
-local GOOD_NAMES = {"Opium", "Silk", "Arms", "General"}
+local GOOD_NAMES = {"Spices", "Silk", "Arms", "General"}
 local Z = 15
 
 function CombatPanel.new(parent, onFight, onRun, onThrow)

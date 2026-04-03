@@ -12,7 +12,7 @@ Constants.MONTH_NAMES = {
 }
 
 Constants.GOOD_NAMES = {
-  "Opium","Silk","Arms","General Cargo",
+  "Spices","Silk","Arms","General Cargo",
 }
 
 Constants.BASE_PRICES = {

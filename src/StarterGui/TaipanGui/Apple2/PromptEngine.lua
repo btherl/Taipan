@@ -19,8 +19,8 @@ local DIM    = Color3.fromRGB(80, 80, 80)
 
 local PromptEngine = {}
 
--- Good-name first-letter shortcut map: O=Opium(1), S=Silk(2), A=Arms(3), G=General(4)
-local GOOD_KEY_MAP = { O = 1, S = 2, A = 3, G = 4 }
+-- Good-name first-letter shortcut map: P=sPices(1), S=Silk(2), A=Arms(3), G=General(4)
+local GOOD_KEY_MAP = { P = 1, S = 2, A = 3, G = 4 }
 
 -- Helpers
 local function pad(s, width)
@@ -42,7 +42,7 @@ local function fmt(n)
 end
 
 -- Abbreviated good names for the 26-char inner box (Constants.GOOD_NAMES[4] is "General Cargo", too long)
-local SHORT_GOOD_NAMES = { "Opium", "Silk", "Arms", "General" }
+local SHORT_GOOD_NAMES = { "Spices", "Silk", "Arms", "General" }
 
 -- Right-justify string to width (add spaces on left)
 local function lpad(s, width)
@@ -200,7 +200,7 @@ local function buildPortRows(state)
     return pad("   " .. pad(SHORT_GOOD_NAMES[goodIdx], 7) .. " " .. tostring(qty), INNER_W):sub(1, INNER_W)
   end
 
-  -- Build a segmented row: �inner� + right-column segments
+  -- Build a segmented row: │inner│ + right-column segments
   local function boxRowSegs(innerText, rightSegs)
     local segs = {
       { text = VERT,                                       color = AMBER, font = THICK },
@@ -226,7 +226,7 @@ local function buildPortRows(state)
   -- Row 3: warehouse header + "Date" label
   rows[3] = boxRowSegs("Hong Kong Warehouse", {{ text = "    Date    ", color = AMBER }})
 
-  -- Row 4: Opium in warehouse + date (with inverted month)
+  -- Row 4: Spices in warehouse + date (with inverted month)
   -- Right col: " 15 " + INVERTED(monthName) + " " + yearStr = 4+3+1+4 = 12 chars
   rows[4] = boxRowSegs(
     whInner(1, wh[1], "In use:"),
@@ -261,7 +261,7 @@ local function buildPortRows(state)
     }
   )
 
-  -- Row 8: box divider (+--...--�), no right content
+  -- Row 8: box divider (├──...──┤), no right content
   rows[8] = { segments = {{ text = BoxDrawing.dividerString(BOX_W), color = AMBER, font = THICK }}}
 
   -- Row 9: Hold/Guns header + "Debt" label
@@ -287,7 +287,7 @@ local function buildPortRows(state)
     }}
   end
 
-  -- Row 10: Opium in hold + inverted debt value (centered in 12-char right col)
+  -- Row 10: Spices in hold + inverted debt value (centered in 12-char right col)
   local debtStr = fmtBig(state.debt or 0)
   local dPad    = math.floor((RIGHT_W - #debtStr) / 2)
   rows[10] = boxRowSegs(holdInner(1, sc[1]), {
@@ -310,7 +310,7 @@ local function buildPortRows(state)
     { text = statusDisp, color = AMBER, inverted = statusInv },
   })
 
-  -- Row 14: box bottom border (+--...--+), no right content
+  -- Row 14: box bottom border (└──...──┘), no right content
   rows[14] = { segments = {{ text = BoxDrawing.bottomString(BOX_W), color = AMBER, font = THICK }}}
 
   -- Row 15: Cash and Bank (right-aligned)
@@ -578,8 +578,8 @@ local function sceneCombatThrowGood(state, actions, localSceneCb)
   table.insert(lines, { text = "  [C] Cancel", color = DIM })
   return lines, {
     type = "key",
-    keys = {"1","2","3","4","O","S","A","G","C"},
-    label = "(1/O)pium (2/S)ilk (3/A)rms (4/G)eneral C=cancel",
+    keys = {"1","2","3","4","P","S","A","G","C"},
+    label = "sPices Silk Arms General Cancel",
     onKey = function(key, _s, _a)
       if key == "C" then
         if localSceneCb then localSceneCb(nil) end
@@ -716,7 +716,7 @@ local function sceneBuySell(state, actions, localSceneCb, isBuy)
   for _, l in ipairs(priceLines(state)) do table.insert(lines, l) end
   table.insert(lines, { text = "", color = AMBER })
   table.insert(lines, { text = string.format("Which good to %s?", verb), color = GREEN })
-  table.insert(lines, { text = " (1)Opium (2)Silk (3)Arms (4)General", color = GREEN })
+  table.insert(lines, { text = " sPices Silk Arms General", color = GREEN })
   for i = 1, 4 do
     local available
     if isBuy then
@@ -734,8 +734,8 @@ local function sceneBuySell(state, actions, localSceneCb, isBuy)
   table.insert(lines, { text = "  [C] Cancel", color = DIM })
   return lines, {
     type = "key",
-    keys = {"1","2","3","4","O","S","A","G","C"},
-    label = "(1/O)pium (2/S)ilk (3/A)rms (4/G)eneral C=cancel",
+    keys = {"1","2","3","4","P","S","A","G","C"},
+    label = "sPices Silk Arms General Cancel",
     onKey = function(key, _s, _a)
       if key == "C" then
         if localSceneCb then localSceneCb(nil) end
@@ -903,7 +903,7 @@ local function sceneWarehouseGood(state, actions, localSceneCb, isToWarehouse)
   local direction = isToWarehouse and "TO warehouse" or "FROM warehouse"
   local lines = {
     { text = string.format("Transfer %s -- which good?", direction), color = AMBER },
-    { text = " (1)Opium (2)Silk (3)Arms (4)General", color = GREEN },
+    { text = " sPices Silk Arms General", color = GREEN },
   }
   for i = 1, 4 do
     local avail = isToWarehouse and (state.shipCargo[i] or 0) or (state.warehouseCargo[i] or 0)
@@ -912,8 +912,8 @@ local function sceneWarehouseGood(state, actions, localSceneCb, isToWarehouse)
   table.insert(lines, { text = "  [C] Cancel", color = DIM })
   return lines, {
     type = "key",
-    keys = {"1","2","3","4","O","S","A","G","C"},
-    label = "(1/O)pium (2/S)ilk (3/A)rms (4/G)eneral C=cancel",
+    keys = {"1","2","3","4","P","S","A","G","C"},
+    label = "sPices Silk Arms General Cancel",
     onKey = function(key, _s, _a)
       if key == "C" then if localSceneCb then localSceneCb(nil) end
       else

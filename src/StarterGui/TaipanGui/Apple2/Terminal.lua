@@ -89,7 +89,7 @@ function Terminal.new(displayOrder)
         t.FontName = font
         current[j] = t
       elseif current[j].FontName ~= font then
-        -- Font changed — replace the Text object
+        -- Font changed -- replace the Text object
         current[j]:Destroy()
         local t = Text.new(font, true)
         t.Parent   = gui.TextParent

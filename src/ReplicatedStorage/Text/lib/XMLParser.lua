@@ -1,4 +1,3 @@
---!nocheck
 --!nolint TableOperations
 -- https://github.com/jonathanpoelen/lua-xmlparser/
 

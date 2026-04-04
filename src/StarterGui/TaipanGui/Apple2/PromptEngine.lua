@@ -854,62 +854,49 @@ local function sceneBuySellAmount(state, actions, localSceneCb, goodIdx, isBuy)
 end
 
 local function sceneBank(state, actions, localSceneCb)
+  local maxDeposit = state.cash or 0
   local lines = {
-    { text = "BANK OF HONG KONG",                        color = AMBER },
-    { text = string.format("Balance: %s  Cash: %s", fmt(state.bankBalance), fmt(state.cash)), color = AMBER },
-    { text = "",                                          color = AMBER },
-    { text = "(D)eposit  (W)ithdraw  (C)ancel",          color = GREEN },
+    { text = "BANK OF HONG KONG", color = AMBER },
+    { text = string.format("Cash: %s   Balance: %s",
+        fmt(state.cash), fmt(state.bankBalance)), color = AMBER },
+    { text = "", color = AMBER },
+    { text = string.format("How much will you deposit? (max %s)", fmt(maxDeposit)), color = GREEN },
   }
   return lines, {
-    type = "key",
-    keys = {"D", "W", "C"},
-    label = "(D)eposit  (W)ithdraw  (C)ancel",
-    onKey = function(key, _s, _a)
-      if key == "D" then
-        if (state.cash or 0) <= 0 then
-          if localSceneCb then localSceneCb("bank") end
-        else
-          if localSceneCb then localSceneCb("bank_deposit") end
-        end
-      elseif key == "W" then
-        if (state.bankBalance or 0) <= 0 then
-          if localSceneCb then localSceneCb("bank") end
-        else
-          if localSceneCb then localSceneCb("bank_withdraw") end
-        end
-      elseif key == "C" then
-        if localSceneCb then localSceneCb(nil) end
+    type            = "numeric",
+    typePlaceholder = "> ",
+    maxDigits       = 9,
+    onType = function(text, _s, _a)
+      local amt = tonumber(text) or 0
+      if amt > maxDeposit then
+        return string.format("Taipan, you only have %s in cash", fmt(maxDeposit))
       end
+      if amt > 0 then actions.bankDeposit(math.floor(amt)) end
+      if localSceneCb then localSceneCb("bank_withdraw") end
+      return nil
     end,
   }
 end
 
-local function sceneBankAmount(state, actions, localSceneCb, isDeposit)
-  local maxAmt = isDeposit and (state.cash or 0) or (state.bankBalance or 0)
-  local verb = isDeposit and "deposit" or "withdraw"
+local function sceneWithdraw(state, actions, localSceneCb)
+  local maxWithdraw = state.bankBalance or 0
   local lines = {
-    { text = string.format("%s (max %s, A=all):", verb:upper(), fmt(maxAmt)), color = AMBER },
+    { text = "BANK OF HONG KONG", color = AMBER },
+    { text = string.format("Cash: %s   Balance: %s",
+        fmt(state.cash), fmt(state.bankBalance)), color = AMBER },
+    { text = "", color = AMBER },
+    { text = string.format("How much will you withdraw? (max %s)", fmt(maxWithdraw)), color = GREEN },
   }
   return lines, {
-    type = "type",
-    typePlaceholder = "Amount: ",
-    maxLength = 8,
+    type            = "numeric",
+    typePlaceholder = "> ",
+    maxDigits       = 9,
     onType = function(text, _s, _a)
-      if text == "" then
-        if localSceneCb then localSceneCb("bank") end
-        return nil
+      local amt = tonumber(text) or 0
+      if amt > maxWithdraw then
+        return string.format("Taipan, you only have %s in the bank", fmt(maxWithdraw))
       end
-      local amt
-      if text:upper() == "A" then amt = maxAmt
-      else amt = tonumber(text) end
-      if not amt or amt < 0 then return "Enter a positive amount or A for all" end
-      if amt == 0 then
-        if localSceneCb then localSceneCb("bank") end
-        return nil
-      end
-      if amt > maxAmt then return string.format("Max %s is %s", verb, fmt(maxAmt)) end
-      if isDeposit then actions.bankDeposit(math.floor(amt))
-      else              actions.bankWithdraw(math.floor(amt)) end
+      if amt > 0 then actions.bankWithdraw(math.floor(amt)) end
       if localSceneCb then localSceneCb(nil) end
       return nil
     end,
@@ -1012,9 +999,9 @@ local function sceneWuAmount(state, actions, localSceneCb, isRepay)
     { text = string.format("%s (max %s, A=all):", verb:upper(), fmt(maxAmt)), color = AMBER },
   }
   return lines, {
-    type = "type",
-    typePlaceholder = "Amount: ",
-    maxLength = 8,
+    type            = "numeric",
+    typePlaceholder = "> ",
+    maxDigits       = 9,
     onType = function(text, _s, _a)
       if text == "" then
         if localSceneCb then localSceneCb(nil) end
@@ -1194,9 +1181,8 @@ function PromptEngine.processState(state, localScene, actions, localSceneCb)
     if localScene == "wu_borrow" then return sceneWuAmount(state, actions, localSceneCb, false) end
     return sceneWuSession(state, actions, localSceneCb)
   end
-  if localScene == "bank"         then return sceneBank(state, actions, localSceneCb) end
-  if localScene == "bank_deposit"  then return sceneBankAmount(state, actions, localSceneCb, true) end
-  if localScene == "bank_withdraw" then return sceneBankAmount(state, actions, localSceneCb, false) end
+  if localScene == "bank"          then return sceneBank(state, actions, localSceneCb) end
+  if localScene == "bank_withdraw"  then return sceneWithdraw(state, actions, localSceneCb) end
   if localScene == "warehouse"    then return sceneWarehouse(state, actions, localSceneCb) end
   if localScene == "wh_to"        then return sceneWarehouseGood(state, actions, localSceneCb, true) end
   if localScene == "wh_from"      then return sceneWarehouseGood(state, actions, localSceneCb, false) end

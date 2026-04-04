@@ -90,4 +90,32 @@ return function()
       expect(keySet["N"]).to.equal(true)
     end)
   end)
+
+  describe("PromptEngine sceneBank sequential", function()
+    local function bankState()
+      return {
+        cash = 500, bankBalance = 1000, debt = 0,
+        currentPort = 1,  -- HONG_KONG
+        shipCargo = {0,0,0,0}, warehouseCargo = {0,0,0,0},
+        warehouseUsed = 0, holdSpace = 60, shipCapacity = 60,
+        guns = 0, damage = 0, month = 1, year = 1860,
+        turnsElapsed = 1, currentPrices = {0,0,0,0},
+        inWuSession = false, startChoice = "cash", gameOver = false,
+        liYuenProtection = 0, firmName = "TEST",
+      }
+    end
+
+    it("bank localScene returns numeric deposit promptDef", function()
+      local lines, promptDef = PromptEngine.processState(
+        bankState(), "bank", mockActions(), function() end)
+      expect(promptDef.type).to.equal("numeric")
+      expect(promptDef.maxDigits).to.equal(9)
+    end)
+
+    it("bank_withdraw localScene returns numeric withdraw promptDef", function()
+      local lines, promptDef = PromptEngine.processState(
+        bankState(), "bank_withdraw", mockActions(), function() end)
+      expect(promptDef.type).to.equal("numeric")
+    end)
+  end)
 end

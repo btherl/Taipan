@@ -531,32 +531,74 @@ local function sceneQuitConfirm(_state, actions, localSceneCb)
   }
 end
 
-local function sceneCombat(state, actions, localSceneCb)
-  local combat = state.combat
-  local total   = combat and combat.enemyTotal or 0
-  local grid    = combat and combat.grid or {}
-  local sw = math.max(0, 100 - math.floor((state.damage or 0) / (state.shipCapacity or 1) * 100))
+local function sceneCombatLayout(state, actions, localSceneCb)
+  local combat  = state.combat or {}
+  local total   = combat.enemyTotal or 0
+  local grid    = combat.grid or {}
+  local guns    = state.guns or 0
+  local sw      = math.max(0, 100 - math.floor((state.damage or 0) / (state.shipCapacity or 1) * 100))
+  local swLabel = (sw >= 100 and "Perfect") or (sw >= 80 and "Prime") or
+                  (sw >= 60 and "Good")    or (sw >= 40 and "Fair")  or
+                  (sw >= 20 and "Poor")    or "Critical"
+  local swInv   = sw < 40
+
+  -- 10-slot ship grid: # = alive, . = empty
   local gridStr = ""
   for i = 1, 10 do
     gridStr = gridStr .. (grid[i] ~= nil and "#" or ".")
   end
-  local lines = {
-    { text = string.format("BATTLE!!%sSW: %d%%", string.rep(" ", 22), sw), color = RED },
-    { text = string.format("Enemy ships: %d remaining", total), color = AMBER },
-    { text = string.format("[%s]%sGuns:%3d", gridStr, string.rep(" ", 18), state.guns), color = GREEN },
-    { text = "", color = AMBER },
-    { text = "(F)ight  (R)un  (T)hrow cargo overboard", color = GREEN },
-  }
-  for i = 1, 4 do
-    if (state.shipCargo[i] or 0) > 0 then
-      table.insert(lines, { text = string.format("  %s: %d units", GOOD_NAMES[i], state.shipCargo[i]), color = AMBER })
-    end
+
+  -- Col 32 onward (9 chars): "| We have" / "|  N guns" / "+--------"
+  local RIGHT_W   = 9
+  local col1Width = 40 - RIGHT_W  -- 31 chars for left column
+
+  local function row17()
+    local left = pad(string.format("   %d ships attacking, Taipan!", total), col1Width)
+    return { text = left .. "| We have", color = AMBER }
   end
-  return lines, {
+
+  local function row18()
+    local left = pad("Your orders are to:", col1Width)
+    -- Right col: "|" + lpad(guns,3) + " guns" = 9 chars total
+    return { text = left .. "|" .. lpad(tostring(guns), 3) .. " guns", color = AMBER }
+  end
+
+  local function row19()
+    return { text = string.rep(" ", col1Width) .. "+--------", color = AMBER }
+  end
+
+  local function row20()
+    local label = swLabel .. " (" .. tostring(sw) .. "%)"
+    local seg = {
+      { text = "Current seaworthiness: ", color = AMBER },
+      { text = label, color = AMBER, inverted = swInv },
+    }
+    return { segments = seg }
+  end
+
+  local function row21()
+    return { text = "  Ships: [" .. gridStr .. "]", color = GREEN }
+  end
+
+  local rows = {}
+  rows[17] = row17()
+  rows[18] = row18()
+  rows[19] = row19()
+  rows[20] = row20()
+  rows[21] = row21()
+  for r = 22, 24 do rows[r] = { text = "", color = AMBER } end
+
+  -- Also populate the status screen (rows 1-16)
+  local statusRows = buildPortRows(state)
+  for r = 1, 16 do
+    rows[r] = statusRows[r]
+  end
+
+  local promptDef = {
     type = "key",
-    keys = {"F", "R", "T"},
+    keys = { "F", "R", "T" },
     label = "(F)ight  (R)un  (T)hrow",
-    onKey = function(key, _s, _a)
+    onKey = function(key, _state, _actions)
       if key == "F" then actions.combatFight()
       elseif key == "R" then actions.combatRun()
       elseif key == "T" then
@@ -564,6 +606,7 @@ local function sceneCombat(state, actions, localSceneCb)
       end
     end,
   }
+  return { rows = rows }, promptDef
 end
 
 local function sceneCombatThrowGood(state, actions, localSceneCb)
@@ -1042,7 +1085,7 @@ function PromptEngine.processState(state, localScene, actions, localSceneCb)
       local idx = tonumber(localScene:match("(%d)$"))
       return sceneCombatThrowAmount(state, actions, localSceneCb, idx)
     end
-    return sceneCombat(state, actions, localSceneCb)
+    return sceneCombatLayout(state, actions, localSceneCb)
   end
   if state.shipOffer ~= nil then
     if localScene == "repair" then

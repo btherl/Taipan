@@ -9,7 +9,6 @@ local GlitchLayer  = require(script.Parent.Apple2.GlitchLayer)
 local KeyInput     = require(script.Parent.Apple2.KeyInput)
 local PromptEngine = require(script.Parent.Apple2.PromptEngine)
 
-local AMBER = Color3.fromRGB(200, 180, 80)
 local RED   = Color3.fromRGB(220, 80, 80)
 
 -- Server-driven scenes that override any localScene
@@ -26,15 +25,20 @@ local SERVER_SCENES = {
 local Apple2Interface = {}
 
 function Apple2Interface.new(screenGui, actions)
-  local term    = Terminal.new(5)
+  local term    = Terminal.new(5)  -- displayOrder 5
   local glitch  = GlitchLayer.new(term._gui)
   local ki      = KeyInput.new(screenGui)
 
   local lastState  = nil
-  local localScene = nil
+  local localScene = nil  -- nil | "buy" | "sell" | "buy_good_N" | "sell_good_N" |
+                          --       "travel" | "warehouse" | "wh_to" | "wh_from" |
+                          --       "wh_to_N" | "wh_from_N" | "bank" | "bank_withdraw" |
+                          --       "wu_repay" | "wu_borrow" | "settings" | "repair" |
+                          --       "quit_confirm" | "combat_throw_good" | "combat_throw_amt_N" |
+                          --       "final_status"
   local notifQueue = {}
   local notifGen   = 0
-  local GREEN_N    = Color3.fromRGB(140, 200, 80)
+  local GREEN      = Color3.fromRGB(140, 200, 80)
 
   local function isServerDriven(state)
     for _, check in pairs(SERVER_SCENES) do
@@ -62,7 +66,7 @@ function Apple2Interface.new(screenGui, actions)
     local entry = table.remove(notifQueue, 1)
     -- Write rows 17–24 from entry; blank any unspecified rows
     for r = 17, 24 do
-      term.showInputAt(r, entry.rows[r] or { text = "", color = GREEN_N })
+      term.showInputAt(r, entry.rows[r] or { text = "", color = GREEN })
     end
     -- Any keypress skips; task.delay auto-advances after duration
     ki.setPrompt({
@@ -77,6 +81,7 @@ function Apple2Interface.new(screenGui, actions)
   render = function(state, scene)
     local lines, promptDef = PromptEngine.processState(state or {}, scene, actions,
       function(newScene)
+        -- Local scene transition: set scene, re-render without waiting for StateUpdate
         localScene = newScene
         render(lastState, localScene)
       end
@@ -105,6 +110,7 @@ function Apple2Interface.new(screenGui, actions)
       end
     end
 
+    -- Attach terminal reference so KeyInput can display input cursor
     ki.setPrompt(promptDef, state, actions)
   end
 

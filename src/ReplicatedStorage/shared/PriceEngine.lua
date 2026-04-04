@@ -40,17 +40,20 @@ function PriceEngine.calculatePrices(basePrices, portIndex)
   end
 
   -- One crash/boom event per port visit: 1-in-9 chance (BASIC line 2410)
+  local event = nil
   if math.random(0, 8) == 0 then
     local affectedGood = math.random(1, 4)         -- FN R(4) + 1 (BASIC line 2420)
     if math.random(0, 1) == 0 then
       prices[affectedGood] = PriceEngine._crashPrice(prices[affectedGood])
+      event = { good = affectedGood, direction = "drop", price = prices[affectedGood] }
     else
       local multiplier = math.random(5, 9)         -- FN R(5) + 5 -> range 5-9
       prices[affectedGood] = PriceEngine._boomPrice(prices[affectedGood], multiplier)
+      event = { good = affectedGood, direction = "rise", price = prices[affectedGood] }
     end
   end
 
-  return prices
+  return prices, event
 end
 
 -- Applies the annual January base price drift to the mutable basePrices table.

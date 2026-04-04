@@ -66,6 +66,32 @@ return function()
         expect(boomedPrice).to.equal(math.floor(normalPrice * mult))
       end
     end)
+
+    it("calculatePrices returns nil event when no crash/boom", function()
+      -- Run 1000 trials: at least some should have no event
+      local sawNil = false
+      for _ = 1, 1000 do
+        local _, event = PriceEngine.calculatePrices(Constants.BASE_PRICES, 1)
+        if event == nil then sawNil = true break end
+      end
+      expect(sawNil).to.equal(true)
+    end)
+
+    it("calculatePrices returns event table with good/direction/price on crash/boom", function()
+      local sawEvent = false
+      for _ = 1, 1000 do
+        local prices, event = PriceEngine.calculatePrices(Constants.BASE_PRICES, 1)
+        if event ~= nil then
+          expect(type(event.good)).to.equal("number")
+          expect(event.good >= 1 and event.good <= 4).to.equal(true)
+          expect(event.direction == "drop" or event.direction == "rise").to.equal(true)
+          expect(event.price).to.equal(prices[event.good])
+          sawEvent = true
+          break
+        end
+      end
+      expect(sawEvent).to.equal(true)
+    end)
   end)
 
   describe("PriceEngine.applyAnnualDrift", function()

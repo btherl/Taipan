@@ -258,101 +258,101 @@ function KeyInput.new(screenGui)
       end
 
     elseif promptDef.type == "numeric" then
-    local placeholder = promptDef.typePlaceholder or "> "
-    maxLength = promptDef.maxDigits   -- reuse maxLength variable for buildDisplayStr
+      local placeholder = promptDef.typePlaceholder or "> "
+      maxLength = promptDef.maxDigits   -- reuse maxLength variable for buildDisplayStr
 
-    local terminal = promptDef._terminal
-    cursorPos = #typeBuf + 1
-    resetBlink()
+      local terminal = promptDef._terminal
+      cursorPos = #typeBuf + 1
+      resetBlink()
 
-    local function updateDisplay()
-      if terminal then
-        local displayStr = buildDisplayStr()
-        if promptDef._buildInputRow and promptDef._inputRow then
-          terminal.showInputAt(promptDef._inputRow, promptDef._buildInputRow(displayStr))
-        else
-          terminal.showInputLine(placeholder .. displayStr)
+      local function updateDisplay()
+        if terminal then
+          local displayStr = buildDisplayStr()
+          if promptDef._buildInputRow and promptDef._inputRow then
+            terminal.showInputAt(promptDef._inputRow, promptDef._buildInputRow(displayStr))
+          else
+            terminal.showInputLine(placeholder .. displayStr)
+          end
         end
       end
-    end
 
-    updateDisplay()
+      updateDisplay()
 
-    blinkConn = RunService.RenderStepped:Connect(function(dt)
-      cursorTimer = cursorTimer + dt
-      if cursorTimer >= BLINK_HALF then
-        cursorVisible = not cursorVisible
-        cursorTimer = 0
-        updateDisplay()
-      end
-    end)
-
-    if isMobile then
-      -- Hidden TextBox: user types, only digits are accepted on submit
-      hiddenBox = Instance.new("TextBox")
-      hiddenBox.Size = UDim2.new(0, 1, 0, 1)
-      hiddenBox.Position = UDim2.new(0, -10, 0, -10)
-      hiddenBox.BackgroundTransparency = 1
-      hiddenBox.Text = ""
-      hiddenBox.Parent = screenGui
-      hiddenBox:CaptureFocus()
-      typeUpdateConn = RunService.RenderStepped:Connect(function()
-        local filtered = hiddenBox.Text:gsub("[^%d]", "")
-        if terminal then terminal.showInputLine(placeholder .. filtered) end
+      blinkConn = RunService.RenderStepped:Connect(function(dt)
+        cursorTimer = cursorTimer + dt
+        if cursorTimer >= BLINK_HALF then
+          cursorVisible = not cursorVisible
+          cursorTimer = 0
+          updateDisplay()
+        end
       end)
-      table.insert(connections,
-        hiddenBox.FocusLost:Connect(function(enterPressed)
-          if enterPressed then
-            local submitted = hiddenBox.Text:gsub("[^%d]", "")
-            hiddenBox.Text = ""
-            local err = promptDef.onType(submitted, state, actions)
-            if err and promptDef._onError then promptDef._onError(err) end
-          end
+
+      if isMobile then
+        -- Hidden TextBox: user types, only digits are accepted on submit
+        hiddenBox = Instance.new("TextBox")
+        hiddenBox.Size = UDim2.new(0, 1, 0, 1)
+        hiddenBox.Position = UDim2.new(0, -10, 0, -10)
+        hiddenBox.BackgroundTransparency = 1
+        hiddenBox.Text = ""
+        hiddenBox.Parent = screenGui
+        hiddenBox:CaptureFocus()
+        typeUpdateConn = RunService.RenderStepped:Connect(function()
+          local filtered = hiddenBox.Text:gsub("[^%d]", "")
+          if terminal then terminal.showInputLine(placeholder .. filtered) end
         end)
-      )
-    else
-      table.insert(connections,
-        UserInputService.InputBegan:Connect(function(input, gameProcessed)
-          if gameProcessed then return end
-          if input.KeyCode == Enum.KeyCode.Return then
-            local submitted = typeBuf
-            typeBuf = ""
-            cursorPos = 1
-            resetBlink()
-            if terminal then terminal.showInputLine(placeholder) end
-            local err = promptDef.onType(submitted, state, actions)
-            if err and promptDef._onError then promptDef._onError(err) end
-          elseif input.KeyCode == Enum.KeyCode.Escape then
-            typeBuf = ""
-            cursorPos = 1
-            resetBlink()
-            if terminal then terminal.showInputLine(placeholder) end
-            local err = promptDef.onType("", state, actions)
-            if err and promptDef._onError then promptDef._onError(err) end
-          elseif input.KeyCode == Enum.KeyCode.Left then
-            -- Left arrow: delete last digit (Apple II behaviour)
-            if #typeBuf > 0 then
-              typeBuf = typeBuf:sub(1, -2)
-              cursorPos = #typeBuf + 1
+        table.insert(connections,
+          hiddenBox.FocusLost:Connect(function(enterPressed)
+            if enterPressed then
+              local submitted = hiddenBox.Text:gsub("[^%d]", "")
+              hiddenBox.Text = ""
+              local err = promptDef.onType(submitted, state, actions)
+              if err and promptDef._onError then promptDef._onError(err) end
             end
-            resetBlink()
-            updateDisplay()
-          else
-            -- Accept digit keys only; Backspace is silently ignored
-            local char = input.KeyCode.Name
-            if NUMKEY_MAP[char] then char = NUMKEY_MAP[char] end
-            if #char == 1 and char:match("%d") then
-              if not maxLength or #typeBuf < maxLength then
-                typeBuf = typeBuf .. char
+          end)
+        )
+      else
+        table.insert(connections,
+          UserInputService.InputBegan:Connect(function(input, gameProcessed)
+            if gameProcessed then return end
+            if input.KeyCode == Enum.KeyCode.Return then
+              local submitted = typeBuf
+              typeBuf = ""
+              cursorPos = 1
+              resetBlink()
+              if terminal then terminal.showInputLine(placeholder) end
+              local err = promptDef.onType(submitted, state, actions)
+              if err and promptDef._onError then promptDef._onError(err) end
+            elseif input.KeyCode == Enum.KeyCode.Escape then
+              typeBuf = ""
+              cursorPos = 1
+              resetBlink()
+              if terminal then terminal.showInputLine(placeholder) end
+              local err = promptDef.onType("", state, actions)
+              if err and promptDef._onError then promptDef._onError(err) end
+            elseif input.KeyCode == Enum.KeyCode.Left then
+              -- Left arrow: delete last digit (Apple II behaviour)
+              if #typeBuf > 0 then
+                typeBuf = typeBuf:sub(1, -2)
                 cursorPos = #typeBuf + 1
               end
               resetBlink()
               updateDisplay()
+            else
+              -- Accept digit keys only; Backspace is silently ignored
+              local char = input.KeyCode.Name
+              if NUMKEY_MAP[char] then char = NUMKEY_MAP[char] end
+              if #char == 1 and char:match("%d") then
+                if not maxLength or #typeBuf < maxLength then
+                  typeBuf = typeBuf .. char
+                  cursorPos = #typeBuf + 1
+                end
+                resetBlink()
+                updateDisplay()
+              end
             end
-          end
-        end)
-      )
-    end
+          end)
+        )
+      end
   end
 
   function ki.destroy()

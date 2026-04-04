@@ -44,4 +44,50 @@ return function()
       expect(keySet["T"]).to.equal(true)
     end)
   end)
+
+  describe("PromptEngine retirement flow", function()
+    local function retiredState(score)
+      return {
+        gameOver = true, gameOverReason = "retired",
+        finalScore = score, finalRating = "Taipan",
+        cash = 1500000, debt = 0, bankBalance = 500000,
+        shipCapacity = 110, guns = 3, turnsElapsed = 26,
+        month = 3, year = 1862,
+        shipCargo = {0,0,0,0},
+        warehouseCargo = {0,0,0,0}, warehouseUsed = 0,
+        holdSpace = 80, currentPort = 1, damage = 0,
+      }
+    end
+
+    it("sceneMillionaire: no localScene → returns rows with inverted text, key promptDef", function()
+      local lines, promptDef = PromptEngine.processState(retiredState(1234), nil, mockActions(), function() end)
+      expect(lines.rows).to.be.ok()
+      -- Rows 19-24 should have inverted segments
+      local r20 = lines.rows[20]
+      expect(r20).to.be.ok()
+      expect(r20.segments or r20.text).to.be.ok()
+      expect(promptDef.type).to.equal("key")
+    end)
+
+    it("sceneFinalStatus: localScene=final_status → row 9 inverted score, Y/N keys", function()
+      local lines, promptDef = PromptEngine.processState(
+        retiredState(1234), "final_status", mockActions(), function() end)
+      expect(lines.rows).to.be.ok()
+      -- Row 9 should have inverted segment containing the score
+      local r9 = lines.rows[9]
+      expect(r9).to.be.ok()
+      local hasInverted = false
+      if r9.segments then
+        for _, seg in ipairs(r9.segments) do
+          if seg.inverted then hasInverted = true end
+        end
+      end
+      expect(hasInverted).to.equal(true)
+      -- Y and N keys
+      local keySet = {}
+      for _, k in ipairs(promptDef.keys) do keySet[k] = true end
+      expect(keySet["Y"]).to.equal(true)
+      expect(keySet["N"]).to.equal(true)
+    end)
+  end)
 end

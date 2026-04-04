@@ -1073,8 +1073,104 @@ local function sceneRepairAmount(state, actions, localSceneCb)
   }
 end
 
+local function sceneMillionaire(_state, _actions, localSceneCb)
+  local INV_W  = 25   -- inverted block width
+  local LEFT   = math.floor((40 - INV_W) / 2)  -- centering offset
+
+  local function invRow(text)
+    local inner = centerStr(text, INV_W)
+    return { segments = {
+      { text = string.rep(" ", LEFT), color = AMBER },
+      { text = inner,                 color = AMBER, inverted = true },
+    }}
+  end
+
+  local rows = {}
+  for r = 1, 18 do rows[r] = { text = "", color = AMBER } end
+  rows[19] = invRow("")
+  rows[20] = invRow("Y o u ' r e    a")
+  rows[21] = invRow("")
+  rows[22] = invRow("M I L L I O N A I R E !")
+  rows[23] = invRow("")
+  rows[24] = invRow("")
+
+  return { rows = rows }, {
+    type   = "key",
+    keys   = {},
+    anyKey = true,
+    onKey  = function()
+      if localSceneCb then localSceneCb("final_status") end
+    end,
+  }
+end
+
+local RATING_TABLE = {
+  { label = "Ma Tsu",        text = "|Ma Tsu         50,000 and over |" },
+  { label = "Master Taipan", text = "|Master Taipan   8,000 to 49,999|" },
+  { label = "Taipan",        text = "|Taipan          1,000 to  7,999|" },
+  { label = "Compradore",    text = "|Compradore        500 to    999|" },
+  { label = "Galley Hand",   text = "|Galley Hand       less than 500|" },
+}
+
+local function sceneFinalStatus(state, actions, _localSceneCb)
+  local score      = state.finalScore  or 0
+  local rating     = state.finalRating or "Galley Hand"
+  local netCash    = (state.cash or 0) + (state.bankBalance or 0) - (state.debt or 0)
+  local yearsTotal = math.floor((state.turnsElapsed or 0) / 12)
+  local monthsRem  = (state.turnsElapsed or 0) % 12
+
+  local rows = {}
+  rows[1]  = { text = "Your final status:", color = AMBER }
+  rows[2]  = { text = "", color = AMBER }
+  rows[3]  = { text = "Net Cash: " .. fmtBig(netCash), color = AMBER }
+  rows[4]  = { text = "", color = AMBER }
+  rows[5]  = { text = string.format("Ship size: %d units with %d guns",
+                 state.shipCapacity or 0, state.guns or 0), color = AMBER }
+  rows[6]  = { text = "", color = AMBER }
+  rows[7]  = { text = string.format("You traded for %d year%s and %d month%s",
+                 yearsTotal, yearsTotal == 1 and "" or "s",
+                 monthsRem,  monthsRem  == 1 and "" or "s"), color = AMBER }
+  rows[8]  = { text = "", color = AMBER }
+  rows[9]  = { segments = {
+    { text = string.format("Your score is %d.", score), color = AMBER, inverted = true },
+  }}
+  rows[10] = { text = "", color = AMBER }
+  rows[11] = { text = "", color = AMBER }
+  rows[12] = { text = "", color = AMBER }
+  rows[13] = { text = "Your Rating:", color = AMBER }
+  rows[14] = { text = "+-------------------------------+", color = AMBER }
+  for i, entry in ipairs(RATING_TABLE) do
+    local isAchieved = (entry.label == rating)
+    rows[14 + i] = isAchieved
+      and { segments = {{ text = entry.text, color = AMBER, inverted = true }}}
+      or  { text = entry.text, color = AMBER }
+  end
+  rows[20] = { text = "+-------------------------------+", color = AMBER }
+  rows[21] = { text = "", color = AMBER }
+  rows[22] = { text = "Play again? (Y/N)", color = GREEN }
+  rows[23] = { text = "", color = AMBER }
+  rows[24] = { text = "", color = AMBER }
+
+  return { rows = rows }, {
+    type = "key",
+    keys = { "Y", "N" },
+    label = "Play again? (Y/N)",
+    onKey = function(key, _s, _a)
+      if key == "Y" then actions.restartGame()
+      elseif key == "N" then actions.quitGame()
+      end
+    end,
+  }
+end
+
 function PromptEngine.processState(state, localScene, actions, localSceneCb)
   if state.gameOver then
+    if state.gameOverReason == "retired" then
+      if localScene == "final_status" then
+        return sceneFinalStatus(state, actions, localSceneCb)
+      end
+      return sceneMillionaire(state, actions, localSceneCb)
+    end
     return sceneGameOver(state, actions, localSceneCb)
   end
   if state.combat ~= nil then

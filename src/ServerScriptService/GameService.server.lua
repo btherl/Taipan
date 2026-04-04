@@ -17,6 +17,39 @@ local PersistenceEngine = require(ReplicatedStorage.shared.PersistenceEngine)
 local Constants   = require(ReplicatedStorage.shared.Constants)
 local Remotes     = require(ReplicatedStorage.Remotes)
 
+-- Colour used in Apple2 notification rows (sent to client via RemoteEvent)
+local AMBER_S = Color3.fromRGB(200, 180, 80)
+
+-- Build a pendingMessages entry in Captain's Report format.
+-- lines: array of content strings starting at row 19.
+-- duration: seconds the client displays this entry.
+local function makeCaptainNotif(lines, duration)
+  local rows = {}
+  rows[17] = { text = "  Captain's Report", color = AMBER_S }
+  rows[18] = { text = "",                   color = AMBER_S }
+  for i, line in ipairs(lines) do
+    rows[18 + i] = { text = line, color = AMBER_S }
+  end
+  for r = 17, 24 do
+    if not rows[r] then rows[r] = { text = "", color = AMBER_S } end
+  end
+  return { rows = rows, duration = duration }
+end
+
+-- Build a pendingMessages entry in Comprador's Report format.
+local function makeCompradorNotif(lines, duration)
+  local rows = {}
+  rows[17] = { text = "Comprador's Report", color = AMBER_S }
+  rows[18] = { text = "",                   color = AMBER_S }
+  for i, line in ipairs(lines) do
+    rows[18 + i] = { text = line, color = AMBER_S }
+  end
+  for r = 17, 24 do
+    if not rows[r] then rows[r] = { text = "", color = AMBER_S } end
+  end
+  return { rows = rows, duration = duration }
+end
+
 local RunService        = game:GetService("RunService")
 local DataStoreService  = game:GetService("DataStoreService")
 local gameStore         = DataStoreService:GetDataStore("TaipanV1")

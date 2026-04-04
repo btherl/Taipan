@@ -174,10 +174,16 @@ Remotes.TravelTo.OnServerEvent:Connect(function(player, destination)
   TravelEngine.timeAdvance(state)
   state.destination   = destination
   state.currentPort   = destination
-  state.currentPrices = PriceEngine.calculatePrices(state.basePrices, destination)
+  local priceEvent
+  state.currentPrices, priceEvent = PriceEngine.calculatePrices(state.basePrices, destination)
   state.holdSpace = state.shipCapacity
     - state.shipCargo[1] - state.shipCargo[2] - state.shipCargo[3] - state.shipCargo[4]
     - state.guns * 10
+
+  local pending = {}
+  table.insert(pending, makeCompradorNotif(
+    { "Arriving at " .. Constants.PORT_NAMES[destination] }, 3
+  ))
 
     if FinanceEngine.liYuenLapse(state) then
       Remotes.Notify:FireClient(player, "Li Yuen no longer protects you!")
@@ -185,7 +191,21 @@ Remotes.TravelTo.OnServerEvent:Connect(function(player, destination)
     if destination ~= Constants.HONG_KONG and FinanceEngine.liYuenWarningFires(state) then
       Remotes.Notify:FireClient(player,
         "Li Yuen wishes you to reconsider! He could protect you for a fee...")
+      table.insert(pending, makeCompradorNotif({
+        "Li Yuen has sent a lieutenant,",
+        "Taipan.  He says his admiral wishes",
+        "to see you in Hong Kong, posthaste!",
+      }, 5))
     end
+
+  if priceEvent then
+    local goodName  = Constants.GOOD_NAMES[priceEvent.good]
+    local direction = priceEvent.direction == "drop" and "dropped" or "risen"
+    table.insert(pending, makeCompradorNotif({
+      string.format("Taipan!!  The price of %s", goodName),
+      string.format("has %s to %d!!", direction, priceEvent.price),
+    }, 5))
+  end
 
     if destination == Constants.HONG_KONG then
       state.inWuSession = true
@@ -228,6 +248,7 @@ Remotes.TravelTo.OnServerEvent:Connect(function(player, destination)
           Remotes.Notify:FireClient(player, "I think we're going down!!")
           if EventEngine.stormSinks(state) then
             Remotes.Notify:FireClient(player, "We're going down, Taipan!!")
+            table.insert(pending, makeCaptainNotif({ "Storm, Taipan!!", "", "We're going down!!" }, 5))
             -- stormSinks already sets state.gameOver = true; add reason + score
             local sc = ProgressionEngine.score(state)
             state.gameOverReason = "sunk"
@@ -243,6 +264,14 @@ Remotes.TravelTo.OnServerEvent:Connect(function(player, destination)
               destination         = newPort  -- sync local so HK offer check uses actual port
               Remotes.Notify:FireClient(player,
                 string.format("We've been blown off course to %s!", Constants.PORT_NAMES[newPort]))
+              table.insert(pending, makeCaptainNotif({
+                "Storm, Taipan!!",
+                "",
+                "We've been blown off course",
+                "to " .. Constants.PORT_NAMES[newPort],
+              }, 5))
+            else
+              table.insert(pending, makeCaptainNotif({ "Storm, Taipan!!", "", "    We made it!!" }, 5))
             end
           end
         else
@@ -255,6 +284,14 @@ Remotes.TravelTo.OnServerEvent:Connect(function(player, destination)
             destination         = newPort  -- sync local so HK offer check uses actual port
             Remotes.Notify:FireClient(player,
               string.format("We've been blown off course to %s!", Constants.PORT_NAMES[newPort]))
+            table.insert(pending, makeCaptainNotif({
+              "Storm, Taipan!!",
+              "",
+              "We've been blown off course",
+              "to " .. Constants.PORT_NAMES[newPort],
+            }, 5))
+          else
+            table.insert(pending, makeCaptainNotif({ "Storm, Taipan!!", "", "    We made it!!" }, 5))
           end
         end
       end
@@ -265,15 +302,26 @@ Remotes.TravelTo.OnServerEvent:Connect(function(player, destination)
         local shipCount = CombatEngine.genericFleetSize(state)
         state.combat = CombatEngine.initCombat(state, shipCount, 1)
         CombatEngine.spawnShips(state.combat, state.enemyBaseHP)
+        table.insert(pending, makeCaptainNotif({
+          string.format("%d hostile ships approaching, Taipan!!", shipCount),
+        }, 1))
         Remotes.Notify:FireClient(player,
           string.format("Taipan!! %d hostile ships approaching!!", shipCount))
       elseif CombatEngine.liYuenEncounterCheck(state) then
         if state.liYuenProtection ~= 0 then
+          table.insert(pending, makeCaptainNotif({
+            "Li Yuen's pirates, Taipan!!",
+            "",
+            "Good joss!! They let us be!!",
+          }, 5))
           Remotes.Notify:FireClient(player, "Good joss!! Li Yuen's fleet let us be!!")
         else
           local shipCount = CombatEngine.liYuenFleetSize(state)
           state.combat = CombatEngine.initCombat(state, shipCount, 2)
           CombatEngine.spawnShips(state.combat, state.enemyBaseHP)
+          table.insert(pending, makeCaptainNotif({
+            "Li Yuen's pirates, Taipan!!",
+          }, 1))
           Remotes.Notify:FireClient(player,
             string.format("Taipan!! Li Yuen's fleet!! %d ships!!", shipCount))
         end
@@ -313,7 +361,9 @@ Remotes.TravelTo.OnServerEvent:Connect(function(player, destination)
     savePlayer(player, state)  -- persist immediately so tutorial never repeats on reconnect
   end
 
+  state.pendingMessages = pending
   pushState(player)
+  state.pendingMessages = nil
   savePlayer(player, state)  -- save on every departure
 end)
 

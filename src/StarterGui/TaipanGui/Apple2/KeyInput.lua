@@ -353,6 +353,7 @@ function KeyInput.new(screenGui)
           end)
         )
       end
+    end  -- if promptDef.type == "key" / "type" / "numeric"
   end
 
   function ki.destroy()

@@ -29,7 +29,9 @@ end
 -- basePrices: the mutable base price matrix from GameState (not Constants directly,
 --             since it drifts each January)
 -- portIndex: 1-7
--- Returns: array of 4 integer prices
+-- Returns: array of 4 integer prices, and optionally a crash/boom event table
+--   { good: 1-4, direction: "drop"|"rise", price: integer }
+--   or nil if no event occurred this visit.
 function PriceEngine.calculatePrices(basePrices, portIndex)
   -- Calculate base prices for all 4 goods
   local prices = {}

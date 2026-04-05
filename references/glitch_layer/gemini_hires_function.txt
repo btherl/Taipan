@@ -1,0 +1,42 @@
+def apple2_hires_render(bit_sequence):
+    """
+    Simulates Apple II High-Resolution color artifacting.
+    Input: A list or tuple of 0s and 1s representing raw pixel data.
+    Output: A list of color names ('Black', 'Green', 'Purple', 'White').
+    """
+    colors = []
+    
+    # We iterate through the bits in pairs (columns)
+    # The Apple II HGR horizontal resolution is effectively 140 color pixels
+    # derived from 280 monochrome dots.
+    for i in range(0, len(bit_sequence) - 1, 2):
+        b1 = bit_sequence[i]     # Even column bit
+        b2 = bit_sequence[i + 1] # Odd column bit
+        
+        if b1 == 0 and b2 == 0:
+            colors.append("Black")
+        elif b1 == 1 and b2 == 1:
+            colors.append("White")
+        elif b1 == 1 and b2 == 0:
+            # Even bit on = Green (in the first color palette)
+            colors.append("Green")
+        elif b1 == 0 and b2 == 1:
+            # Odd bit on = Purple (in the first color palette)
+            colors.append("Purple")
+            
+    return colors
+
+# Example Usage:
+# Alternating bits 101010 (Purple)
+data = [1, 0, 1, 0, 1, 0, 0, 1, 0, 1, 0, 1]
+print(apple2_hires_render(data))
+
+
+
+Key Technical Nuances
+
+1. The Shift Bit (MSB): In actual Apple II memory, each byte contains 7 pixels. The 8th bit (Most Significant Bit) is used to shift the entire 7-pixel block by half a pixel. This shift changes the phase relative to the NTSC carrier, swapping the Green/Purple palette for the Orange/Blue palette.
+
+2. Bit Positioning: The specific color (Green vs. Purple) depends entirely on whether the bit is in an even or odd column on the screen. If you shift a green line one pixel to the right, it immediately turns purple.
+
+3. Horizontal Constraints: Because colors are created by bit-pairs, you cannot easily place a Green pixel immediately next to a Purple one without them bleeding into White or creating a Black gap. This is why Apple II games often have a "fringed" or "crunchy" look on vertical edges.

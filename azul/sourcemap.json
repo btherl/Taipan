@@ -1,0 +1,836 @@
+{
+  "name": "Game",
+  "className": "DataModel",
+  "children": [
+    {
+      "name": "Lighting",
+      "className": "Lighting",
+      "guid": "9651",
+      "children": [
+        {
+          "name": "Atmosphere",
+          "className": "Atmosphere",
+          "guid": "9621"
+        },
+        {
+          "name": "Bloom",
+          "className": "BloomEffect",
+          "guid": "9629"
+        },
+        {
+          "name": "DepthOfField",
+          "className": "DepthOfFieldEffect",
+          "guid": "9637"
+        },
+        {
+          "name": "Sky",
+          "className": "Sky",
+          "guid": "9745"
+        },
+        {
+          "name": "SunRays",
+          "className": "SunRaysEffect",
+          "guid": "9752"
+        }
+      ]
+    },
+    {
+      "name": "ReplicatedFirst",
+      "className": "ReplicatedFirst",
+      "guid": "7370"
+    },
+    {
+      "name": "ReplicatedStorage",
+      "className": "ReplicatedStorage",
+      "guid": "9738",
+      "children": [
+        {
+          "name": "AcceptGun",
+          "className": "RemoteEvent",
+          "guid": "9733"
+        },
+        {
+          "name": "AcceptUpgrade",
+          "className": "RemoteEvent",
+          "guid": "9731"
+        },
+        {
+          "name": "BankDeposit",
+          "className": "RemoteEvent",
+          "guid": "9722"
+        },
+        {
+          "name": "BankWithdraw",
+          "className": "RemoteEvent",
+          "guid": "9723"
+        },
+        {
+          "name": "BuyGoods",
+          "className": "RemoteEvent",
+          "guid": "9711"
+        },
+        {
+          "name": "BuyLiYuenProtection",
+          "className": "RemoteEvent",
+          "guid": "9724"
+        },
+        {
+          "name": "ChooseStart",
+          "className": "RemoteEvent",
+          "guid": "9710"
+        },
+        {
+          "name": "CombatFight",
+          "className": "RemoteEvent",
+          "guid": "9727"
+        },
+        {
+          "name": "CombatRun",
+          "className": "RemoteEvent",
+          "guid": "9728"
+        },
+        {
+          "name": "CombatThrow",
+          "className": "RemoteEvent",
+          "guid": "9729"
+        },
+        {
+          "name": "DeclineGun",
+          "className": "RemoteEvent",
+          "guid": "9734"
+        },
+        {
+          "name": "DeclineUpgrade",
+          "className": "RemoteEvent",
+          "guid": "9732"
+        },
+        {
+          "name": "EndTurn",
+          "className": "RemoteEvent",
+          "guid": "9713"
+        },
+        {
+          "name": "LeaveWu",
+          "className": "RemoteEvent",
+          "guid": "9721"
+        },
+        {
+          "name": "Notify",
+          "className": "RemoteEvent",
+          "guid": "9725"
+        },
+        {
+          "name": "QuitGame",
+          "className": "RemoteEvent",
+          "guid": "9737"
+        },
+        {
+          "name": "Remotes",
+          "className": "ModuleScript",
+          "guid": "9686",
+          "filePaths": [
+            "sync/ReplicatedStorage/Remotes.luau"
+          ]
+        },
+        {
+          "name": "RequestStateUpdate",
+          "className": "RemoteEvent",
+          "guid": "9715"
+        },
+        {
+          "name": "RestartGame",
+          "className": "RemoteEvent",
+          "guid": "9726"
+        },
+        {
+          "name": "Retire",
+          "className": "RemoteEvent",
+          "guid": "9736"
+        },
+        {
+          "name": "SellGoods",
+          "className": "RemoteEvent",
+          "guid": "9712"
+        },
+        {
+          "name": "shared",
+          "className": "Folder",
+          "guid": "9640",
+          "children": [
+            {
+              "name": "CombatEngine",
+              "className": "ModuleScript",
+              "guid": "9681",
+              "filePaths": [
+                "sync/ReplicatedStorage/shared/CombatEngine.luau"
+              ]
+            },
+            {
+              "name": "Constants",
+              "className": "ModuleScript",
+              "guid": "9675",
+              "filePaths": [
+                "sync/ReplicatedStorage/shared/Constants.luau"
+              ]
+            },
+            {
+              "name": "EventEngine",
+              "className": "ModuleScript",
+              "guid": "9680",
+              "filePaths": [
+                "sync/ReplicatedStorage/shared/EventEngine.luau"
+              ]
+            },
+            {
+              "name": "FinanceEngine",
+              "className": "ModuleScript",
+              "guid": "9679",
+              "filePaths": [
+                "sync/ReplicatedStorage/shared/FinanceEngine.luau"
+              ]
+            },
+            {
+              "name": "GameState",
+              "className": "ModuleScript",
+              "guid": "9683",
+              "filePaths": [
+                "sync/ReplicatedStorage/shared/GameState.luau"
+              ]
+            },
+            {
+              "name": "PersistenceEngine",
+              "className": "ModuleScript",
+              "guid": "9684",
+              "filePaths": [
+                "sync/ReplicatedStorage/shared/PersistenceEngine.luau"
+              ]
+            },
+            {
+              "name": "PriceEngine",
+              "className": "ModuleScript",
+              "guid": "9676",
+              "filePaths": [
+                "sync/ReplicatedStorage/shared/PriceEngine.luau"
+              ]
+            },
+            {
+              "name": "ProgressionEngine",
+              "className": "ModuleScript",
+              "guid": "9682",
+              "filePaths": [
+                "sync/ReplicatedStorage/shared/ProgressionEngine.luau"
+              ]
+            },
+            {
+              "name": "TravelEngine",
+              "className": "ModuleScript",
+              "guid": "9678",
+              "filePaths": [
+                "sync/ReplicatedStorage/shared/TravelEngine.luau"
+              ]
+            },
+            {
+              "name": "Validators",
+              "className": "ModuleScript",
+              "guid": "9677",
+              "filePaths": [
+                "sync/ReplicatedStorage/shared/Validators.luau"
+              ]
+            }
+          ]
+        },
+        {
+          "name": "ShipPanelDone",
+          "className": "RemoteEvent",
+          "guid": "9735"
+        },
+        {
+          "name": "ShipRepair",
+          "className": "RemoteEvent",
+          "guid": "9730"
+        },
+        {
+          "name": "StateUpdate",
+          "className": "RemoteEvent",
+          "guid": "9714"
+        },
+        {
+          "name": "TestEZ",
+          "className": "ModuleScript",
+          "guid": "9685",
+          "filePaths": [
+            "sync/ReplicatedStorage/TestEZ.luau"
+          ]
+        },
+        {
+          "name": "Text",
+          "className": "ModuleScript",
+          "guid": "9687",
+          "filePaths": [
+            "sync/ReplicatedStorage/Text.luau"
+          ],
+          "children": [
+            {
+              "name": "BoxDrawing",
+              "className": "ModuleScript",
+              "guid": "9695",
+              "filePaths": [
+                "sync/ReplicatedStorage/Text/BoxDrawing.luau"
+              ]
+            },
+            {
+              "name": "Fonts",
+              "className": "Folder",
+              "guid": "9642",
+              "children": [
+                {
+                  "name": "TaipanStandardFont",
+                  "className": "Folder",
+                  "guid": "9643",
+                  "children": [
+                    {
+                      "name": "FontData",
+                      "className": "ModuleScript",
+                      "guid": "9693",
+                      "filePaths": [
+                        "sync/ReplicatedStorage/Text/Fonts/TaipanStandardFont/FontData.luau"
+                      ]
+                    },
+                    {
+                      "name": "ImageID",
+                      "className": "StringValue",
+                      "guid": "9750"
+                    }
+                  ]
+                },
+                {
+                  "name": "TaipanThickFont",
+                  "className": "Folder",
+                  "guid": "9644",
+                  "children": [
+                    {
+                      "name": "FontData",
+                      "className": "ModuleScript",
+                      "guid": "9694",
+                      "filePaths": [
+                        "sync/ReplicatedStorage/Text/Fonts/TaipanThickFont/FontData.luau"
+                      ]
+                    },
+                    {
+                      "name": "ImageID",
+                      "className": "StringValue",
+                      "guid": "9751"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "name": "lib",
+              "className": "Folder",
+              "guid": "9641",
+              "children": [
+                {
+                  "name": "Signal",
+                  "className": "ModuleScript",
+                  "guid": "9688",
+                  "filePaths": [
+                    "sync/ReplicatedStorage/Text/lib/Signal.luau"
+                  ]
+                },
+                {
+                  "name": "TextSprite",
+                  "className": "ModuleScript",
+                  "guid": "9689",
+                  "filePaths": [
+                    "sync/ReplicatedStorage/Text/lib/TextSprite.luau"
+                  ]
+                },
+                {
+                  "name": "Unicode",
+                  "className": "ModuleScript",
+                  "guid": "9690",
+                  "filePaths": [
+                    "sync/ReplicatedStorage/Text/lib/Unicode.luau"
+                  ]
+                },
+                {
+                  "name": "Util",
+                  "className": "ModuleScript",
+                  "guid": "9691",
+                  "filePaths": [
+                    "sync/ReplicatedStorage/Text/lib/Util.luau"
+                  ]
+                },
+                {
+                  "name": "XMLParser",
+                  "className": "ModuleScript",
+                  "guid": "9692",
+                  "filePaths": [
+                    "sync/ReplicatedStorage/Text/lib/XMLParser.luau"
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "TransferFromWarehouse",
+          "className": "RemoteEvent",
+          "guid": "9718"
+        },
+        {
+          "name": "TransferToWarehouse",
+          "className": "RemoteEvent",
+          "guid": "9717"
+        },
+        {
+          "name": "TravelTo",
+          "className": "RemoteEvent",
+          "guid": "9716"
+        },
+        {
+          "name": "WuBorrow",
+          "className": "RemoteEvent",
+          "guid": "9720"
+        },
+        {
+          "name": "WuRepay",
+          "className": "RemoteEvent",
+          "guid": "9719"
+        }
+      ]
+    },
+    {
+      "name": "ServerScriptService",
+      "className": "ServerScriptService",
+      "guid": "9742",
+      "children": [
+        {
+          "name": "GameService",
+          "className": "Script",
+          "guid": "9741",
+          "filePaths": [
+            "sync/ServerScriptService/GameService.server.luau"
+          ]
+        },
+        {
+          "name": "Tests",
+          "className": "Folder",
+          "guid": "9645",
+          "children": [
+            {
+              "name": "BoxDrawing.spec",
+              "className": "ModuleScript",
+              "guid": "9706",
+              "filePaths": [
+                "sync/ServerScriptService/Tests/BoxDrawing.spec.luau"
+              ]
+            },
+            {
+              "name": "CombatEngine.spec",
+              "className": "ModuleScript",
+              "guid": "9703",
+              "filePaths": [
+                "sync/ServerScriptService/Tests/CombatEngine.spec.luau"
+              ]
+            },
+            {
+              "name": "Constants.spec",
+              "className": "ModuleScript",
+              "guid": "9696",
+              "filePaths": [
+                "sync/ServerScriptService/Tests/Constants.spec.luau"
+              ]
+            },
+            {
+              "name": "EventEngine.spec",
+              "className": "ModuleScript",
+              "guid": "9702",
+              "filePaths": [
+                "sync/ServerScriptService/Tests/EventEngine.spec.luau"
+              ]
+            },
+            {
+              "name": "FinanceEngine.spec",
+              "className": "ModuleScript",
+              "guid": "9701",
+              "filePaths": [
+                "sync/ServerScriptService/Tests/FinanceEngine.spec.luau"
+              ]
+            },
+            {
+              "name": "GameState.spec",
+              "className": "ModuleScript",
+              "guid": "9697",
+              "filePaths": [
+                "sync/ServerScriptService/Tests/GameState.spec.luau"
+              ]
+            },
+            {
+              "name": "PersistenceEngine.spec",
+              "className": "ModuleScript",
+              "guid": "9705",
+              "filePaths": [
+                "sync/ServerScriptService/Tests/PersistenceEngine.spec.luau"
+              ]
+            },
+            {
+              "name": "PriceEngine",
+              "className": "Folder",
+              "guid": "9646",
+              "children": [
+                {
+                  "name": "spec",
+                  "className": "Folder",
+                  "guid": "9647"
+                }
+              ]
+            },
+            {
+              "name": "PriceEngine.spec",
+              "className": "ModuleScript",
+              "guid": "9698",
+              "filePaths": [
+                "sync/ServerScriptService/Tests/PriceEngine.spec.luau"
+              ]
+            },
+            {
+              "name": "ProgressionEngine.spec",
+              "className": "ModuleScript",
+              "guid": "9704",
+              "filePaths": [
+                "sync/ServerScriptService/Tests/ProgressionEngine.spec.luau"
+              ]
+            },
+            {
+              "name": "PromptEngine",
+              "className": "Folder",
+              "guid": "9648",
+              "children": [
+                {
+                  "name": "spec",
+                  "className": "ModuleScript",
+                  "guid": "9707",
+                  "filePaths": [
+                    "sync/ServerScriptService/Tests/PromptEngine/spec.luau"
+                  ]
+                }
+              ]
+            },
+            {
+              "name": "TestRunner",
+              "className": "Script",
+              "guid": "9740",
+              "filePaths": [
+                "sync/ServerScriptService/Tests/TestRunner.server.luau"
+              ]
+            },
+            {
+              "name": "TravelEngine.spec",
+              "className": "ModuleScript",
+              "guid": "9700",
+              "filePaths": [
+                "sync/ServerScriptService/Tests/TravelEngine.spec.luau"
+              ]
+            },
+            {
+              "name": "Validators.spec",
+              "className": "ModuleScript",
+              "guid": "9699",
+              "filePaths": [
+                "sync/ServerScriptService/Tests/Validators.spec.luau"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "ServerStorage",
+      "className": "ServerStorage",
+      "guid": "9743",
+      "children": [
+        {
+          "name": "__Rojo_SessionLock",
+          "className": "ObjectValue",
+          "guid": "399230"
+        }
+      ]
+    },
+    {
+      "name": "SoundService",
+      "className": "SoundService",
+      "guid": "6775"
+    },
+    {
+      "name": "StarterGui",
+      "className": "StarterGui",
+      "guid": "7383",
+      "children": [
+        {
+          "name": "TaipanGui",
+          "className": "ScreenGui",
+          "guid": "9739",
+          "children": [
+            {
+              "name": "GameController",
+              "className": "LocalScript",
+              "guid": "9652",
+              "filePaths": [
+                "sync/StarterGui/TaipanGui/GameController.client.luau"
+              ],
+              "children": [
+                {
+                  "name": "Apple2",
+                  "className": "Folder",
+                  "guid": "9639",
+                  "children": [
+                    {
+                      "name": "GlitchLayer",
+                      "className": "ModuleScript",
+                      "guid": "9668",
+                      "filePaths": [
+                        "sync/StarterGui/TaipanGui/GameController/Apple2/GlitchLayer.luau"
+                      ]
+                    },
+                    {
+                      "name": "KeyInput",
+                      "className": "ModuleScript",
+                      "guid": "9670",
+                      "filePaths": [
+                        "sync/StarterGui/TaipanGui/GameController/Apple2/KeyInput.luau"
+                      ]
+                    },
+                    {
+                      "name": "PromptEngine",
+                      "className": "ModuleScript",
+                      "guid": "9671",
+                      "filePaths": [
+                        "sync/StarterGui/TaipanGui/GameController/Apple2/PromptEngine.luau"
+                      ]
+                    },
+                    {
+                      "name": "Terminal",
+                      "className": "ModuleScript",
+                      "guid": "9669",
+                      "filePaths": [
+                        "sync/StarterGui/TaipanGui/GameController/Apple2/Terminal.luau"
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "name": "Apple2Interface",
+                  "className": "ModuleScript",
+                  "guid": "9674",
+                  "filePaths": [
+                    "sync/StarterGui/TaipanGui/GameController/Apple2Interface.luau"
+                  ]
+                },
+                {
+                  "name": "GameActions",
+                  "className": "ModuleScript",
+                  "guid": "9667",
+                  "filePaths": [
+                    "sync/StarterGui/TaipanGui/GameController/GameActions.luau"
+                  ]
+                },
+                {
+                  "name": "InterfacePicker",
+                  "className": "ModuleScript",
+                  "guid": "9673",
+                  "filePaths": [
+                    "sync/StarterGui/TaipanGui/GameController/InterfacePicker.luau"
+                  ]
+                },
+                {
+                  "name": "ModernInterface",
+                  "className": "ModuleScript",
+                  "guid": "9672",
+                  "filePaths": [
+                    "sync/StarterGui/TaipanGui/GameController/ModernInterface.luau"
+                  ]
+                },
+                {
+                  "name": "Panels",
+                  "className": "Folder",
+                  "guid": "9638",
+                  "children": [
+                    {
+                      "name": "BankPanel",
+                      "className": "ModuleScript",
+                      "guid": "9658",
+                      "filePaths": [
+                        "sync/StarterGui/TaipanGui/GameController/Panels/BankPanel.luau"
+                      ]
+                    },
+                    {
+                      "name": "BuySellPanel",
+                      "className": "ModuleScript",
+                      "guid": "9663",
+                      "filePaths": [
+                        "sync/StarterGui/TaipanGui/GameController/Panels/BuySellPanel.luau"
+                      ]
+                    },
+                    {
+                      "name": "CombatPanel",
+                      "className": "ModuleScript",
+                      "guid": "9662",
+                      "filePaths": [
+                        "sync/StarterGui/TaipanGui/GameController/Panels/CombatPanel.luau"
+                      ]
+                    },
+                    {
+                      "name": "GameOverPanel",
+                      "className": "ModuleScript",
+                      "guid": "9660",
+                      "filePaths": [
+                        "sync/StarterGui/TaipanGui/GameController/Panels/GameOverPanel.luau"
+                      ]
+                    },
+                    {
+                      "name": "InventoryPanel",
+                      "className": "ModuleScript",
+                      "guid": "9656",
+                      "filePaths": [
+                        "sync/StarterGui/TaipanGui/GameController/Panels/InventoryPanel.luau"
+                      ]
+                    },
+                    {
+                      "name": "MessagePanel",
+                      "className": "ModuleScript",
+                      "guid": "9654",
+                      "filePaths": [
+                        "sync/StarterGui/TaipanGui/GameController/Panels/MessagePanel.luau"
+                      ]
+                    },
+                    {
+                      "name": "PortPanel",
+                      "className": "ModuleScript",
+                      "guid": "9661",
+                      "filePaths": [
+                        "sync/StarterGui/TaipanGui/GameController/Panels/PortPanel.luau"
+                      ]
+                    },
+                    {
+                      "name": "PricesPanel",
+                      "className": "ModuleScript",
+                      "guid": "9657",
+                      "filePaths": [
+                        "sync/StarterGui/TaipanGui/GameController/Panels/PricesPanel.luau"
+                      ]
+                    },
+                    {
+                      "name": "ShipPanel",
+                      "className": "ModuleScript",
+                      "guid": "9659",
+                      "filePaths": [
+                        "sync/StarterGui/TaipanGui/GameController/Panels/ShipPanel.luau"
+                      ]
+                    },
+                    {
+                      "name": "StartPanel",
+                      "className": "ModuleScript",
+                      "guid": "9666",
+                      "filePaths": [
+                        "sync/StarterGui/TaipanGui/GameController/Panels/StartPanel.luau"
+                      ]
+                    },
+                    {
+                      "name": "StatusStrip",
+                      "className": "ModuleScript",
+                      "guid": "9655",
+                      "filePaths": [
+                        "sync/StarterGui/TaipanGui/GameController/Panels/StatusStrip.luau"
+                      ]
+                    },
+                    {
+                      "name": "WarehousePanel",
+                      "className": "ModuleScript",
+                      "guid": "9665",
+                      "filePaths": [
+                        "sync/StarterGui/TaipanGui/GameController/Panels/WarehousePanel.luau"
+                      ]
+                    },
+                    {
+                      "name": "WuPanel",
+                      "className": "ModuleScript",
+                      "guid": "9664",
+                      "filePaths": [
+                        "sync/StarterGui/TaipanGui/GameController/Panels/WuPanel.luau"
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "StarterPack",
+      "className": "StarterPack",
+      "guid": "7382"
+    },
+    {
+      "name": "StarterPlayer",
+      "className": "StarterPlayer",
+      "guid": "7381",
+      "children": [
+        {
+          "name": "StarterCharacterScripts",
+          "className": "StarterCharacterScripts",
+          "guid": "9747"
+        },
+        {
+          "name": "StarterPlayerScripts",
+          "className": "StarterPlayerScripts",
+          "guid": "9748"
+        }
+      ]
+    },
+    {
+      "name": "Workspace",
+      "className": "Workspace",
+      "guid": "13",
+      "children": [
+        {
+          "name": "Baseplate",
+          "className": "Part",
+          "guid": "9708",
+          "children": [
+            {
+              "name": "Texture",
+              "className": "Texture",
+              "guid": "9756"
+            }
+          ]
+        },
+        {
+          "name": "Camera",
+          "className": "Camera",
+          "guid": "254846"
+        },
+        {
+          "name": "SpawnLocation",
+          "className": "SpawnLocation",
+          "guid": "9746",
+          "children": [
+            {
+              "name": "Decal",
+              "className": "Decal",
+              "guid": "9636"
+            }
+          ]
+        },
+        {
+          "name": "Terrain",
+          "className": "Terrain",
+          "guid": "9754"
+        }
+      ]
+    }
+  ]
+}

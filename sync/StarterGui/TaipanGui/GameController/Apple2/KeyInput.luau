@@ -142,6 +142,93 @@ function KeyInput.new(screenGui)
         )
       end
 
+      -- Optional blinking cursor for key prompts (Apple II style single-char input)
+      local terminal = promptDef._terminal
+      local buildRow = promptDef._buildInputRow
+      if terminal and buildRow and promptDef._inputRow then
+        local function updateCursor()
+          local cursorChar = cursorVisible and CURSOR_CHAR or " "
+          terminal.showInputAt(promptDef._inputRow, buildRow(cursorChar))
+        end
+        resetBlink()
+        updateCursor()
+        blinkConn = RunService.RenderStepped:Connect(function(dt)
+          cursorTimer += dt
+          if cursorTimer >= BLINK_HALF then
+            cursorVisible = not cursorVisible
+            cursorTimer = 0
+            updateCursor()
+          end
+        end)
+      end
+
+    elseif promptDef.type == "singlechar" then
+      -- Single-character input with Enter to submit.
+      -- Valid chars display; invalid chars or backspace clear the buffer.
+      -- A new valid char replaces the current one.
+      local validKeySet = {}
+      for _, k in ipairs(promptDef.keys) do validKeySet[k:upper()] = true end
+
+      local terminal = promptDef._terminal
+      local buildRow = promptDef._buildInputRow
+      local stored   = ""  -- "" or one accepted char
+
+      local function updateDisplay()
+        if terminal and buildRow and promptDef._inputRow then
+          local cursorChar = cursorVisible and CURSOR_CHAR or " "
+          -- Always pass exactly 2 chars so the row length stays constant
+          local suffix = stored ~= "" and (stored .. cursorChar) or (cursorChar .. " ")
+          terminal.showInputAt(promptDef._inputRow, buildRow(suffix))
+        end
+      end
+
+      resetBlink()
+      updateDisplay()
+      blinkConn = RunService.RenderStepped:Connect(function(dt)
+        cursorTimer += dt
+        if cursorTimer >= BLINK_HALF then
+          cursorVisible = not cursorVisible
+          cursorTimer = 0
+          updateDisplay()
+        end
+      end)
+
+      if not isMobile then
+        table.insert(connections,
+          UserInputService.InputBegan:Connect(function(input, gameProcessed)
+            if gameProcessed then return end
+            local name = input.KeyCode.Name
+
+            if name == "Return" or name == "KeypadEnter" then
+              if stored ~= "" then
+                promptDef.onKey(stored, state, actions)
+              end
+              return
+            end
+
+            if name == "BackSpace" then
+              stored = ""
+              resetBlink()
+              updateDisplay()
+              return
+            end
+
+            local char = name
+            if #name == 1 then char = name:upper()
+            elseif NUMKEY_MAP[name] then char = NUMKEY_MAP[name]
+            end
+
+            if validKeySet[char] then
+              stored = char
+            else
+              stored = ""
+            end
+            resetBlink()
+            updateDisplay()
+          end)
+        )
+      end
+
     elseif promptDef.type == "type" then
       local placeholder = promptDef.typePlaceholder or "> "
       maxLength = promptDef.maxLength  -- nil = unlimited
@@ -181,8 +268,9 @@ function KeyInput.new(screenGui)
         local function updateDisplay()
           if terminal then
             local displayStr = buildDisplayStr()
-            if promptDef._buildInputRow and promptDef._inputRow then
-              terminal.showInputAt(promptDef._inputRow, promptDef._buildInputRow(displayStr))
+            local buildRow = promptDef._buildInputRow
+            if buildRow and promptDef._inputRow then
+              terminal.showInputAt(promptDef._inputRow, buildRow(displayStr))
             else
               terminal.showInputLine(placeholder .. displayStr)
             end

@@ -144,28 +144,6 @@ local function priceLines(state)
   return lines
 end
 
-local function atPortMenu(state)
-  local isHK = (state.currentPort == HONG_KONG)
-  local nw    = (state.cash or 0) + (state.bankBalance or 0) - (state.debt or 0)
-  local canRetire = isHK and nw >= 1000000
-  local menuLines = { "(B)uy  (S)ell  (T)ravel" }
-  if isHK then
-    table.insert(menuLines, "(W)arehouse  (K)Bank")
-  end
-  local line3Parts = {}
-  if canRetire then
-    table.insert(line3Parts, "(R)etire")
-  end
-  table.insert(line3Parts, "(P)Settings  (Q)uit")
-  table.insert(menuLines, table.concat(line3Parts, "  "))
-  local validKeys = {"B", "S", "T", "P", "Q"}
-  if isHK then
-    table.insert(validKeys, "W")
-    table.insert(validKeys, "K")
-  end
-  if canRetire then table.insert(validKeys, "R") end
-  return menuLines, validKeys
-end
 
 local function buildPortRows(state)
   local rows = {}
@@ -342,34 +320,72 @@ end
 
 local function sceneAtPort(state, actions, localSceneCb)
   local rows = buildPortRows(state)
-  rows[17] = { text = "", color = AMBER }
-  local menuLines, validKeys = atPortMenu(state)
-  for i, ml in ipairs(menuLines) do
-    rows[17 + i] = { text = ml, color = GREEN }
+  local isHK     = (state.currentPort == HONG_KONG)
+  local nw       = (state.cash or 0) + (state.bankBalance or 0) - (state.debt or 0)
+  local canRetire = isHK and nw >= 1000000
+  local prices   = state.currentPrices or {0,0,0,0}
+
+  -- Price lines: left column 18 chars wide so right column aligns
+  local p1 = tostring(math.floor(prices[1]))
+  local p2 = tostring(math.floor(prices[2]))
+  local p3 = tostring(math.floor(prices[3]))
+  local p4 = tostring(math.floor(prices[4]))
+
+  rows[17] = { text = "Comprador's Report",                              color = AMBER }
+  rows[18] = { text = "",                                                color = AMBER }
+  rows[19] = { text = "Taipan, present prices per unit here are",        color = AMBER }
+  rows[20] = { text = "   Spices: " .. pad(p1, 7) .. "Silk: " .. p2,   color = GREEN }
+  rows[21] = { text = "   Arms: "   .. pad(p3, 9) .. "General: " .. p4, color = GREEN }
+  rows[22] = { text = "",                                                color = AMBER }
+
+  local validKeys = {"B", "S", "Q", "P"}  -- P = Settings (unlisted)
+  local cursorRow, cursorPrefix
+  if isHK then
+    if canRetire then
+      rows[23] = { text = "Shall I Buy, Sell, Visit bank, Transfer",  color = GREEN }
+      rows[24] = { text = "cargo, Quit trading, or Retire?",          color = GREEN }
+      table.insert(validKeys, "V")
+      table.insert(validKeys, "T")
+      table.insert(validKeys, "R")
+      cursorRow    = 24
+      cursorPrefix = "cargo, Quit trading, or Retire? "
+    else
+      rows[23] = { text = "Shall I Buy, Sell, Visit bank, Transfer",  color = GREEN }
+      rows[24] = { text = "cargo, or Quit trading?",                  color = GREEN }
+      table.insert(validKeys, "V")
+      table.insert(validKeys, "T")
+      cursorRow    = 24
+      cursorPrefix = "cargo, or Quit trading? "
+    end
+  else
+    rows[23] = { text = "Shall I Buy, Sell, or Quit trading?",        color = GREEN }
+    cursorRow    = 23
+    cursorPrefix = "Shall I Buy, Sell, or Quit trading? "
   end
-  local promptDef = {
-    type = "key",
-    keys = validKeys,
-    label = menuLines[#menuLines],
+
+  return { rows = rows }, {
+    type           = "singlechar",
+    keys           = validKeys,
+    _inputRow      = cursorRow,
+    _buildInputRow = function(s) return { text = cursorPrefix .. s, color = GREEN } end,
     onKey = function(key, _state, _actions)
-      if key == "B" or key == "S" then
-        if localSceneCb then localSceneCb(key == "B" and "buy" or "sell") end
-      elseif key == "W" then
-        if localSceneCb then localSceneCb("warehouse") end
-      elseif key == "K" then
+      if key == "B" then
+        if localSceneCb then localSceneCb("buy") end
+      elseif key == "S" then
+        if localSceneCb then localSceneCb("sell") end
+      elseif key == "V" then
         if localSceneCb then localSceneCb("bank") end
       elseif key == "T" then
+        if localSceneCb then localSceneCb("warehouse") end
+      elseif key == "Q" then
         if localSceneCb then localSceneCb("travel") end
       elseif key == "R" then
         actions.retire()
-      elseif key == "Q" then
-        if localSceneCb then localSceneCb("quit_confirm") end
       elseif key == "P" then
         if localSceneCb then localSceneCb("settings") end
       end
     end,
   }
-  return { rows = rows }, promptDef
 end
 
 local function sceneTravel(state, actions, localSceneCb)

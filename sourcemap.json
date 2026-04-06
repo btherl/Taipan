@@ -549,19 +549,12 @@
     {
       "name": "ServerStorage",
       "className": "ServerStorage",
-      "guid": "9743",
-      "children": [
-        {
-          "name": "__Rojo_SessionLock",
-          "className": "ObjectValue",
-          "guid": "399230"
-        }
-      ]
+      "guid": "9743"
     },
     {
       "name": "SoundService",
       "className": "SoundService",
-      "guid": "6775"
+      "guid": "6622"
     },
     {
       "name": "StarterGui",
@@ -811,7 +804,7 @@
         {
           "name": "Camera",
           "className": "Camera",
-          "guid": "254846"
+          "guid": "659924"
         },
         {
           "name": "SpawnLocation",

@@ -4,13 +4,13 @@
 
 Taipan! is a single-player Roblox port of the classic 1982 Apple II trading game. The player is a merchant sailing the South China Sea in the 1860s, trading goods (Opium, Silk, Arms, General Cargo) between 7 ports, managing debt with Elder Brother Wu, fighting pirates, and trying to amass enough wealth to retire. The game is pure 2D ScreenGui — no 3D world.
 
-The original BASIC source is annotated in `BASIC_ANNOTATED.md`; all formulas cite BASIC line numbers. The authoritative game design is in `DESIGN_DOCUMENT.md`.
+The original BASIC source is annotated in `references/BASIC_ANNOTATED.md`; all formulas cite BASIC line numbers. The authoritative game design is in `docs/original_design/DESIGN_DOCUMENT.md`.
 
 ## Tech Stack
 
 - **Roblox** (Luau) — game runtime
-- **Rojo** — file-based source control; `default.project.json` maps `src/` to Roblox services
-- **TestEZ** — unit testing framework (bundled at `src/ReplicatedStorage/TestEZ.lua`)
+- **Azul** — file-based source control; `sourcemap.json` maps `sync/` to Roblox services
+- **TestEZ** — unit testing framework (bundled at `sync/ReplicatedStorage/TestEZ.luau`)
 - **MCP Studio integration** — Roblox Studio MCP tools for runtime code injection and play-testing
 - **DataStore** — player persistence via `DataStoreService` (store name: `TaipanV1`)
 
@@ -24,7 +24,7 @@ Likewise, Studio edits will propagate back to local files.
 
 ### Server-Authoritative Model
 
-All game logic runs on the server (`GameService.server.lua`). The client is pure UI — it receives state snapshots and sends action requests. The client never computes game state.
+All game logic runs on the server (`GameService.server.luau`). The client is pure UI — it receives state snapshots and sends action requests. The client never computes game state.
 
 ```
 Client (StarterGui)                    Server (ServerScriptService)
@@ -46,7 +46,7 @@ Client (StarterGui)                    Server (ServerScriptService)
 
 1. Server holds `playerStates[player]` — one state table per connected player.
 2. Every mutation ends with `pushState(player)` which fires `Remotes.StateUpdate:FireClient(player, state)`.
-3. The client's `init.client.lua` receives the state and calls `.update(state)` on every panel.
+3. The client's `GameController.client.luau` receives the state and calls `.update(state)` on every panel.
 4. Server notifications (Wu warnings, combat messages, etc.) go via `Remotes.Notify` and display in `MessagePanel`.
 
 ### Sentinel Pattern for Async Load
@@ -56,79 +56,107 @@ When `ChooseStart` fires, the server sets `playerStates[player] = true` (a boole
 ## File Structure
 
 ```
-D:/dev/taipan/
-├── default.project.json          # Rojo project config
+D:/dev/Taipan/
+├── sourcemap.json                # Azul project config (syncs local files with Roblox Studio)
 ├── CLAUDE.md                     # This file
-├── DESIGN_DOCUMENT.md            # Authoritative game design (v3.0)
-├── BASIC_ANNOTATED.md            # Annotated Apple II BASIC source
 │
-├── src/
+├── sync/
 │   ├── ServerScriptService/
-│   │   └── GameService.server.lua    # THE server — all state mutations happen here
+│   │   ├── GameService.server.luau       # THE server — all state mutations happen here
+│   │   └── Tests/                        # Test suite (synced to ServerScriptService.Tests)
+│   │       ├── TestRunner.server.luau    # Discovers and runs all .spec files
+│   │       ├── BoxDrawing.spec.luau
+│   │       ├── CombatEngine.spec.luau
+│   │       ├── Constants.spec.luau
+│   │       ├── EventEngine.spec.luau
+│   │       ├── FinanceEngine.spec.luau
+│   │       ├── GameState.spec.luau
+│   │       ├── PersistenceEngine.spec.luau
+│   │       ├── PriceEngine.spec.luau
+│   │       ├── ProgressionEngine.spec.luau
+│   │       ├── PromptEngine/spec.luau
+│   │       ├── TravelEngine.spec.luau
+│   │       └── Validators.spec.luau
 │   │
 │   ├── ReplicatedStorage/
-│   │   ├── Remotes.lua               # All RemoteEvents (single source of truth)
-│   │   ├── TestEZ.lua                # TestEZ framework module
-│   │   ├── Text/                     # Custom font rendering (BMFont-based)
-│   │   │   ├── init.lua
-│   │   │   ├── lib/ (Signal, TextSprite, Unicode, Util, XMLParser)
-│   │   │   └── Fonts/November/FontData.lua
+│   │   ├── Remotes.luau              # All RemoteEvents (single source of truth)
+│   │   ├── TestEZ.luau               # TestEZ framework module
+│   │   ├── Text.luau                 # Custom font rendering (BMFont-based) — entry point
+│   │   ├── Text/                     # Text sub-modules
+│   │   │   ├── BoxDrawing.luau       # Box-drawing character rendering
+│   │   │   ├── lib/ (Signal, TextSprite, Unicode, Util, XMLParser — all .luau)
+│   │   │   └── Fonts/
+│   │   │       ├── TaipanStandardFont/FontData.luau
+│   │   │       └── TaipanThickFont/FontData.luau
 │   │   └── shared/                   # Pure logic modules (no Roblox service calls)
-│   │       ├── Constants.lua         # All fixed game data — edit here to tune balance
-│   │       ├── GameState.lua         # newGame(startChoice) constructor
-│   │       ├── PriceEngine.lua       # Price calculation, crash/boom, annual drift
-│   │       ├── Validators.lua        # canBuy(), canSell() guards
-│   │       ├── TravelEngine.lua      # Time advance, departure validation
-│   │       ├── FinanceEngine.lua     # Wu repay/borrow/bankruptcy, bank, Li Yuen
-│   │       ├── EventEngine.lua       # Opium seizure, cargo theft, robbery, storm
-│   │       ├── CombatEngine.lua      # Encounter checks, fight/run/throw, enemy fire
-│   │       ├── ProgressionEngine.lua # Repair, upgrade, guns, score, rating, retirement
-│   │       └── PersistenceEngine.lua # Serialize/deserialize state, DataStore retry
+│   │       ├── Constants.luau        # All fixed game data — edit here to tune balance
+│   │       ├── GameState.luau        # newGame(startChoice) constructor
+│   │       ├── PriceEngine.luau      # Price calculation, crash/boom, annual drift
+│   │       ├── Validators.luau       # canBuy(), canSell() guards
+│   │       ├── TravelEngine.luau     # Time advance, departure validation
+│   │       ├── FinanceEngine.luau    # Wu repay/borrow/bankruptcy, bank, Li Yuen
+│   │       ├── EventEngine.luau      # Opium seizure, cargo theft, robbery, storm
+│   │       ├── CombatEngine.luau     # Encounter checks, fight/run/throw, enemy fire
+│   │       ├── ProgressionEngine.luau # Repair, upgrade, guns, score, rating, retirement
+│   │       └── PersistenceEngine.luau # Serialize/deserialize state, DataStore retry
 │   │
 │   └── StarterGui/
 │       └── TaipanGui/
-│           ├── init.client.lua       # GameController — wires panels to Remotes
-│           └── Panels/
-│               ├── StartPanel.lua      # Start choice (cash/guns), ZIndex=30
-│               ├── PortPanel.lua       # Port name, date, travel buttons, RETIRE/QUIT
-│               ├── StatusStrip.lua     # Cash | Debt | Bank | Guns one-liner
-│               ├── InventoryPanel.lua  # Hold + warehouse cargo side by side
-│               ├── PricesPanel.lua     # Current 4-good price table
-│               ├── BuySellPanel.lua    # Good selector, amount input, Buy/Sell/End Turn
-│               ├── WarehousePanel.lua  # Transfer goods (HK only)
-│               ├── WuPanel.lua         # Repay/borrow/Li Yuen protection (HK only)
-│               ├── BankPanel.lua       # Deposit/withdraw (HK only)
-│               ├── MessagePanel.lua    # Floating notification bar, ZIndex=10
-│               ├── ShipPanel.lua       # Repair/upgrade/gun offers modal (HK), ZIndex=12
-│               ├── CombatPanel.lua     # Combat overlay, ZIndex=15
-│               └── GameOverPanel.lua   # Full-screen game-over overlay, ZIndex=20
+│           ├── GameController.client.luau    # GameController — wires panels, remotes, interfaces
+│           └── GameController/               # Child modules of GameController
+│               ├── Apple2Interface.luau      # Apple II retro terminal interface
+│               ├── ModernInterface.luau      # Modern GUI interface
+│               ├── InterfacePicker.luau      # Interface selection screen
+│               ├── GameActions.luau          # Shared game action helpers
+│               ├── Apple2/                   # Apple II terminal sub-modules
+│               │   ├── Terminal.luau         # Terminal emulator (character grid)
+│               │   ├── KeyInput.luau         # Keyboard input handling
+│               │   ├── PromptEngine.luau     # Sequential prompt/flow engine
+│               │   └── GlitchLayer.luau      # CRT glitch visual effects
+│               └── Panels/                   # Modern interface panels
+│                   ├── StartPanel.luau       # Start choice (cash/guns), ZIndex=30
+│                   ├── PortPanel.luau        # Port name, date, travel buttons, RETIRE/QUIT
+│                   ├── StatusStrip.luau      # Cash | Debt | Bank | Guns one-liner
+│                   ├── InventoryPanel.luau   # Hold + warehouse cargo side by side
+│                   ├── PricesPanel.luau      # Current 4-good price table
+│                   ├── BuySellPanel.luau     # Good selector, amount input, Buy/Sell/End Turn
+│                   ├── WarehousePanel.luau   # Transfer goods (HK only)
+│                   ├── WuPanel.luau          # Repay/borrow/Li Yuen protection (HK only)
+│                   ├── BankPanel.luau        # Deposit/withdraw (HK only)
+│                   ├── MessagePanel.luau     # Floating notification bar, ZIndex=10
+│                   ├── ShipPanel.luau        # Repair/upgrade/gun offers modal (HK), ZIndex=12
+│                   ├── CombatPanel.luau      # Combat overlay, ZIndex=15
+│                   └── GameOverPanel.luau    # Full-screen game-over overlay, ZIndex=20
 │
-├── tests/
-│   ├── TestRunner.server.lua         # Discovers and runs all .spec files
+├── tests/                            # Legacy test copies (.lua extension, not synced by Azul)
+│   ├── TestRunner.server.lua
+│   ├── BoxDrawing.spec.lua
 │   ├── Constants.spec.lua
-│   ├── GameState.spec.lua
-│   ├── PriceEngine.spec.lua
-│   ├── Validators.spec.lua
-│   ├── TravelEngine.spec.lua
-│   ├── FinanceEngine.spec.lua
-│   ├── EventEngine.spec.lua
-│   ├── CombatEngine.spec.lua
-│   ├── ProgressionEngine.spec.lua
-│   └── PersistenceEngine.spec.lua
+│   ├── ... (mirrors sync/ServerScriptService/Tests/)
 │
-└── docs/superpowers/
-    ├── plans/                        # Implementation plans (per phase)
-    └── specs/                        # Design specs
+└── docs/
+    ├── original_design/              # Historical design documents
+    │   └── DESIGN_DOCUMENT.md        # Authoritative game design
+    └── superpowers/
+        ├── plans/                    # Implementation plans (per phase)
+        └── specs/                    # Design specs
 ```
 
-### Rojo Mapping (default.project.json)
+### Azul Mapping (sourcemap.json)
+
+Azul uses `sourcemap.json` with `filePaths` entries to map local `.luau` files to Roblox instances. Unlike Rojo (which uses project files with directory rules), Azul maps each script individually. Key mappings:
 
 | Disk Path | Roblox Location |
 |---|---|
-| `src/ServerScriptService/` | `ServerScriptService` |
-| `tests/` | `ServerScriptService.Tests` (Folder) |
-| `src/ReplicatedStorage/` | `ReplicatedStorage` |
-| `src/StarterGui/TaipanGui/` | `StarterGui.TaipanGui` (ScreenGui) |
+| `sync/ServerScriptService/GameService.server.luau` | `ServerScriptService.GameService` (Script) |
+| `sync/ServerScriptService/Tests/` | `ServerScriptService.Tests` (Folder) |
+| `sync/ReplicatedStorage/` | `ReplicatedStorage` (children mapped individually) |
+| `sync/StarterGui/TaipanGui/GameController.client.luau` | `StarterGui.TaipanGui.GameController` (LocalScript) |
+| `sync/StarterGui/TaipanGui/GameController/` | Children of `StarterGui.TaipanGui.GameController` |
+
+Note: RemoteEvents are defined as instances in `sourcemap.json` (not as file-backed scripts). The `Remotes.luau` module script provides a convenience wrapper to access them.
+
+The `tests/` directory at the project root is a legacy copy and is **not** synced by Azul. The authoritative test files are in `sync/ServerScriptService/Tests/`.
 
 ## Game State
 
@@ -204,20 +232,20 @@ The canonical state table is created by `GameState.newGame(startChoice)`. Key fi
 
 ## Engine Modules
 
-All engine modules are in `src/ReplicatedStorage/shared/`. They are **pure logic** — no Roblox service calls, no yields, no state creation. They take a state table and mutate it or return values.
+All engine modules are in `sync/ReplicatedStorage/shared/`. They are **pure logic** — no Roblox service calls, no yields, no state creation. They take a state table and mutate it or return values.
 
 | Module | Purpose |
 |---|---|
-| `Constants.lua` | All fixed game data: port names, good names, base prices, start values, rates |
-| `GameState.lua` | `newGame(startChoice)` — creates a fresh state table |
-| `PriceEngine.lua` | `calculatePrices(basePrices, port)` — random prices with crash/boom; `applyAnnualDrift(basePrices)` |
-| `Validators.lua` | `canBuy()`, `canSell()`, `holdSpaceFor()` — pure validation |
-| `TravelEngine.lua` | `timeAdvance(state)` — month/year/interest; `canDepart(state, dest)` |
-| `FinanceEngine.lua` | Wu repay/borrow/bankruptcy, bank deposit/withdraw, Li Yuen protection |
-| `EventEngine.lua` | Opium seizure, cargo theft, cash robbery, storm (occurs/severity/sinks/blown off course) |
-| `CombatEngine.lua` | Encounter checks, fleet sizing, initCombat, fight/run/throw, enemy fire, booty |
-| `ProgressionEngine.lua` | Repair, upgrade/gun offers, score, rating, retirement eligibility |
-| `PersistenceEngine.lua` | Serialize/deserialize for DataStore, retry with exponential backoff |
+| `Constants.luau` | All fixed game data: port names, good names, base prices, start values, rates |
+| `GameState.luau` | `newGame(startChoice)` — creates a fresh state table |
+| `PriceEngine.luau` | `calculatePrices(basePrices, port)` — random prices with crash/boom; `applyAnnualDrift(basePrices)` |
+| `Validators.luau` | `canBuy()`, `canSell()`, `holdSpaceFor()` — pure validation |
+| `TravelEngine.luau` | `timeAdvance(state)` — month/year/interest; `canDepart(state, dest)` |
+| `FinanceEngine.luau` | Wu repay/borrow/bankruptcy, bank deposit/withdraw, Li Yuen protection |
+| `EventEngine.luau` | Opium seizure, cargo theft, cash robbery, storm (occurs/severity/sinks/blown off course) |
+| `CombatEngine.luau` | Encounter checks, fleet sizing, initCombat, fight/run/throw, enemy fire, booty |
+| `ProgressionEngine.luau` | Repair, upgrade/gun offers, score, rating, retirement eligibility |
+| `PersistenceEngine.luau` | Serialize/deserialize for DataStore, retry with exponential backoff |
 
 ### FN_R Helper Pattern
 
@@ -243,14 +271,15 @@ if not RunService:IsRunMode() then return end
 To run tests:
 1. Open Roblox Studio with the Taipan place.
 2. Click the **Run** button (not Play/Play Here).
-3. `TestRunner.server.lua` auto-discovers all `.spec.lua` files in `ServerScriptService.Tests` and runs them via TestEZ.
+3. `TestRunner.server.luau` auto-discovers all `.spec` modules in `ServerScriptService.Tests` and runs them via TestEZ.
 4. Output appears in the Studio Output panel.
 
 ### Test File Convention
 
-- Spec files live in `tests/` and are named `<ModuleName>.spec.lua`.
+- Spec files live in `sync/ServerScriptService/Tests/` and are named `<ModuleName>.spec.luau`.
 - Each spec file returns a function containing `describe`/`it`/`expect` blocks (TestEZ style).
 - Tests require modules via `game:GetService("ReplicatedStorage").shared.<ModuleName>`.
+- Legacy `.lua` copies also exist in the `tests/` root directory but are **not** synced by Azul.
 
 ### Writing New Tests
 
@@ -285,7 +314,7 @@ Claude can drive the game UI end-to-end using the Roblox Studio MCP tools. This 
 
 ### Critical: execute_luau Runs Client-Side
 
-Despite intuition, `execute_luau` executes in the **client context** during Play mode. ServerScriptService scripts are consumed by Rojo and not directly accessible. This means:
+Despite intuition, `execute_luau` executes in the **client context** during Play mode. ServerScriptService scripts are consumed by Azul and not directly accessible. This means:
 
 - **Can** fire `RemoteEvent:FireServer()` to simulate client actions
 - **Can** connect `RemoteEvent.OnClientEvent` to capture server responses
@@ -334,7 +363,7 @@ The full flow was tested successfully end-to-end:
 
 ## Constants Reference
 
-Key constants from `src/ReplicatedStorage/shared/Constants.lua`:
+Key constants from `sync/ReplicatedStorage/shared/Constants.luau`:
 
 | Constant | Value | Notes |
 |---|---|---|
@@ -388,7 +417,7 @@ Many input panels support typing "A" in the amount box to mean "all available" (
 ## Coding Conventions
 
 1. **Pure logic modules** in `shared/` — no `game:GetService()` calls (except `require(script.Parent...)`), no yields, no Instance creation. This makes them testable.
-2. **Server-only mutation** — all state changes happen in `GameService.server.lua`. Client panels are read-only displays.
+2. **Server-only mutation** — all state changes happen in `GameService.server.luau`. Client panels are read-only displays.
 3. **Every handler ends with `pushState(player)`** — ensures the client always has the latest state.
 4. **Guard pattern** — every remote handler starts with: `local state = playerStates[player]; if type(state) ~= "table" then return end`
 5. **Input validation** — server validates all client inputs (goodIndex 1-4, positive integer quantities, port 1-7) before any mutation.
@@ -400,7 +429,7 @@ Many input panels support typing "A" in the amount box to mean "all available" (
 
 ## Remotes Reference
 
-All RemoteEvents are defined in `src/ReplicatedStorage/Remotes.lua`. Key remotes:
+All RemoteEvents are defined in `sync/ReplicatedStorage/Remotes.luau`. Key remotes:
 
 **Client to Server:**
 - `ChooseStart` — "cash" or "guns"
@@ -434,7 +463,8 @@ All RemoteEvents are defined in `src/ReplicatedStorage/Remotes.lua`. Key remotes
 | 5 | Combat | Complete |
 | 6 | Ship Progression + Score + Retirement | Complete |
 | 7 | Persistence + Polish (DataStore, onboarding, UI) | Complete |
-| 8 | Custom fonts (BMFont XML generator) | In progress |
+| 8 | Custom fonts (BMFont XML generator) | Complete |
+| 9 | Apple II retro terminal interface | In progress |
 
 Plans are in `docs/superpowers/plans/`. Design specs are in `docs/superpowers/specs/`.
 

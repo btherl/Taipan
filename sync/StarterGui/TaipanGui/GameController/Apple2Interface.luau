@@ -56,6 +56,8 @@ function Apple2Interface.new(screenGui, actions)
     if #notifQueue > 0 then
       playNextNotif()
     else
+      -- Notifications only fire on state transitions (travel/combat); old local scenes are invalid.
+      localScene = nil
       render(lastState, localScene)
     end
   end
@@ -66,7 +68,8 @@ function Apple2Interface.new(screenGui, actions)
     local entry = table.remove(notifQueue, 1)
     -- Write rows 17–24 from entry; blank any unspecified rows
     for r = 17, 24 do
-      term.showInputAt(r, entry.rows[r] or { text = "", color = GREEN })
+      local rows_r = entry.rows[r] or entry.rows[tostring(r)]
+      term.showInputAt(r, rows_r or { text = "", color = GREEN })
     end
     -- Any keypress skips; task.delay auto-advances after duration
     ki.setPrompt({

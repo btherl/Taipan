@@ -233,6 +233,15 @@ This shows for 5 seconds, followed by "Arriving at (port)"
 
 If Li Yuen has not been paid, and player has non-zero cash, and arrive in HK, this message appears:
 
+Li Yuen asks 81 in donation
+to the temple of Tin Hau, the Sea
+Goddess.  Will you pay?
+
+Valid answers are Y or N
+
+This is followed by "Do you have business with Elder Brother
+Wu, the moneylender? "
+
 ## Li Yuen battle
 
 -----

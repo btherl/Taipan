@@ -718,6 +718,52 @@ local function sceneShipOffers(state, actions, localSceneCb)
   }
 end
 
+local function sceneLiYuenDemand(state, actions, localSceneCb)
+  local cost = state.liYuenOfferCost or 0
+  local lines = {
+    { text = "Comprador's Report", color = AMBER },
+    { text = "", color = AMBER },
+    { text = string.format("Li Yuen asks %s in donation", fmt(cost)), color = GREEN },
+    { text = "to the temple of Tin Hau, the Sea", color = GREEN },
+    { text = "Goddess.  Will you pay?", color = GREEN },
+    { text = "", color = AMBER },
+    { text = "(Y)es  (N)o", color = GREEN },
+  }
+  return lines, {
+    type = "key",
+    keys = {"Y", "N"},
+    onKey = function(key, _s, _a)
+      if key == "Y" then
+        actions.buyLiYuen()
+      else
+        actions.declineLiYuen()
+      end
+    end,
+  }
+end
+
+local function sceneWuQuestion(state, actions, localSceneCb)
+  local lines = {
+    { text = "Comprador's Report", color = AMBER },
+    { text = "", color = AMBER },
+    { text = "Do you have business with Elder", color = GREEN },
+    { text = "Brother Wu, the moneylender?", color = GREEN },
+    { text = "", color = AMBER },
+    { text = "(Y)es  (N)o", color = GREEN },
+  }
+  return lines, {
+    type = "key",
+    keys = {"Y", "N"},
+    onKey = function(key, _s, _a)
+      if key == "Y" then
+        actions.confirmWu()
+      else
+        actions.declineWu()
+      end
+    end,
+  }
+end
+
 local function sceneWuSession(state, actions, localSceneCb)
   local maxRepay  = math.min(state.debt or 0, state.cash or 0)
   local maxBorrow = 2 * (state.cash or 0)
@@ -727,17 +773,11 @@ local function sceneWuSession(state, actions, localSceneCb)
     { text = string.format("Borrow max:%s", fmt(maxBorrow)), color = AMBER },
     { text = "",                                     color = AMBER },
   }
-  if state.liYuenOfferCost then
-    table.insert(lines, { text = string.format("Li Yuen asks %s for protection", fmt(state.liYuenOfferCost)), color = GREEN })
-    table.insert(lines, { text = "(L)i Yuen", color = GREEN })
-  end
   table.insert(lines, { text = "(P)ay debt  (B)orrow  (Q)Leave Wu", color = GREEN })
-  local keys = {"P", "B", "Q"}
-  if state.liYuenOfferCost then table.insert(keys, "L") end
   return lines, {
     type = "key",
-    keys = keys,
-    label = "(P)ay  (B)orrow  (Q)Leave  (L)iYuen",
+    keys = {"P", "B", "Q"},
+    label = "(P)ay  (B)orrow  (Q)Leave Wu",
     onKey = function(key, _s, _a)
       if key == "P" then
         if localSceneCb then localSceneCb("wu_repay") end
@@ -745,8 +785,6 @@ local function sceneWuSession(state, actions, localSceneCb)
         if localSceneCb then localSceneCb("wu_borrow") end
       elseif key == "Q" then
         actions.leaveWu()
-      elseif key == "L" then
-        actions.buyLiYuen()
       end
     end,
   }
@@ -1175,6 +1213,12 @@ function PromptEngine.processState(state, localScene, actions, localSceneCb)
       return sceneRepairAmount(state, actions, localSceneCb)
     end
     return sceneShipOffers(state, actions, localSceneCb)
+  end
+  if state.currentPort == HONG_KONG and state.liYuenPending then
+    return sceneLiYuenDemand(state, actions, localSceneCb)
+  end
+  if state.currentPort == HONG_KONG and state.wuPending then
+    return sceneWuQuestion(state, actions, localSceneCb)
   end
   if state.currentPort == HONG_KONG and state.inWuSession then
     if localScene == "wu_repay" then return sceneWuAmount(state, actions, localSceneCb, true) end

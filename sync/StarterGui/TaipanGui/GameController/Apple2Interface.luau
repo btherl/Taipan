@@ -20,6 +20,14 @@ local SERVER_SCENES = {
     local C = require(ReplicatedStorage.shared.Constants)
     return s.currentPort == C.HONG_KONG and s.inWuSession == true
   end,
+  liYuenDemand = function(s)
+    local C = require(ReplicatedStorage.shared.Constants)
+    return s.currentPort == C.HONG_KONG and s.liYuenPending == true
+  end,
+  wuQuestion = function(s)
+    local C = require(ReplicatedStorage.shared.Constants)
+    return s.currentPort == C.HONG_KONG and s.wuPending == true
+  end,
 }
 
 local Apple2Interface = {}

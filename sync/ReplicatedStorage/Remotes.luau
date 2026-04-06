@@ -31,8 +31,11 @@ Remotes.WuBorrow            = getOrCreate("RemoteEvent", "WuBorrow")            
 Remotes.LeaveWu             = getOrCreate("RemoteEvent", "LeaveWu")             -- client->server: triggers enforcer check
 Remotes.BankDeposit         = getOrCreate("RemoteEvent", "BankDeposit")         -- client->server: amount
 Remotes.BankWithdraw        = getOrCreate("RemoteEvent", "BankWithdraw")        -- client->server: amount
-Remotes.BuyLiYuenProtection = getOrCreate("RemoteEvent", "BuyLiYuenProtection") -- client->server: no args
-Remotes.Notify              = getOrCreate("RemoteEvent", "Notify")              -- server->client: message string
+Remotes.BuyLiYuenProtection   = getOrCreate("RemoteEvent", "BuyLiYuenProtection")   -- client->server: no args
+Remotes.DeclineLiYuenTribute  = getOrCreate("RemoteEvent", "DeclineLiYuenTribute")  -- client->server: skip Li Yuen payment
+Remotes.ConfirmWu             = getOrCreate("RemoteEvent", "ConfirmWu")             -- client->server: enter Wu session
+Remotes.DeclineWu             = getOrCreate("RemoteEvent", "DeclineWu")             -- client->server: skip Wu session
+Remotes.Notify                = getOrCreate("RemoteEvent", "Notify")                -- server->client: message string
 
 -- Phase 4: Game over
 Remotes.RestartGame = getOrCreate("RemoteEvent", "RestartGame")  -- client->server: restart after game over

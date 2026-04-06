@@ -181,7 +181,43 @@ Remotes.TravelTo.OnServerEvent:Connect(function(player, destination)
     - state.guns * 10
 
   local pending = {}
-  table.insert(pending, makeCompradorNotif(
+  local arrivalPending = {}
+
+  -- Combat is an at-sea event: check for pirates BEFORE arrival notifications.
+  -- If real combat occurs, arrival messages are deferred until after combat resolves.
+  if not state.gameOver then
+    if CombatEngine.genericEncounterCheck(state) then
+      local shipCount = CombatEngine.genericFleetSize(state)
+      state.combat = CombatEngine.initCombat(state, shipCount, 1)
+      CombatEngine.spawnShips(state.combat, state.enemyBaseHP)
+      table.insert(pending, makeCaptainNotif({
+        string.format("%d hostile ships approaching, Taipan!!", shipCount),
+      }, 1))
+      Remotes.Notify:FireClient(player,
+        string.format("Taipan!! %d hostile ships approaching!!", shipCount))
+    elseif CombatEngine.liYuenEncounterCheck(state) then
+      if state.liYuenProtection ~= 0 then
+        table.insert(pending, makeCaptainNotif({
+          "Li Yuen's pirates, Taipan!!",
+          "",
+          "Good joss!! They let us be!!",
+        }, 5))
+        Remotes.Notify:FireClient(player, "Good joss!! Li Yuen's fleet let us be!!")
+      else
+        local shipCount = CombatEngine.liYuenFleetSize(state)
+        state.combat = CombatEngine.initCombat(state, shipCount, 2)
+        CombatEngine.spawnShips(state.combat, state.enemyBaseHP)
+        table.insert(pending, makeCaptainNotif({
+          "Li Yuen's pirates, Taipan!!",
+        }, 1))
+        Remotes.Notify:FireClient(player,
+          string.format("Taipan!! Li Yuen's fleet!! %d ships!!", shipCount))
+      end
+    end
+  end
+
+  -- Build arrival notifications (shown immediately if no combat, deferred if combat occurs).
+  table.insert(arrivalPending, makeCompradorNotif(
     { "Arriving at " .. Constants.PORT_NAMES[destination] }, 3
   ))
 
@@ -191,7 +227,7 @@ Remotes.TravelTo.OnServerEvent:Connect(function(player, destination)
     if destination ~= Constants.HONG_KONG and FinanceEngine.liYuenWarningFires(state) then
       Remotes.Notify:FireClient(player,
         "Li Yuen wishes you to reconsider! He could protect you for a fee...")
-      table.insert(pending, makeCompradorNotif({
+      table.insert(arrivalPending, makeCompradorNotif({
         "Li Yuen has sent a lieutenant,",
         "Taipan.  He says his admiral wishes",
         "to see you in Hong Kong, posthaste!",
@@ -201,14 +237,19 @@ Remotes.TravelTo.OnServerEvent:Connect(function(player, destination)
   if priceEvent then
     local goodName  = Constants.GOOD_NAMES[priceEvent.good]
     local direction = priceEvent.direction == "drop" and "dropped" or "risen"
-    table.insert(pending, makeCompradorNotif({
+    table.insert(arrivalPending, makeCompradorNotif({
       string.format("Taipan!!  The price of %s", goodName),
       string.format("has %s to %d!!", direction, priceEvent.price),
     }, 5))
   end
 
+  if state.combat then
+    state.pendingArrival = arrivalPending  -- defer until after combat
+  else
+    for _, entry in ipairs(arrivalPending) do table.insert(pending, entry) end
+  end
+
     if destination == Constants.HONG_KONG then
-      state.inWuSession = true
       local braves = FinanceEngine.wuWarningCheck(state)
       if braves then
         Remotes.Notify:FireClient(player,
@@ -221,11 +262,16 @@ Remotes.TravelTo.OnServerEvent:Connect(function(player, destination)
       end
       if state.liYuenProtection == 0 and state.cash > 0 then
         state.liYuenOfferCost = FinanceEngine.liYuenProtectionCost(state)
+        state.liYuenPending   = true
       else
         state.liYuenOfferCost = nil
+        state.liYuenPending   = false
       end
+      state.wuPending   = true
+      state.inWuSession = false
     else
       state.liYuenOfferCost = nil
+      state.liYuenPending   = false
     end
 
     if not state.gameOver then
@@ -242,7 +288,7 @@ Remotes.TravelTo.OnServerEvent:Connect(function(player, destination)
         Remotes.Notify:FireClient(player,
           string.format("Bad joss!! You've been beaten up and robbed of $%d in cash!", stolen))
       end
-      if EventEngine.stormOccurs() then
+      if not state.combat and EventEngine.stormOccurs() then
         Remotes.Notify:FireClient(player, "Storm, Taipan!!")
         if EventEngine.stormGoingDown() then
           Remotes.Notify:FireClient(player, "I think we're going down!!")
@@ -297,36 +343,6 @@ Remotes.TravelTo.OnServerEvent:Connect(function(player, destination)
       end
     end
 
-    if not state.gameOver and not state.combat then
-      if CombatEngine.genericEncounterCheck(state) then
-        local shipCount = CombatEngine.genericFleetSize(state)
-        state.combat = CombatEngine.initCombat(state, shipCount, 1)
-        CombatEngine.spawnShips(state.combat, state.enemyBaseHP)
-        table.insert(pending, makeCaptainNotif({
-          string.format("%d hostile ships approaching, Taipan!!", shipCount),
-        }, 1))
-        Remotes.Notify:FireClient(player,
-          string.format("Taipan!! %d hostile ships approaching!!", shipCount))
-      elseif CombatEngine.liYuenEncounterCheck(state) then
-        if state.liYuenProtection ~= 0 then
-          table.insert(pending, makeCaptainNotif({
-            "Li Yuen's pirates, Taipan!!",
-            "",
-            "Good joss!! They let us be!!",
-          }, 5))
-          Remotes.Notify:FireClient(player, "Good joss!! Li Yuen's fleet let us be!!")
-        else
-          local shipCount = CombatEngine.liYuenFleetSize(state)
-          state.combat = CombatEngine.initCombat(state, shipCount, 2)
-          CombatEngine.spawnShips(state.combat, state.enemyBaseHP)
-          table.insert(pending, makeCaptainNotif({
-            "Li Yuen's pirates, Taipan!!",
-          }, 1))
-          Remotes.Notify:FireClient(player,
-            string.format("Taipan!! Li Yuen's fleet!! %d ships!!", shipCount))
-        end
-      end
-    end
 
   -- Phase 6: set ship offers on HK arrival
   if destination == Constants.HONG_KONG then
@@ -447,7 +463,35 @@ Remotes.BuyLiYuenProtection.OnServerEvent:Connect(function(player)
   if type(state) ~= "table" then return end
   if state.currentPort ~= Constants.HONG_KONG then return end
   if not FinanceEngine.buyLiYuenProtection(state) then pushState(player) return end
+  state.liYuenPending = false
   Remotes.Notify:FireClient(player, "Li Yuen smiles. You are under his protection.")
+  pushState(player)
+end)
+
+Remotes.DeclineLiYuenTribute.OnServerEvent:Connect(function(player)
+  local state = playerStates[player]
+  if type(state) ~= "table" then return end
+  if state.currentPort ~= Constants.HONG_KONG then return end
+  state.liYuenPending   = false
+  state.liYuenOfferCost = nil
+  pushState(player)
+end)
+
+Remotes.ConfirmWu.OnServerEvent:Connect(function(player)
+  local state = playerStates[player]
+  if type(state) ~= "table" then return end
+  if state.currentPort ~= Constants.HONG_KONG then return end
+  state.wuPending   = false
+  state.inWuSession = true
+  pushState(player)
+end)
+
+Remotes.DeclineWu.OnServerEvent:Connect(function(player)
+  local state = playerStates[player]
+  if type(state) ~= "table" then return end
+  if state.currentPort ~= Constants.HONG_KONG then return end
+  state.wuPending   = false
+  state.inWuSession = false
   pushState(player)
 end)
 
@@ -487,6 +531,17 @@ local function setGameOver(state, reason)
   state.finalRating    = ProgressionEngine.rating(sc)
   state.combat         = nil
   state.shipOffer      = nil
+  state.pendingArrival = nil  -- no arrival if sunk
+end
+
+-- Appends deferred arrival notifications into pending (set during travel when combat interrupted arrival).
+local function appendArrivalPending(state, pending)
+  if state.pendingArrival then
+    for _, entry in ipairs(state.pendingArrival) do
+      table.insert(pending, entry)
+    end
+    state.pendingArrival = nil
+  end
 end
 
 local function postCombatStorm(player, state, pending)
@@ -560,7 +615,8 @@ Remotes.CombatFight.OnServerEvent:Connect(function(player)
     combat.lastCommand = 2
     Remotes.Notify:FireClient(player, "We have no guns, Taipan!!")
     table.insert(pending, makeCaptainNotif({ "We have no guns, Taipan!!" }, 2))
-    applyEnemyFire(player, state, combat, pending)
+    local combatEnded = applyEnemyFire(player, state, combat, pending)
+    if combatEnded and not state.gameOver then appendArrivalPending(state, pending) end
     state.pendingMessages = pending; pushState(player); state.pendingMessages = nil
     return
   end
@@ -600,11 +656,13 @@ Remotes.CombatFight.OnServerEvent:Connect(function(player)
       string.format("We've captured some booty worth $%d!!", combat.booty))
     state.combat = nil
     postCombatStorm(player, state, pending)
+    if not state.gameOver then appendArrivalPending(state, pending) end
     state.pendingMessages = pending; pushState(player); state.pendingMessages = nil
     return
   end
 
-  applyEnemyFire(player, state, combat, pending)
+  local combatEnded = applyEnemyFire(player, state, combat, pending)
+  if combatEnded and not state.gameOver then appendArrivalPending(state, pending) end
   state.pendingMessages = pending; pushState(player); state.pendingMessages = nil
 end)
 
@@ -622,6 +680,7 @@ Remotes.CombatRun.OnServerEvent:Connect(function(player)
     table.insert(pending, makeCaptainNotif({ "We got away from 'em, Taipan!!" }, 3))
     state.combat = nil
     postCombatStorm(player, state, pending)
+    if not state.gameOver then appendArrivalPending(state, pending) end
     state.pendingMessages = pending; pushState(player); state.pendingMessages = nil
     return
   end
@@ -637,7 +696,8 @@ Remotes.CombatRun.OnServerEvent:Connect(function(player)
     }, 2))
   end
 
-  applyEnemyFire(player, state, combat, pending)
+  local combatEnded = applyEnemyFire(player, state, combat, pending)
+  if combatEnded and not state.gameOver then appendArrivalPending(state, pending) end
   state.pendingMessages = pending; pushState(player); state.pendingMessages = nil
 end)
 
@@ -670,6 +730,7 @@ Remotes.CombatThrow.OnServerEvent:Connect(function(player, goodIndex, qty)
     table.insert(pending, makeCaptainNotif({ "We got away from 'em, Taipan!!" }, 3))
     state.combat = nil
     postCombatStorm(player, state, pending)
+    if not state.gameOver then appendArrivalPending(state, pending) end
     state.pendingMessages = pending; pushState(player); state.pendingMessages = nil
     return
   end
@@ -685,7 +746,8 @@ Remotes.CombatThrow.OnServerEvent:Connect(function(player, goodIndex, qty)
     }, 2))
   end
 
-  applyEnemyFire(player, state, combat, pending)
+  local combatEnded = applyEnemyFire(player, state, combat, pending)
+  if combatEnded and not state.gameOver then appendArrivalPending(state, pending) end
   state.pendingMessages = pending; pushState(player); state.pendingMessages = nil
 end)
 

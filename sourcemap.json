@@ -75,6 +75,21 @@
           "guid": "9724"
         },
         {
+          "name": "DeclineLiYuenTribute",
+          "className": "RemoteEvent",
+          "guid": "9801"
+        },
+        {
+          "name": "ConfirmWu",
+          "className": "RemoteEvent",
+          "guid": "9802"
+        },
+        {
+          "name": "DeclineWu",
+          "className": "RemoteEvent",
+          "guid": "9803"
+        },
+        {
           "name": "ChooseStart",
           "className": "RemoteEvent",
           "guid": "9710"

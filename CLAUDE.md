@@ -14,15 +14,11 @@ The original BASIC source is annotated in `BASIC_ANNOTATED.md`; all formulas cit
 - **MCP Studio integration** — Roblox Studio MCP tools for runtime code injection and play-testing
 - **DataStore** — player persistence via `DataStoreService` (store name: `TaipanV1`)
 
-## Critical Workflow: Rojo Does NOT Auto-Sync
+## Critical Workflow: Using Azul to sync with Roblox Studio
 
-**Rojo does NOT automatically push file changes into Studio.** When you edit a file on disk, you MUST also patch it into Studio via the MCP `run_code` tool. The typical workflow is:
+Edits made locally will propagate automatically to Roblox Studio, using Azul sync.
 
-1. Edit the `.lua` file on disk (for git).
-2. Use `mcp__Roblox_Studio__run_code` to inject the same change into the running Studio session.
-3. Test in Studio.
-
-If you only edit on disk, Studio will have stale code until the next Rojo sync or manual injection.
+Likewise, Studio edits will propagate back to local files.
 
 ## Architecture
 

@@ -326,6 +326,20 @@ local function buildPortRows(state)
   return rows
 end
 
+-- Dialog with Elder Brother Wu, borrowing and repayment
+-- Also used for other similar dialogs
+local function sceneWuLayout(state, bodyLines)
+  local rows = buildPortRows(state)
+  rows[17] = { text = "Comprador's Report", color = AMBER }
+  rows[18] = { text = "", color = AMBER }
+  local r = 19
+  for _, l in ipairs(bodyLines) do
+    rows[r] = l
+    r += 1
+  end
+  return { rows = rows }
+end
+
 local function sceneAtPort(state, actions, localSceneCb)
   local rows = buildPortRows(state)
   rows[17] = { text = "", color = AMBER }
@@ -720,16 +734,14 @@ end
 
 local function sceneLiYuenDemand(state, actions, localSceneCb)
   local cost = state.liYuenOfferCost or 0
-  local lines = {
-    { text = "Comprador's Report", color = AMBER },
-    { text = "", color = AMBER },
+  local bodyLines = {
     { text = string.format("Li Yuen asks %s in donation", fmt(cost)), color = GREEN },
     { text = "to the temple of Tin Hau, the Sea", color = GREEN },
     { text = "Goddess.  Will you pay?", color = GREEN },
     { text = "", color = AMBER },
     { text = "(Y)es  (N)o", color = GREEN },
   }
-  return lines, {
+  return sceneWuLayout(state, bodyLines), {
     type = "key",
     keys = {"Y", "N"},
     onKey = function(key, _s, _a)
@@ -743,15 +755,13 @@ local function sceneLiYuenDemand(state, actions, localSceneCb)
 end
 
 local function sceneWuQuestion(state, actions, localSceneCb)
-  local lines = {
-    { text = "Comprador's Report", color = AMBER },
-    { text = "", color = AMBER },
+  local bodyLines = {
     { text = "Do you have business with Elder", color = GREEN },
     { text = "Brother Wu, the moneylender?", color = GREEN },
     { text = "", color = AMBER },
     { text = "(Y)es  (N)o", color = GREEN },
   }
-  return lines, {
+  return sceneWuLayout(state, bodyLines), {
     type = "key",
     keys = {"Y", "N"},
     onKey = function(key, _s, _a)
@@ -764,31 +774,55 @@ local function sceneWuQuestion(state, actions, localSceneCb)
   }
 end
 
-local function sceneWuSession(state, actions, localSceneCb)
-  local maxRepay  = math.min(state.debt or 0, state.cash or 0)
-  local maxBorrow = 2 * (state.cash or 0)
-  local lines = {
-    { text = "ELDER BROTHER WU",                    color = AMBER },
-    { text = string.format("Debt:%-13s Repay:%s", fmt(state.debt), fmt(maxRepay)), color = AMBER },
-    { text = string.format("Borrow max:%s", fmt(maxBorrow)), color = AMBER },
-    { text = "",                                     color = AMBER },
+local function sceneWuBorrow(state, actions, localSceneCb)
+  local bodyLines = {
+    { text = "How much do you wish to", color = AMBER },
   }
-  table.insert(lines, { text = "(P)ay debt  (B)orrow  (Q)Leave Wu", color = GREEN })
-  return lines, {
-    type = "key",
-    keys = {"P", "B", "Q"},
-    label = "(P)ay  (B)orrow  (Q)Leave Wu",
-    onKey = function(key, _s, _a)
-      if key == "P" then
-        if localSceneCb then localSceneCb("wu_repay") end
-      elseif key == "B" then
-        if localSceneCb then localSceneCb("wu_borrow") end
-      elseif key == "Q" then
-        actions.leaveWu()
+  return sceneWuLayout(state, bodyLines), {
+    type            = "numeric",
+    typePlaceholder = "borrow? ",
+    _inputRow       = 20,
+    _buildInputRow  = function(s) return { text = "borrow? " .. s, color = AMBER } end,
+    maxDigits       = 9,
+    onType = function(text, _s, _a)
+      local amt = tonumber(text) or 0
+      if amt > 0 then
+        actions.wuBorrow(math.floor(amt))
       end
+      -- Transition to repay scene if they have debt or just borrowed
+      if (state.debt or 0) > 0 or amt > 0 then
+        if localSceneCb then localSceneCb("wu_repay") end
+      else
+        actions.leaveWu()
+        if localSceneCb then localSceneCb(nil) end
+      end
+      return nil
     end,
   }
 end
+
+local function sceneWuRepay(state, actions, localSceneCb)
+  local bodyLines = {
+    { text = "How much do you wish to", color = AMBER },
+  }
+  return sceneWuLayout(state, bodyLines), {
+    type            = "numeric",
+    typePlaceholder = "repay? ",
+    _inputRow       = 20,
+    _buildInputRow  = function(s) return { text = "repay? " .. s, color = AMBER } end,
+    maxDigits       = 9,
+    onType = function(text, _s, _a)
+      local amt = tonumber(text) or 0
+      if amt > 0 then
+        actions.wuRepay(math.floor(amt))
+      end
+      actions.leaveWu()
+      if localSceneCb then localSceneCb(nil) end
+      return nil
+    end,
+  }
+end
+
 
 local function sceneBuySell(state, actions, localSceneCb, isBuy)
   local verb = isBuy and "buy" or "sell"
@@ -1028,40 +1062,6 @@ local function sceneWarehouseAmount(state, actions, localSceneCb, goodIdx, isToW
   }
 end
 
-local function sceneWuAmount(state, actions, localSceneCb, isRepay)
-  local maxAmt = isRepay
-    and math.min(state.debt or 0, state.cash or 0)
-    or  2 * (state.cash or 0)
-  local verb = isRepay and "repay" or "borrow"
-  local lines = {
-    { text = string.format("%s (max %s, A=all):", verb:upper(), fmt(maxAmt)), color = AMBER },
-  }
-  return lines, {
-    type            = "numeric",
-    typePlaceholder = "> ",
-    maxDigits       = 9,
-    onType = function(text, _s, _a)
-      if text == "" then
-        if localSceneCb then localSceneCb(nil) end
-        return nil
-      end
-      local amt
-      if text:upper() == "A" then amt = maxAmt
-      else amt = tonumber(text) end
-      if not amt or amt < 0 then return "Enter a positive amount or A" end
-      if amt == 0 then
-        if localSceneCb then localSceneCb(nil) end
-        return nil
-      end
-      if amt > maxAmt then return string.format("Max is %s", fmt(maxAmt)) end
-      if isRepay then actions.wuRepay(math.floor(amt))
-      else            actions.wuBorrow(math.floor(amt)) end
-      if localSceneCb then localSceneCb(nil) end
-      return nil
-    end,
-  }
-end
-
 local function sceneRepairAmount(state, actions, localSceneCb)
   local offer = state.shipOffer
   if not offer or not offer.repairRate then
@@ -1221,9 +1221,8 @@ function PromptEngine.processState(state, localScene, actions, localSceneCb)
     return sceneWuQuestion(state, actions, localSceneCb)
   end
   if state.currentPort == HONG_KONG and state.inWuSession then
-    if localScene == "wu_repay" then return sceneWuAmount(state, actions, localSceneCb, true) end
-    if localScene == "wu_borrow" then return sceneWuAmount(state, actions, localSceneCb, false) end
-    return sceneWuSession(state, actions, localSceneCb)
+    if localScene == "wu_repay" then return sceneWuRepay(state, actions, localSceneCb) end
+    return sceneWuBorrow(state, actions, localSceneCb)
   end
   if localScene == "bank"          then return sceneBank(state, actions, localSceneCb) end
   if localScene == "bank_withdraw"  then return sceneWithdraw(state, actions, localSceneCb) end

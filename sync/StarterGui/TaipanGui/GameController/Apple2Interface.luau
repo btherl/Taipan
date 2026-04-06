@@ -16,10 +16,6 @@ local SERVER_SCENES = {
   gameOver   = function(s) return s.gameOver == true end,
   combat     = function(s) return s.combat ~= nil end,
   shipOffers = function(s) return s.shipOffer ~= nil end,
-  wuSession  = function(s)
-    local C = require(ReplicatedStorage.shared.Constants)
-    return s.currentPort == C.HONG_KONG and s.inWuSession == true
-  end,
   liYuenDemand = function(s)
     local C = require(ReplicatedStorage.shared.Constants)
     return s.currentPort == C.HONG_KONG and s.liYuenPending == true

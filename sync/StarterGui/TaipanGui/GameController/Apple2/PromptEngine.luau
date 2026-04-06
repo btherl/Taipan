@@ -389,31 +389,32 @@ local function sceneAtPort(state, actions, localSceneCb)
 end
 
 local function sceneTravel(state, actions, localSceneCb)
-  local lines = {}
-  for _, l in ipairs(statusLines(state)) do table.insert(lines, l) end
-  table.insert(lines, { text = "", color = AMBER })
-  table.insert(lines, { text = "Sail to which port?", color = AMBER })
-  local validKeys = {"C"}
+  local rows = buildPortRows(state)
+
+  rows[17] = { text = "Comprador's Report",                          color = AMBER }
+  rows[18] = { text = "",                                            color = AMBER }
+  rows[19] = { text = "Taipan, do you wish to go to:",              color = AMBER }
+  rows[20] = { text = "1) Hong Kong, 2) Shanghai, 3) Nagasaki,",   color = GREEN }
+  rows[21] = { text = "4) Saigon, 5) Manila, 6) Singapore, or",    color = GREEN }
+  rows[22] = { text = "7) Batavia ?",                               color = GREEN }
+
+  local validKeys = {}
   for i = 1, 7 do
     if i ~= state.currentPort then
-      table.insert(lines, { text = string.format("  [%d] %s", i, PORT_NAMES[i]), color = GREEN })
       table.insert(validKeys, tostring(i))
     end
   end
-  table.insert(lines, { text = "  [C] Cancel", color = DIM })
-  return lines, {
-    type = "key",
-    keys = validKeys,
-    label = "Select port number or C to cancel",
+
+  return { rows = rows }, {
+    type           = "singlechar",
+    keys           = validKeys,
+    _inputRow      = 22,
+    _buildInputRow = function(s) return { text = "7) Batavia ? " .. s, color = GREEN } end,
     onKey = function(key, _state, _actions)
-      if key == "C" then
+      local dest = tonumber(key)
+      if dest then
+        actions.travelTo(dest)
         if localSceneCb then localSceneCb(nil) end
-      else
-        local dest = tonumber(key)
-        if dest and dest >= 1 and dest <= 7 and dest ~= state.currentPort then
-          actions.travelTo(dest)
-          if localSceneCb then localSceneCb(nil) end
-        end
       end
     end,
   }
@@ -841,100 +842,119 @@ end
 
 
 local function sceneBuySell(state, actions, localSceneCb, isBuy)
-  local verb = isBuy and "buy" or "sell"
-  local lines = {}
-  for _, l in ipairs(statusLines(state)) do table.insert(lines, l) end
-  for _, l in ipairs(priceLines(state)) do table.insert(lines, l) end
-  table.insert(lines, { text = "", color = AMBER })
-  table.insert(lines, { text = string.format("Which good to %s?", verb), color = GREEN })
-  table.insert(lines, { text = " sPices Silk Arms General", color = GREEN })
-  for i = 1, 4 do
-    local available
-    if isBuy then
-      if state.currentPort == HONG_KONG then
-        local p = (state.currentPrices or {})[i] or 0
-        available = math.floor((state.cash or 0) / math.max(1, p))
-      else
-        available = state.holdSpace or 0
-      end
-    else
-      available = state.shipCargo[i] or 0
-    end
-    table.insert(lines, { text = string.format("  [%d] %s (avail: %d)", i, GOOD_NAMES[i], available), color = AMBER })
-  end
-  table.insert(lines, { text = "  [C] Cancel", color = DIM })
-  return lines, {
-    type = "key",
-    keys = {"1","2","3","4","P","S","A","G","C"},
-    label = "sPices Silk Arms General Cancel",
-    onKey = function(key, _s, _a)
-      if key == "C" then
-        if localSceneCb then localSceneCb(nil) end
-      else
-        local idx = GOOD_KEY_MAP[key] or tonumber(key)
-        if idx and idx >= 1 and idx <= 4 then
-          local price = (state.currentPrices or {})[idx] or 0
-          local maxQty
-          if isBuy then
-            local affordable = math.floor((state.cash or 0) / math.max(1, price))
-            if state.currentPort == HONG_KONG then
-              maxQty = affordable
-            else
-              maxQty = math.min(affordable, state.holdSpace or 0)
-            end
-          else
-            maxQty = state.shipCargo[idx] or 0
-          end
-          if maxQty <= 0 then
-            if localSceneCb then localSceneCb(isBuy and "buy" or "sell") end
-          else
-            if localSceneCb then localSceneCb(isBuy and ("buy_good_"..idx) or ("sell_good_"..idx)) end
-          end
-        end
+  local rows = buildPortRows(state)
+  local prices = state.currentPrices or {0,0,0,0}
+  local p1 = tostring(math.floor(prices[1]))
+  local p2 = tostring(math.floor(prices[2]))
+  local p3 = tostring(math.floor(prices[3]))
+  local p4 = tostring(math.floor(prices[4]))
+
+  rows[17] = { text = "Comprador's Report",                              color = AMBER }
+  rows[18] = { text = "",                                                color = AMBER }
+  rows[19] = { text = "Taipan, present prices per unit here are",        color = AMBER }
+  rows[20] = { text = "   Spices: " .. pad(p1, 7) .. "Silk: " .. p2,   color = GREEN }
+  rows[21] = { text = "   Arms: "   .. pad(p3, 9) .. "General: " .. p4, color = GREEN }
+  rows[22] = { text = "",                                                color = AMBER }
+
+  local verb     = isBuy and "buy" or "sell"
+  local question = "What do you wish me to " .. verb .. ", Taipan?"
+  rows[23] = { text = question, color = AMBER }
+  rows[24] = { text = "", color = AMBER }
+
+  return { rows = rows }, {
+    type           = "singlechar",
+    keys           = {"P", "S", "A", "G"},
+    _inputRow      = 23,
+    _buildInputRow = function(s) return { text = question .. " " .. s, color = AMBER } end,
+    onKey = function(key, _state, _actions)
+      local idx = GOOD_KEY_MAP[key]
+      if idx then
+        if localSceneCb then localSceneCb(isBuy and ("buy_good_"..idx) or ("sell_good_"..idx)) end
       end
     end,
   }
 end
 
 local function sceneBuySellAmount(state, actions, localSceneCb, goodIdx, isBuy)
-  local goodName  = GOOD_NAMES[goodIdx]
-  local price     = (state.currentPrices or {})[goodIdx] or 0
-  local maxQty
+  local goodName = SHORT_GOOD_NAMES[goodIdx]
+  local price    = (state.currentPrices or {})[goodIdx] or 0
+  local cash     = state.cash or 0
+  local cargoAmt = (state.shipCargo or {})[goodIdx] or 0
+  local affordable = price > 0 and math.floor(cash / price) or 0
+  local verb     = isBuy and "buy" or "sell"
+
+  local rows = buildPortRows(state)
+  local prices = state.currentPrices or {0,0,0,0}
+  local p1 = tostring(math.floor(prices[1]))
+  local p2 = tostring(math.floor(prices[2]))
+  local p3 = tostring(math.floor(prices[3]))
+  local p4 = tostring(math.floor(prices[4]))
+
+  rows[17] = { text = "Comprador's Report",                              color = AMBER }
+  rows[18] = { text = "",                                                color = AMBER }
+  rows[19] = { text = "Taipan, present prices per unit here are",        color = AMBER }
+  rows[20] = { text = "   Spices: " .. pad(p1, 7) .. "Silk: " .. p2,   color = GREEN }
+  rows[21] = { text = "   Arms: "   .. pad(p3, 9) .. "General: " .. p4, color = GREEN }
+
+  local firstLine  = "How much " .. goodName .. " shall"
+  local secondLine = "I " .. verb .. ", Taipan? "
+
   if isBuy then
-    local affordable = math.floor((state.cash or 0) / math.max(1, price))
-    if state.currentPort == HONG_KONG then
-      maxQty = affordable
-    else
-      maxQty = math.min(affordable, state.holdSpace or 0)
-    end
+    rows[22] = { segments = {
+      { text = pad(firstLine, 31),  color = AMBER },
+      { text = " You can ",         color = AMBER, inverted = true },
+    }}
+    -- row 23 set by _buildInputRow on first update
+    rows[23] = { text = secondLine, color = AMBER }
+    local affordStr = centerStr(tostring(affordable), 9)
+    rows[24] = { segments = {
+      { text = string.rep(" ", 31), color = AMBER },
+      { text = affordStr,           color = AMBER, inverted = true },
+    }}
   else
-    maxQty = state.shipCargo[goodIdx] or 0
+    rows[22] = { text = firstLine,  color = AMBER }
+    rows[23] = { text = secondLine, color = AMBER }
+    rows[24] = { text = "",         color = AMBER }
   end
-  local verb = isBuy and "buy" or "sell"
-  local lines = {
-    { text = string.format("%s %s at %s", verb:upper(), goodName, fmt(price)), color = AMBER },
-    { text = string.format("Max %d, A=all.", maxQty), color = AMBER },
-  }
-  return lines, {
-    type = "type",
-    typePlaceholder = "Amount: ",
-    maxLength = 8,
+
+  local function buildAmountRow(s)
+    if isBuy then
+      return { segments = {
+        { text = pad(secondLine .. s, 31), color = AMBER },
+        { text = "  afford ",              color = AMBER, inverted = true },
+      }}
+    else
+      return { text = secondLine .. s, color = AMBER }
+    end
+  end
+
+  return { rows = rows }, {
+    type            = "numeric",
+    typePlaceholder = "",
+    _inputRow       = 23,
+    _buildInputRow  = buildAmountRow,
+    maxDigits       = 9,
     onType = function(text, _s, _a)
-      if text == "" then
-        if localSceneCb then localSceneCb(isBuy and "buy" or "sell") end
-        return nil
-      end
-      local qty
-      if text:upper() == "A" then qty = maxQty
-      else qty = tonumber(text) end
-      if not qty or qty < 0 then return "Enter a number or A for all" end
+      local qty = tonumber(text) or 0
       if qty == 0 then
         if localSceneCb then localSceneCb(isBuy and "buy" or "sell") end
         return nil
       end
-      if qty > maxQty then return string.format("You can only %s %d units", verb, maxQty) end
-      if isBuy then actions.buyGoods(goodIdx, math.floor(qty))
-      else           actions.sellGoods(goodIdx, math.floor(qty)) end
+      if isBuy then
+        if qty * price > cash then
+          -- Exceeds available cash: stay on same scene (input already cleared)
+          if localSceneCb then localSceneCb("buy_good_" .. goodIdx) end
+          return nil
+        end
+        actions.buyGoods(goodIdx, math.floor(qty))
+      else
+        if qty > cargoAmt then
+          -- Exceeds available cargo: stay on same scene
+          if localSceneCb then localSceneCb("sell_good_" .. goodIdx) end
+          return nil
+        end
+        actions.sellGoods(goodIdx, math.floor(qty))
+      end
       if localSceneCb then localSceneCb(nil) end
       return nil
     end,

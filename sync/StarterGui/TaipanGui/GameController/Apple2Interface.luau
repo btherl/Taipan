@@ -156,6 +156,12 @@ function Apple2Interface.new(screenGui, actions)
       localScene = nil
     end
 
+    -- Warehouse wait: StateUpdate has arrived with fresh cargo; advance to next step.
+    if type(localScene) == "string" and localScene:match("^wh_wait_%d+$") then
+      local n = tonumber(localScene:match("(%d+)"))
+      localScene = "wh_step_" .. (n + 1)
+    end
+
     -- Play notifications first, then render main scene
     if #notifQueue > 0 then
       playNextNotif()

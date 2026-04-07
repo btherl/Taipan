@@ -477,3 +477,9 @@ Plans are in `docs/superpowers/plans/`. Design specs are in `docs/superpowers/sp
 - **Combat**: Pirates encounter based on `1/pirateBase` chance. 10-slot grid, fight/run/throw actions. Booty on victory. Post-combat storm possible.
 - **Progression**: Ship upgrade (+50 capacity), gun purchase (costs 10 hold), repair. Score = `netWorth / 100 / turnsElapsed^1.1`. Retire at net worth >= $1,000,000.
 - **Persistence**: DataStore `TaipanV1`, key `player_<UserId>`. Saves on every departure and disconnect. Retry with exponential backoff (1s, 2s, 4s).
+
+## Apple 2 Input Glitches
+
+Apple 2 interface cursor input sometimes glitches - when deleting characters, or when input finishes, text can visually jump.  This is not possible to detect with screenshots because it happens to fast, but is obvious to a human watching.
+
+To deal with this, we should ensure inputs are padded to the same length when displayed.  We can right-pad with spaces up to the maximum allowed length.

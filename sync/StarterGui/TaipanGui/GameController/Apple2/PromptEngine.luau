@@ -1047,90 +1047,146 @@ local function sceneBankWithdrawErr(state, _actions, localSceneCb)
   }
 end
 
-local function sceneWarehouse(state, actions, localSceneCb)
-  local lines = {
-    { text = "HONG KONG WAREHOUSE",                             color = AMBER },
-    { text = string.format("Warehouse used: %d / %d",
-        state.warehouseUsed or 0, Constants.WAREHOUSE_CAPACITY), color = AMBER },
-    { text = "",                                                  color = AMBER },
-  }
-  for i = 1, 4 do
-    table.insert(lines, { text = string.format(" %-14s Ship:%-5d WH:%d",
-      GOOD_NAMES[i], state.shipCargo[i] or 0, state.warehouseCargo[i] or 0), color = AMBER })
-  end
-  table.insert(lines, { text = "", color = AMBER })
-  table.insert(lines, { text = "(T)o WH  (F)rom WH  (C)ancel", color = GREEN })
-  return lines, {
-    type = "key",
-    keys = {"T", "F", "C"},
-    label = "(T)o warehouse  (F)rom warehouse  (C)ancel",
-    onKey = function(key, _s, _a)
-      if key == "T" then if localSceneCb then localSceneCb("wh_to") end
-      elseif key == "F" then if localSceneCb then localSceneCb("wh_from") end
-      elseif key == "C" then if localSceneCb then localSceneCb(nil) end
-      end
-    end,
+-- Ordered sequence of (goodIdx, isToWarehouse) steps for transfer dialog.
+-- For each good: to-warehouse first, then from-warehouse.
+local TRANSFER_SEQ = {
+  {1, true}, {1, false},
+  {2, true}, {2, false},
+  {3, true}, {3, false},
+  {4, true}, {4, false},
+}
+
+-- "T" pressed with no transferable cargo in either direction.
+-- Preserves prices on rows 19-21 (only lines 6-8 are affected).
+local function sceneWarehouseNoCargo(state, _actions, localSceneCb)
+  local rows  = buildPortRows(state)
+  local prices = state.currentPrices or {0,0,0,0}
+  local p1 = tostring(math.floor(prices[1]))
+  local p2 = tostring(math.floor(prices[2]))
+  local p3 = tostring(math.floor(prices[3]))
+  local p4 = tostring(math.floor(prices[4]))
+  rows[17] = { text = "Comprador's Report",                              color = AMBER }
+  rows[18] = { text = "",                                                color = AMBER }
+  rows[19] = { text = "Taipan, present prices per unit here are",        color = AMBER }
+  rows[20] = { text = "   Spices: " .. pad(p1, 7) .. "Silk: " .. p2,   color = GREEN }
+  rows[21] = { text = "   Arms: "   .. pad(p3, 9) .. "General: " .. p4, color = GREEN }
+  rows[22] = { text = "You have no cargo, Taipan.",                      color = GREEN }
+  rows[23] = { text = "",                                                color = AMBER }
+  rows[24] = { text = "",                                                color = AMBER }
+  return { rows = rows }, {
+    type         = "key",
+    keys         = {},
+    anyKey       = true,
+    _autoAdvance = { 5, nil },
+    onKey        = function() if localSceneCb then localSceneCb(nil) end end,
   }
 end
 
-local function sceneWarehouseGood(state, actions, localSceneCb, isToWarehouse)
-  local direction = isToWarehouse and "TO warehouse" or "FROM warehouse"
-  local lines = {
-    { text = string.format("Transfer %s -- which good?", direction), color = AMBER },
-    { text = " sPices Silk Arms General", color = GREEN },
-  }
-  for i = 1, 4 do
-    local avail = isToWarehouse and (state.shipCargo[i] or 0) or (state.warehouseCargo[i] or 0)
-    table.insert(lines, { text = string.format("  [%d] %s (%d avail)", i, GOOD_NAMES[i], avail), color = AMBER })
+-- Finds the first TRANSFER_SEQ step >= startN with something available to move.
+-- Returns (stepIndex, goodIdx, isToWarehouse) or (nil, nil, nil) when done.
+local function findNextStep(state, startN)
+  for n = startN, #TRANSFER_SEQ do
+    local step = TRANSFER_SEQ[n]
+    local g, isTo = step[1], step[2]
+    local avail = isTo and (state.shipCargo[g] or 0) or (state.warehouseCargo[g] or 0)
+    if avail > 0 then
+      return n, g, isTo
+    end
   end
-  table.insert(lines, { text = "  [C] Cancel", color = DIM })
-  return lines, {
-    type = "key",
-    keys = {"1","2","3","4","P","S","A","G","C"},
-    label = "sPices Silk Arms General Cancel",
-    onKey = function(key, _s, _a)
-      if key == "C" then if localSceneCb then localSceneCb(nil) end
-      else
-        local idx = GOOD_KEY_MAP[key] or tonumber(key)
-        if idx then
-          if localSceneCb then localSceneCb(isToWarehouse and ("wh_to_"..idx) or ("wh_from_"..idx)) end
-        end
-      end
-    end,
-  }
+  return nil, nil, nil
 end
 
-local function sceneWarehouseAmount(state, actions, localSceneCb, goodIdx, isToWarehouse)
-  local goodName = GOOD_NAMES[goodIdx]
-  local maxAmt   = isToWarehouse and (state.shipCargo[goodIdx] or 0)
-                                  or (state.warehouseCargo[goodIdx] or 0)
-  local dir = isToWarehouse and "to WH" or "from WH"
-  local lines = {
-    { text = string.format("%s %s (max %d, A=all):", goodName, dir, maxAmt), color = AMBER },
-  }
-  return lines, {
-    type = "type",
-    typePlaceholder = "Amount: ",
-    maxLength = 8,
+-- Shows the next applicable transfer question starting from step startN.
+-- Falls through to at-port when all steps are exhausted.
+local function sceneWarehouseStep(state, actions, localSceneCb, startN)
+  local foundN, foundG, foundIsTo = findNextStep(state, startN)
+  if not foundN then
+    -- All steps exhausted. Show a neutral lower section (header + blanks) and wait
+    -- for the StateUpdate from the server to re-render the full port view.
+    -- Falling through to sceneAtPort here would briefly flash the price menu using
+    -- stale lastState cargo values before the server response arrives.
+    local rows = buildPortRows(state)
+    rows[17] = { text = "Comprador's Report", color = AMBER }
+    for r = 18, 24 do rows[r] = { text = "", color = AMBER } end
+    return { rows = rows }, { type = "key", keys = {}, _autoAdvance = { 0, nil } }
+  end
+
+  local rows      = buildPortRows(state)
+  local goodName  = SHORT_GOOD_NAMES[foundG]
+  local direction = foundIsTo and "to the warehouse, Taipan?" or "aboard ship, Taipan?"
+  local maxAvail  = foundIsTo and (state.shipCargo[foundG] or 0) or (state.warehouseCargo[foundG] or 0)
+  local firstLine  = "How much " .. goodName .. " shall I move"
+  local secondLine = direction .. " "   -- trailing space precedes cursor
+
+  rows[17] = { text = "Comprador's Report", color = AMBER }
+  rows[18] = { text = "",                  color = AMBER }
+  rows[19] = { text = firstLine,           color = AMBER }
+  rows[20] = { text = direction,           color = AMBER }  -- overridden immediately by _buildInputRow
+  rows[21] = { text = "",                  color = AMBER }
+  rows[22] = { text = "",                  color = AMBER }
+  rows[23] = { text = "",                  color = AMBER }
+  rows[24] = { text = "",                  color = AMBER }
+
+  return { rows = rows }, {
+    type            = "numeric",
+    typePlaceholder = "",
+    _inputRow       = 20,
+    _buildInputRow  = function(s) return { text = secondLine .. s, color = AMBER } end,
+    maxDigits       = 9,
     onType = function(text, _s, _a)
-      if text == "" then
-        if localSceneCb then localSceneCb(isToWarehouse and "wh_to" or "wh_from") end
-        return nil
-      end
-      local qty
-      if text:upper() == "A" then qty = maxAmt
-      else qty = tonumber(text) end
-      if not qty or qty < 0 then return "Enter a positive amount or A" end
+      local qty = tonumber(text) or 0
       if qty == 0 then
-        if localSceneCb then localSceneCb(isToWarehouse and "wh_to" or "wh_from") end
+        -- Empty/zero: skip this step
+        if localSceneCb then localSceneCb("wh_step_" .. (foundN + 1)) end
         return nil
       end
-      if qty > maxAmt then return string.format("Only %d available", maxAmt) end
-      if isToWarehouse then actions.transferTo(goodIdx, math.floor(qty))
-      else                  actions.transferFrom(goodIdx, math.floor(qty)) end
-      if localSceneCb then localSceneCb(nil) end
+      if qty > maxAvail then
+        -- Too much: show error scene for this step
+        if localSceneCb then localSceneCb("wh_err_" .. foundN) end
+        return nil
+      end
+      if foundIsTo then
+        actions.transferTo(foundG, math.floor(qty))
+      else
+        actions.transferFrom(foundG, math.floor(qty))
+      end
+      -- Use wh_wait_N so Apple2Interface advances to the next step only after the
+      -- StateUpdate arrives with fresh cargo counts. Using stale lastState here would
+      -- cause findNextStep to miss "from warehouse" steps (warehouseCargo still 0).
+      if localSceneCb then localSceneCb("wh_wait_" .. foundN) end
       return nil
     end,
+  }
+end
+
+-- Error: entered more than available.  Shows question + error line, anyKey/5s re-asks.
+local function sceneWarehouseStepErr(state, actions, localSceneCb, stepN)
+  local step = TRANSFER_SEQ[stepN]
+  if not step then
+    return sceneAtPort(state, actions, localSceneCb)
+  end
+  local g, isTo   = step[1], step[2]
+  local avail     = isTo and (state.shipCargo[g] or 0) or (state.warehouseCargo[g] or 0)
+  local goodName  = SHORT_GOOD_NAMES[g]
+  local direction = isTo and "to the warehouse, Taipan?" or "aboard ship, Taipan?"
+
+  local rows = buildPortRows(state)
+  rows[17] = { text = "Comprador's Report",                         color = AMBER }
+  rows[18] = { text = "",                                           color = AMBER }
+  rows[19] = { text = "How much " .. goodName .. " shall I move",  color = AMBER }
+  rows[20] = { text = direction,                                    color = AMBER }
+  rows[21] = { text = "",                                           color = AMBER }
+  rows[22] = { text = "You only have " .. tostring(avail) .. ", Taipan.", color = GREEN }
+  rows[23] = { text = "",                                           color = AMBER }
+  rows[24] = { text = "",                                           color = AMBER }
+
+  local retScene = "wh_step_" .. stepN
+  return { rows = rows }, {
+    type         = "key",
+    keys         = {},
+    anyKey       = true,
+    _autoAdvance = { 5, retScene },
+    onKey        = function() if localSceneCb then localSceneCb(retScene) end end,
   }
 end
 
@@ -1300,16 +1356,34 @@ function PromptEngine.processState(state, localScene, actions, localSceneCb)
   if localScene == "bank_withdraw"    then return sceneWithdraw(state, actions, localSceneCb) end
   if localScene == "bank_deposit_err" then return sceneBankDepositErr(state, actions, localSceneCb) end
   if localScene == "bank_withdraw_err" then return sceneBankWithdrawErr(state, actions, localSceneCb) end
-  if localScene == "warehouse"    then return sceneWarehouse(state, actions, localSceneCb) end
-  if localScene == "wh_to"        then return sceneWarehouseGood(state, actions, localSceneCb, true) end
-  if localScene == "wh_from"      then return sceneWarehouseGood(state, actions, localSceneCb, false) end
-  if localScene and localScene:match("^wh_to_(%d)$") then
-    local idx = tonumber(localScene:match("(%d)$"))
-    return sceneWarehouseAmount(state, actions, localSceneCb, idx, true)
+  if localScene == "warehouse" then
+    local hasCargo = false
+    for g = 1, 4 do
+      if (state.shipCargo and state.shipCargo[g] or 0) > 0 or
+         (state.warehouseCargo and state.warehouseCargo[g] or 0) > 0 then
+        hasCargo = true; break
+      end
+    end
+    if not hasCargo then
+      return sceneWarehouseNoCargo(state, actions, localSceneCb)
+    end
+    return sceneWarehouseStep(state, actions, localSceneCb, 1)
   end
-  if localScene and localScene:match("^wh_from_(%d)$") then
-    local idx = tonumber(localScene:match("(%d)$"))
-    return sceneWarehouseAmount(state, actions, localSceneCb, idx, false)
+  if localScene and localScene:match("^wh_wait_(%d+)$") then
+    -- Neutral holding screen while waiting for StateUpdate after a transfer action.
+    -- Apple2Interface.adapter.update advances this to wh_step_N+1 with fresh cargo.
+    local rows = buildPortRows(state)
+    rows[17] = { text = "Comprador's Report", color = AMBER }
+    for r = 18, 24 do rows[r] = { text = "", color = AMBER } end
+    return { rows = rows }, nil
+  end
+  if localScene and localScene:match("^wh_step_(%d+)$") then
+    local n = tonumber(localScene:match("(%d+)"))
+    return sceneWarehouseStep(state, actions, localSceneCb, n)
+  end
+  if localScene and localScene:match("^wh_err_(%d+)$") then
+    local n = tonumber(localScene:match("(%d+)"))
+    return sceneWarehouseStepErr(state, actions, localSceneCb, n)
   end
   if localScene == "buy"  then return sceneBuySell(state, actions, localSceneCb, true) end
   if localScene == "sell" then return sceneBuySell(state, actions, localSceneCb, false) end

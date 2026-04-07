@@ -961,23 +961,32 @@ local function sceneBuySellAmount(state, actions, localSceneCb, goodIdx, isBuy)
   }
 end
 
+-- Shared helper: rows 1-18 (status screen + Comprador header), rows 19-24 blank
+local function buildBankRows(state)
+  local rows = buildPortRows(state)
+  rows[17] = { text = "Comprador's Report", color = AMBER }
+  rows[18] = { text = "",                  color = AMBER }
+  for r = 19, 24 do rows[r] = { text = "", color = AMBER } end
+  return rows
+end
+
 local function sceneBank(state, actions, localSceneCb)
   local maxDeposit = state.cash or 0
-  local lines = {
-    { text = "BANK OF HONG KONG", color = AMBER },
-    { text = string.format("Cash: %s   Balance: %s",
-        fmt(state.cash), fmt(state.bankBalance)), color = AMBER },
-    { text = "", color = AMBER },
-    { text = string.format("How much will you deposit? (max %s)", fmt(maxDeposit)), color = GREEN },
-  }
-  return lines, {
+  local rows = buildBankRows(state)
+  local question = "How much will you deposit? "
+  rows[19] = { text = question, color = AMBER }
+
+  return { rows = rows }, {
     type            = "numeric",
-    typePlaceholder = "> ",
+    typePlaceholder = "",
+    _inputRow       = 19,
+    _buildInputRow  = function(s) return { text = question .. s, color = AMBER } end,
     maxDigits       = 9,
     onType = function(text, _s, _a)
       local amt = tonumber(text) or 0
       if amt > maxDeposit then
-        return string.format("Taipan, you only have %s in cash", fmt(maxDeposit))
+        if localSceneCb then localSceneCb("bank_deposit_err") end
+        return nil
       end
       if amt > 0 then actions.bankDeposit(math.floor(amt)) end
       if localSceneCb then localSceneCb("bank_withdraw") end
@@ -988,26 +997,53 @@ end
 
 local function sceneWithdraw(state, actions, localSceneCb)
   local maxWithdraw = state.bankBalance or 0
-  local lines = {
-    { text = "BANK OF HONG KONG", color = AMBER },
-    { text = string.format("Cash: %s   Balance: %s",
-        fmt(state.cash), fmt(state.bankBalance)), color = AMBER },
-    { text = "", color = AMBER },
-    { text = string.format("How much will you withdraw? (max %s)", fmt(maxWithdraw)), color = GREEN },
-  }
-  return lines, {
+  local rows = buildBankRows(state)
+  local question = "How much will you withdraw? "
+  rows[19] = { text = question, color = AMBER }
+
+  return { rows = rows }, {
     type            = "numeric",
-    typePlaceholder = "> ",
+    typePlaceholder = "",
+    _inputRow       = 19,
+    _buildInputRow  = function(s) return { text = question .. s, color = AMBER } end,
     maxDigits       = 9,
     onType = function(text, _s, _a)
       local amt = tonumber(text) or 0
       if amt > maxWithdraw then
-        return string.format("Taipan, you only have %s in the bank", fmt(maxWithdraw))
+        if localSceneCb then localSceneCb("bank_withdraw_err") end
+        return nil
       end
       if amt > 0 then actions.bankWithdraw(math.floor(amt)) end
       if localSceneCb then localSceneCb(nil) end
       return nil
     end,
+  }
+end
+
+-- Error scenes: shown for 5 seconds or until keypress, then return to their parent scene
+local function sceneBankDepositErr(state, _actions, localSceneCb)
+  local rows = buildBankRows(state)
+  rows[21] = { text = "Taipan, you only have " .. fmtBig(state.cash or 0), color = GREEN }
+  rows[22] = { text = "in cash.",                                           color = GREEN }
+  return { rows = rows }, {
+    type         = "key",
+    keys         = {},
+    anyKey       = true,
+    _autoAdvance = { 5, "bank" },
+    onKey        = function() if localSceneCb then localSceneCb("bank") end end,
+  }
+end
+
+local function sceneBankWithdrawErr(state, _actions, localSceneCb)
+  local rows = buildBankRows(state)
+  rows[21] = { text = "Taipan, you only have " .. fmtBig(state.bankBalance or 0), color = GREEN }
+  rows[22] = { text = "in the bank.",                                              color = GREEN }
+  return { rows = rows }, {
+    type         = "key",
+    keys         = {},
+    anyKey       = true,
+    _autoAdvance = { 5, "bank_withdraw" },
+    onKey        = function() if localSceneCb then localSceneCb("bank_withdraw") end end,
   }
 end
 
@@ -1260,8 +1296,10 @@ function PromptEngine.processState(state, localScene, actions, localSceneCb)
     if localScene == "wu_repay" then return sceneWuRepay(state, actions, localSceneCb) end
     return sceneWuBorrow(state, actions, localSceneCb)
   end
-  if localScene == "bank"          then return sceneBank(state, actions, localSceneCb) end
-  if localScene == "bank_withdraw"  then return sceneWithdraw(state, actions, localSceneCb) end
+  if localScene == "bank"             then return sceneBank(state, actions, localSceneCb) end
+  if localScene == "bank_withdraw"    then return sceneWithdraw(state, actions, localSceneCb) end
+  if localScene == "bank_deposit_err" then return sceneBankDepositErr(state, actions, localSceneCb) end
+  if localScene == "bank_withdraw_err" then return sceneBankWithdrawErr(state, actions, localSceneCb) end
   if localScene == "warehouse"    then return sceneWarehouse(state, actions, localSceneCb) end
   if localScene == "wh_to"        then return sceneWarehouseGood(state, actions, localSceneCb, true) end
   if localScene == "wh_from"      then return sceneWarehouseGood(state, actions, localSceneCb, false) end

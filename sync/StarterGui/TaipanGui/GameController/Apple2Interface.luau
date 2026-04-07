@@ -42,6 +42,7 @@ function Apple2Interface.new(screenGui, actions)
                           --       "final_status"
   local notifQueue = {}
   local notifGen   = 0
+  local renderGen  = 0   -- incremented each render; used to discard stale _autoAdvance callbacks
   local GREEN      = Color3.fromRGB(140, 200, 80)
 
   local function isServerDriven(state)
@@ -86,6 +87,9 @@ function Apple2Interface.new(screenGui, actions)
   end
 
   render = function(state, scene)
+    renderGen += 1
+    local myRenderGen = renderGen
+
     local lines, promptDef = PromptEngine.processState(state or {}, scene, actions,
       function(newScene)
         -- Local scene transition: set scene, re-render without waiting for StateUpdate
@@ -119,6 +123,18 @@ function Apple2Interface.new(screenGui, actions)
 
     -- Attach terminal reference so KeyInput can display input cursor
     ki.setPrompt(promptDef, state, actions)
+
+    -- _autoAdvance = {duration, nextScene}: auto-transition after timeout unless superseded
+    if promptDef and promptDef._autoAdvance then
+      local duration  = promptDef._autoAdvance[1]
+      local nextScene = promptDef._autoAdvance[2]
+      task.delay(duration, function()
+        if renderGen == myRenderGen then
+          localScene = nextScene
+          render(lastState, localScene)
+        end
+      end)
+    end
   end
 
   local adapter = {}

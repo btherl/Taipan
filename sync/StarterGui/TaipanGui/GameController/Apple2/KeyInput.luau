@@ -15,6 +15,49 @@ local NUMKEY_MAP = {
   Five = "5", Six = "6", Seven = "7", Eight = "8", Nine = "9", Zero = "0",
 }
 
+-- Printable non-letter, non-digit keys: {unshifted, shifted}
+local PRINTABLE_KEY_MAP = {
+  Space        = {" ", " "},
+  Period       = {".", ">"},
+  Comma        = {",", "<"},
+  Slash        = {"/", "?"},
+  Semicolon    = {";", ":"},
+  Quote        = {"'", '"'},
+  LeftBracket  = {"[", "{"},
+  RightBracket = {"]", "}"},
+  Backslash    = {"\\", "|"},
+  Minus        = {"-", "_"},
+  Equals       = {"=", "+"},
+  Grave        = {"`", "~"},
+}
+
+-- Shift+digit → punctuation (US layout)
+local SHIFTED_NUM_MAP = {
+  One = "!", Two = "@", Three = "#", Four = "$", Five = "%",
+  Six = "^", Seven = "&", Eight = "*", Nine = "(", Zero = ")",
+}
+
+local function isShiftHeld()
+  return UserInputService:IsKeyDown(Enum.KeyCode.LeftShift)
+      or UserInputService:IsKeyDown(Enum.KeyCode.RightShift)
+end
+
+-- Resolve a KeyCode.Name to a single printable character, or nil if not printable.
+local function toPrintableChar(name)
+  if NUMKEY_MAP[name] then
+    return isShiftHeld() and (SHIFTED_NUM_MAP[name] or NUMKEY_MAP[name]) or NUMKEY_MAP[name]
+  end
+  if PRINTABLE_KEY_MAP[name] then
+    local pair = PRINTABLE_KEY_MAP[name]
+    return isShiftHeld() and pair[2] or pair[1]
+  end
+  if #name == 1 then
+    -- Single-char name = letter key (A-Z); KeyCode always gives uppercase
+    return name
+  end
+  return nil
+end
+
 local KeyInput = {}
 
 function KeyInput.new(screenGui)
@@ -323,9 +366,8 @@ function KeyInput.new(screenGui)
               resetBlink()
               updateDisplay()
             else
-              local char = input.KeyCode.Name
-              if NUMKEY_MAP[char] then char = NUMKEY_MAP[char] end
-              if #char == 1 then
+              local char = toPrintableChar(input.KeyCode.Name)
+              if char then
                 if cursorPos <= #typeBuf then
                   -- Overwrite mode: replace char at cursor position
                   typeBuf = typeBuf:sub(1, cursorPos - 1) .. char .. typeBuf:sub(cursorPos + 1)

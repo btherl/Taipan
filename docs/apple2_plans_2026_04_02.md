@@ -109,7 +109,13 @@ Once both deposits and withdrawals are handled, control returns to the main dock
 
 If "T" is entered, but you have no cargo, lines 6-8 are cleared, and line 6 displays "You have no cargo, Taipan.".  This message clears on keypress, or after 5 seconds.
 
-If cargo is available, each good is asked about in turn:
+If cargo is available, each good is asked about in turn.  Dialog follows.
+
+Each question is only asked if there is at least 1 of that item available to move in that direction.
+
+The cursor appears one space after the question mark, and allows up to 9 digits.  Left arrow deletes a digit, backspace does not do anything.
+
+If you enter more than is available, the line "You only have 50, Taipan." appears 2 lines below the cursor line (one blank line between), with a 5 second delay, then the same question is asked again.  The same thing happens whether moving to warehouse or from warehouse.
 
 -----
 Comprador's Report

@@ -131,7 +131,7 @@ function Text:Update(DeltaTime)
 			else
 				difference = math.abs(difference)
 
-				for i = 1, difference do
+				for i = #self.Sprites, #self.Sprites - difference + 1, -1 do
 					self.Sprites[i]:DestroySprite()
 				end
 

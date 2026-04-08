@@ -15,14 +15,25 @@ local RED   = Color3.fromRGB(220, 80, 80)
 local SERVER_SCENES = {
   gameOver   = function(s) return s.gameOver == true end,
   combat     = function(s) return s.combat ~= nil end,
-  shipOffers = function(s) return s.shipOffer ~= nil end,
   liYuenDemand = function(s)
     local C = require(ReplicatedStorage.shared.Constants)
     return s.currentPort == C.HONG_KONG and s.liYuenPending == true
   end,
+  repairPending = function(s)
+    local C = require(ReplicatedStorage.shared.Constants)
+    return s.currentPort == C.HONG_KONG and s.repairPending == true
+  end,
   wuQuestion = function(s)
     local C = require(ReplicatedStorage.shared.Constants)
     return s.currentPort == C.HONG_KONG and s.wuPending == true
+  end,
+  shipUpgrade = function(s)
+    local C = require(ReplicatedStorage.shared.Constants)
+    return s.currentPort == C.HONG_KONG and s.shipOffer ~= nil and s.shipOffer.upgradeOffer ~= nil
+  end,
+  shipGun = function(s)
+    local C = require(ReplicatedStorage.shared.Constants)
+    return s.currentPort == C.HONG_KONG and s.shipOffer ~= nil and s.shipOffer.gunOffer ~= nil
   end,
 }
 
@@ -37,7 +48,8 @@ function Apple2Interface.new(screenGui, actions)
   local localScene = nil  -- nil | "buy" | "sell" | "buy_good_N" | "sell_good_N" |
                           --       "travel" | "warehouse" | "wh_to" | "wh_from" |
                           --       "wh_to_N" | "wh_from_N" | "bank" | "bank_withdraw" |
-                          --       "wu_repay" | "wu_borrow" | "settings" | "repair" |
+                          --       "wu_repay" | "wu_borrow" | "settings" |
+                          --       "repair_amount" | "repair_amount_err" |
                           --       "quit_confirm" | "combat_throw_good" | "combat_throw_amt_N" |
                           --       "final_status"
   local notifQueue = {}

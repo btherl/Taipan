@@ -47,6 +47,7 @@ Remotes.CombatThrow = getOrCreate("RemoteEvent", "CombatThrow") -- client->serve
 
 -- Phase 6: Ship progression + retirement
 Remotes.ShipRepair     = getOrCreate("RemoteEvent", "ShipRepair")     -- amount (cash to spend)
+Remotes.DeclineRepair  = getOrCreate("RemoteEvent", "DeclineRepair")  -- skip repair dialog
 Remotes.AcceptUpgrade  = getOrCreate("RemoteEvent", "AcceptUpgrade")  -- no args
 Remotes.DeclineUpgrade = getOrCreate("RemoteEvent", "DeclineUpgrade") -- no args
 Remotes.AcceptGun      = getOrCreate("RemoteEvent", "AcceptGun")      -- no args

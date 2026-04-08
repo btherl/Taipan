@@ -711,48 +711,135 @@ local function sceneCombatThrowAmount(state, actions, localSceneCb, goodIdx)
   }
 end
 
-local function sceneShipOffers(state, actions, localSceneCb)
-  local offer = state.shipOffer
-  local lines = {
-    { text = "[ HONG KONG -- SHIP OFFERS ]", color = AMBER },
-    { text = "", color = AMBER },
-  }
-  local keys = {"D"}
-  if offer and offer.upgradeOffer then
-    table.insert(lines, { text = string.format("Upgrade ship (+50 tons) for %s", fmt(offer.upgradeOffer.cost)), color = GREEN })
-    table.insert(lines, { text = "(U)pgrade  (N)o thanks", color = GREEN })
-    table.insert(keys, "U")
-    table.insert(keys, "N")
-  end
-  if offer and offer.gunOffer then
-    table.insert(lines, { text = "", color = AMBER })
-    table.insert(lines, { text = string.format("Buy cannon for %s (-10 hold)", fmt(offer.gunOffer.cost)), color = GREEN })
-    table.insert(lines, { text = "(G)un  (X) No cannon", color = GREEN })
-    table.insert(keys, "G")
-    table.insert(keys, "X")
-  end
-  if offer and offer.repairRate and (state.damage or 0) > 0 then
-    local sw = math.max(0, 100 - math.floor((state.damage or 0) / (state.shipCapacity or 1) * 100))
-    table.insert(lines, { text = "", color = AMBER })
-    table.insert(lines, { text = string.format("Repair: %s/pt  SW:%d%%  Dmg:%d",
-      fmt(offer.repairRate), sw, math.floor(state.damage or 0)), color = AMBER })
-    table.insert(lines, { text = "(R)epair -- enter amount, A=all", color = GREEN })
-    table.insert(keys, "R")
-  end
-  table.insert(lines, { text = "", color = AMBER })
-  table.insert(lines, { text = "(D)one", color = AMBER })
-  return lines, {
-    type = "key",
-    keys = keys,
-    label = "Select option or D to finish",
+local function sceneRepair(state, actions, localSceneCb)
+  local rows = buildPortRows(state)
+  rows[17] = { text = "Comprador's Report",                              color = AMBER }
+  rows[18] = { text = "",                                                color = AMBER }
+  rows[19] = { text = "Taipan, Mc Henry from the Hong Kong",             color = GREEN }
+  rows[20] = { text = "Shipyards has arrived!  He says, 'I see",         color = GREEN }
+  rows[21] = { text = "ye've a wee bit of damage to yer ship.",          color = GREEN }
+  local prompt_base = "Will ye be wanting repairs?' "
+  rows[22] = { text = prompt_base,                                       color = GREEN }
+  rows[23] = { text = "",                                                color = AMBER }
+  rows[24] = { text = "",                                                color = AMBER }
+  return { rows = rows }, {
+    type           = "singlechar",
+    keys           = {"Y", "N"},
+    _inputRow      = 22,
+    _buildInputRow = function(s) return { text = prompt_base .. s, color = GREEN } end,
     onKey = function(key, _s, _a)
-      if key == "U" then actions.acceptUpgrade()
-      elseif key == "N" then actions.declineUpgrade()
-      elseif key == "G" then actions.acceptGun()
-      elseif key == "X" then actions.declineGun()
-      elseif key == "D" then actions.shipPanelDone()
-      elseif key == "R" then
-        if localSceneCb then localSceneCb("repair") end
+      if key == "Y" then
+        if localSceneCb then localSceneCb("repair_amount") end
+      else
+        actions.declineRepair()
+      end
+    end,
+  }
+end
+
+local function sceneRepairAmountErr(state, _actions, localSceneCb)
+  local rows = buildPortRows(state)
+  rows[17] = { text = "Comprador's Report",                              color = AMBER }
+  rows[18] = { text = "",                                                color = AMBER }
+  rows[19] = { text = "Taipan, you do not have enough cash!!",           color = GREEN }
+  for r = 20, 24 do rows[r] = { text = "", color = AMBER } end
+  return { rows = rows }, {
+    type         = "key",
+    keys         = {},
+    anyKey       = true,
+    _autoAdvance = { 5, "repair_amount" },
+    onKey        = function() if localSceneCb then localSceneCb("repair_amount") end end,
+  }
+end
+
+local function sceneRepairAmount(state, actions, localSceneCb)
+  local offer = state.shipOffer
+  if not offer or not offer.repairRate then
+    actions.declineRepair()
+    return {}, nil
+  end
+  local dmgPct  = math.floor((state.damage or 0) / (state.shipCapacity or 1) * 100)
+  local maxCost = math.floor(offer.repairRate * math.ceil(state.damage or 0)) + 1
+  local rows = buildPortRows(state)
+  rows[17] = { text = "Comprador's Report",                              color = AMBER }
+  rows[18] = { text = "",                                                color = AMBER }
+  rows[19] = { text = string.format("Och, 'tis a pity to be %d%% damaged.", dmgPct), color = GREEN }
+  rows[20] = { text = "",                                                color = AMBER }
+  rows[21] = { text = string.format("We can fix yer whole ship for %s,", fmtBig(maxCost)), color = GREEN }
+  rows[22] = { text = "or make partial repairs if you wish.",            color = GREEN }
+  local prompt_base = "How much will ye spend? "
+  rows[23] = { text = prompt_base,                                       color = GREEN }
+  rows[24] = { text = "",                                                color = AMBER }
+  return { rows = rows }, {
+    type            = "numeric",
+    typePlaceholder = prompt_base,
+    _inputRow       = 23,
+    _buildInputRow  = function(s) return { text = prompt_base .. s, color = GREEN } end,
+    maxDigits       = 9,
+    onType = function(text, _s, _a)
+      local amt = tonumber(text) or 0
+      if amt > (state.cash or 0) then
+        if localSceneCb then localSceneCb("repair_amount_err") end
+        return nil
+      end
+      if amt > 0 then
+        actions.shipRepair(math.floor(amt))
+      else
+        actions.declineRepair()
+      end
+      return nil
+    end,
+  }
+end
+
+local function sceneUpgrade(state, actions, _localSceneCb)
+  local offer = state.shipOffer and state.shipOffer.upgradeOffer
+  local cost = offer and offer.cost or 0
+  local condition = (state.damage or 0) > 0 and "damaged" or "fine"
+  local rows = buildPortRows(state)
+  rows[17] = { text = "Comprador's Report",                              color = AMBER }
+  rows[18] = { text = "",                                                color = AMBER }
+  rows[19] = { text = "Do you wish to trade in your " .. condition,      color = GREEN }
+  rows[20] = { text = "ship for one with 50 more capacity by",           color = GREEN }
+  local prompt_base = string.format("paying an additional %s, Taipan? ", fmtBig(cost))
+  rows[21] = { text = prompt_base,                                       color = GREEN }
+  rows[22] = { text = "",                                                color = AMBER }
+  rows[23] = { text = "",                                                color = AMBER }
+  rows[24] = { text = "",                                                color = AMBER }
+  return { rows = rows }, {
+    type           = "singlechar",
+    keys           = {"Y", "N"},
+    _inputRow      = 21,
+    _buildInputRow = function(s) return { text = prompt_base .. s, color = GREEN } end,
+    onKey = function(key, _s, _a)
+      if key == "Y" then actions.acceptUpgrade()
+      else actions.declineUpgrade()
+      end
+    end,
+  }
+end
+
+local function sceneGun(state, actions, _localSceneCb)
+  local offer = state.shipOffer and state.shipOffer.gunOffer
+  local cost = offer and offer.cost or 0
+  local rows = buildPortRows(state)
+  rows[17] = { text = "Comprador's Report",                              color = AMBER }
+  rows[18] = { text = "",                                                color = AMBER }
+  rows[19] = { text = "Do you wish to buy a ship's gun",                 color = GREEN }
+  local prompt_base = string.format("for %s, Taipan? ", fmtBig(cost))
+  rows[20] = { text = prompt_base,                                       color = GREEN }
+  rows[21] = { text = "",                                                color = AMBER }
+  rows[22] = { text = "",                                                color = AMBER }
+  rows[23] = { text = "",                                                color = AMBER }
+  rows[24] = { text = "",                                                color = AMBER }
+  return { rows = rows }, {
+    type           = "singlechar",
+    keys           = {"Y", "N"},
+    _inputRow      = 20,
+    _buildInputRow = function(s) return { text = prompt_base .. s, color = GREEN } end,
+    onKey = function(key, _s, _a)
+      if key == "Y" then actions.acceptGun()
+      else actions.declineGun()
       end
     end,
   }
@@ -1207,42 +1294,6 @@ local function sceneWarehouseStepErr(state, actions, localSceneCb, stepN)
   }
 end
 
-local function sceneRepairAmount(state, actions, localSceneCb)
-  local offer = state.shipOffer
-  if not offer or not offer.repairRate then
-    if localSceneCb then localSceneCb(nil) end
-    return {}, nil
-  end
-  local maxCost = offer.repairRate * math.ceil(state.damage or 0) + 1
-  local lines = {
-    { text = string.format("Repair: %s/pt  Full: %s",
-        fmt(offer.repairRate), fmt(maxCost)), color = AMBER },
-    { text = "Cash to spend (A=all):", color = GREEN },
-  }
-  return lines, {
-    type = "type",
-    typePlaceholder = "Amount: ",
-    maxLength = 8,
-    onType = function(text, _s, _a)
-      if text == "" then
-        if localSceneCb then localSceneCb(nil) end
-        return nil
-      end
-      local amt
-      if text:upper() == "A" then amt = maxCost
-      else amt = tonumber(text) end
-      if not amt or amt < 0 then return "Enter a positive amount or A" end
-      if amt == 0 then
-        if localSceneCb then localSceneCb(nil) end
-        return nil
-      end
-      actions.shipRepair(math.floor(amt))
-      if localSceneCb then localSceneCb(nil) end
-      return nil
-    end,
-  }
-end
-
 local function sceneMillionaire(_state, _actions, localSceneCb)
   local INV_W  = 25   -- inverted block width
   local LEFT   = math.floor((40 - INV_W) / 2)  -- centering offset
@@ -1353,14 +1404,17 @@ function PromptEngine.processState(state, localScene, actions, localSceneCb)
     end
     return sceneCombatLayout(state, actions, localSceneCb)
   end
-  if state.shipOffer ~= nil then
-    if localScene == "repair" then
-      return sceneRepairAmount(state, actions, localSceneCb)
-    end
-    return sceneShipOffers(state, actions, localSceneCb)
-  end
   if state.currentPort == HONG_KONG and state.liYuenPending then
     return sceneLiYuenDemand(state, actions, localSceneCb)
+  end
+  if state.currentPort == HONG_KONG and state.repairPending then
+    if localScene == "repair_amount_err" then
+      return sceneRepairAmountErr(state, actions, localSceneCb)
+    end
+    if localScene == "repair_amount" then
+      return sceneRepairAmount(state, actions, localSceneCb)
+    end
+    return sceneRepair(state, actions, localSceneCb)
   end
   if state.currentPort == HONG_KONG and state.wuPending then
     return sceneWuQuestion(state, actions, localSceneCb)
@@ -1368,6 +1422,12 @@ function PromptEngine.processState(state, localScene, actions, localSceneCb)
   if state.currentPort == HONG_KONG and state.inWuSession then
     if localScene == "wu_repay" then return sceneWuRepay(state, actions, localSceneCb) end
     return sceneWuBorrow(state, actions, localSceneCb)
+  end
+  if state.currentPort == HONG_KONG and state.shipOffer and state.shipOffer.upgradeOffer then
+    return sceneUpgrade(state, actions, localSceneCb)
+  end
+  if state.currentPort == HONG_KONG and state.shipOffer and state.shipOffer.gunOffer then
+    return sceneGun(state, actions, localSceneCb)
   end
   if localScene == "bank"             then return sceneBank(state, actions, localSceneCb) end
   if localScene == "bank_withdraw"    then return sceneWithdraw(state, actions, localSceneCb) end

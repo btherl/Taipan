@@ -27,6 +27,7 @@ return {
   combatRun      = function()       Remotes.CombatRun:FireServer() end,
   combatThrow    = function(g, q)   Remotes.CombatThrow:FireServer(g, q) end,
   shipRepair     = function(amt)    Remotes.ShipRepair:FireServer(amt) end,
+  declineRepair  = function()       Remotes.DeclineRepair:FireServer() end,
   acceptUpgrade  = function()       Remotes.AcceptUpgrade:FireServer() end,
   declineUpgrade = function()       Remotes.DeclineUpgrade:FireServer() end,
   acceptGun      = function()       Remotes.AcceptGun:FireServer() end,

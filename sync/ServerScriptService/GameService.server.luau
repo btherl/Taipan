@@ -357,11 +357,14 @@ Remotes.TravelTo.OnServerEvent:Connect(function(player, destination)
         upgradeOffer  = upgradeOffer and { cost = upgradeOffer } or nil,
         gunOffer      = gunOffer     and { cost = gunOffer }     or nil,
       }
+      state.repairPending = repairRate ~= nil
     else
-      state.shipOffer = nil
+      state.shipOffer     = nil
+      state.repairPending = false
     end
   else
-    state.shipOffer = nil
+    state.shipOffer     = nil
+    state.repairPending = false
   end
 
   -- Onboarding: fire tutorial messages on first HK arrival of a new game
@@ -751,6 +754,14 @@ Remotes.CombatThrow.OnServerEvent:Connect(function(player, goodIndex, qty)
   state.pendingMessages = pending; pushState(player); state.pendingMessages = nil
 end)
 
+-- Clears shipOffer when upgrade and gun sub-offers are both resolved.
+local function cleanupShipOffer(state)
+  if not state.shipOffer then return end
+  if not state.shipOffer.upgradeOffer and not state.shipOffer.gunOffer then
+    state.shipOffer = nil
+  end
+end
+
 Remotes.ShipRepair.OnServerEvent:Connect(function(player, amount)
   local state = playerStates[player]
   if type(state) ~= "table" or state.gameOver then return end
@@ -765,11 +776,19 @@ Remotes.ShipRepair.OnServerEvent:Connect(function(player, amount)
     Remotes.Notify:FireClient(player,
       string.format("Repaired %d damage for $%d, Taipan.", repaired, w))
   end
-  if state.damage <= 0 then
-    state.shipOffer.repairRate = nil
-  else
-    state.shipOffer.repairRate = ProgressionEngine.repairRate(state)
-  end
+  state.shipOffer.repairRate = nil
+  state.repairPending = false
+  cleanupShipOffer(state)
+  pushState(player)
+end)
+
+Remotes.DeclineRepair.OnServerEvent:Connect(function(player)
+  local state = playerStates[player]
+  if type(state) ~= "table" or state.gameOver then return end
+  if state.currentPort ~= Constants.HONG_KONG then return end
+  if state.shipOffer then state.shipOffer.repairRate = nil end
+  state.repairPending = false
+  cleanupShipOffer(state)
   pushState(player)
 end)
 
@@ -788,6 +807,7 @@ Remotes.AcceptUpgrade.OnServerEvent:Connect(function(player)
   state.shipOffer.repairRate   = nil
   Remotes.Notify:FireClient(player,
     string.format("New ship! Capacity now %d tons, fully repaired!", state.shipCapacity))
+  cleanupShipOffer(state)
   pushState(player)
 end)
 
@@ -796,6 +816,7 @@ Remotes.DeclineUpgrade.OnServerEvent:Connect(function(player)
   if type(state) ~= "table" or state.gameOver then return end
   if not state.shipOffer then return end
   state.shipOffer.upgradeOffer = nil
+  cleanupShipOffer(state)
   pushState(player)
 end)
 
@@ -813,6 +834,7 @@ Remotes.AcceptGun.OnServerEvent:Connect(function(player)
   state.shipOffer.gunOffer = nil
   Remotes.Notify:FireClient(player,
     string.format("Purchased a gun! You now have %d gun(s).", state.guns))
+  cleanupShipOffer(state)
   pushState(player)
 end)
 
@@ -821,6 +843,7 @@ Remotes.DeclineGun.OnServerEvent:Connect(function(player)
   if type(state) ~= "table" or state.gameOver then return end
   if not state.shipOffer then return end
   state.shipOffer.gunOffer = nil
+  cleanupShipOffer(state)
   pushState(player)
 end)
 

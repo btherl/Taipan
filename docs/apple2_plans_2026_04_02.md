@@ -423,4 +423,15 @@ Answer is "Y" or "N" as a cursor input, at the marked "_"
 
 If ship is in perfect condition, it will say "fine" instead of "damaged", and not be underlined.
 
+
+## Ordering of port arrival dialogs
+
 Note that the "ship upgrade" dialog appears before "buy a gun" dialog.
+
+Li Yuen donation request comes before Mc Henry ship repairs
+
+Wu is after ship repairs
+
+Ships Gun is after Wu
+
+Li Yuen admiral warning (at non-HK ports) comes after gun and ship upgrade dialogs.

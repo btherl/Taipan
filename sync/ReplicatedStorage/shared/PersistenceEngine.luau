@@ -86,6 +86,7 @@ function PersistenceEngine.deserialize(data, PriceEngine)
   state.pendingTutorial = nil
   state.combat          = nil
   state.shipOffer       = nil
+  state.repairPending   = nil
 
   return state
 end

@@ -75,21 +75,6 @@
           "guid": "9724"
         },
         {
-          "name": "DeclineLiYuenTribute",
-          "className": "RemoteEvent",
-          "guid": "9801"
-        },
-        {
-          "name": "ConfirmWu",
-          "className": "RemoteEvent",
-          "guid": "9802"
-        },
-        {
-          "name": "DeclineWu",
-          "className": "RemoteEvent",
-          "guid": "9803"
-        },
-        {
           "name": "ChooseStart",
           "className": "RemoteEvent",
           "guid": "9710"
@@ -569,7 +554,7 @@
     {
       "name": "SoundService",
       "className": "SoundService",
-      "guid": "6635"
+      "guid": "7345"
     },
     {
       "name": "StarterGui",
@@ -819,7 +804,7 @@
         {
           "name": "Camera",
           "className": "Camera",
-          "guid": "304281"
+          "guid": "259892"
         },
         {
           "name": "SpawnLocation",

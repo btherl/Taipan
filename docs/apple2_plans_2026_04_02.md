@@ -356,3 +356,71 @@ The "Your score is 421" line is inverted
 The rating you achieved (in the box listing 5 rating levels) is also inverted.
 
 Valid responses here are "Y" or "N".  "N" returns to the main menu.  "Y" returns to the screen for selecting Firm Name.
+
+## Shipyard repaird
+
+Upon arrival in Hong Kong with a damaged ship:
+
+-----
+Comprador's Report
+
+Taipan, Mc Henry from the Hong Kong
+Shipyards has arrived!  He says, 'I see
+ye've a wee bit of damage to yer ship.
+Will ye be wanting reparis?' _
+-----
+
+This dialog accepts Y or N at the cursor.
+
+If "N", continue to next dialog.
+
+If "Y":
+
+-----
+Comprador's Report
+
+Och, 'tis a pity to be 2% damaged.
+
+We can fix yer whole ship for 204,
+or make partial repairs if you wish.
+How much will ye spend? _
+-----
+
+If amount higher than cash on hand is entered, then following message on 5 second delay:
+
+-----
+Comprador's Report
+
+Taipan, you do not have enough cash!!
+-----
+
+If an amount entered (including 0), do any repairs, then continue to next dialog.
+
+
+## Buy a gun
+
+-----
+Comprador's Report
+
+Do you wish to buy a ship's gun
+for 784, Taipan? _
+-----
+
+This is a Y / N dialog, using cursor input at the marked "_"
+
+## Ship upgrade
+
+-----
+Comprador's Report
+
+Do you wish to trade in your damaged
+ship for one with 50 more capacity by
+paying an additional 3908, Taipan? _
+-----
+
+The word "damaged" is underlined, we may need to implement support for this somehow.
+Answer is "Y" or "N" as a cursor input, at the marked "_"
+
+If ship is in perfect condition, it will say "fine" instead of "damaged", and not be underlined.
+
+Note that the "ship upgrade" dialog appears before "buy a gun" dialog.

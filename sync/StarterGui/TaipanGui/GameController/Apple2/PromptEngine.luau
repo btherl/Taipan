@@ -414,7 +414,7 @@ local function sceneTravel(state, actions, localSceneCb)
       local dest = tonumber(key)
       if dest then
         actions.travelTo(dest)
-        if localSceneCb then localSceneCb(nil) end
+        if localSceneCb then localSceneCb("traveling") end
       end
     end,
   }
@@ -460,27 +460,36 @@ local function sceneFirmName(_state, actions, localSceneCb)
   }
 end
 
+local START_CHOICE_INPUT_ROW = 21
+local function buildStartChoiceInputRow(s)
+  return { text = "          ? " .. s, color = AMBER }
+end
+
 local function sceneStartChoice(_state, actions, _localSceneCb)
-  local lines = {
-    { text = "Do you want to start . . .", color = AMBER },
-	{ text = "", color = AMBER },
-	{ text = "", color = AMBER },
-	{ text = "  1) With cash (and a debt)", color = AMBER },
-	{ text = "", color = AMBER },
-	{ text = "", color = AMBER },
-	{ text = string.rep(" ", 16) .. ">> or <<", color = AMBER},
-	{ text = "", color = AMBER },
-	{ text = "", color = AMBER },
-	{ text = "  2) With five guns and no cash", color = AMBER },
-	{ text = string.rep(" ", 16) .. "(But no debt!)", color = AMBER},
-	{ text = "", color = AMBER },
-	{ text = "", color = AMBER },
-	{ text = string.rep(" ", 10) .. "?", color = AMBER},
+  local rows = {
+    [8]  = { text = "Do you want to start . . .", color = AMBER },
+    [9]  = { text = "", color = AMBER },
+    [10] = { text = "", color = AMBER },
+    [11] = { text = "  1) With cash (and a debt)", color = AMBER },
+    [12] = { text = "", color = AMBER },
+    [13] = { text = "", color = AMBER },
+    [14] = { text = string.rep(" ", 16) .. ">> or <<", color = AMBER },
+    [15] = { text = "", color = AMBER },
+    [16] = { text = "", color = AMBER },
+    [17] = { text = "  2) With five guns and no cash", color = AMBER },
+    [18] = { text = string.rep(" ", 16) .. "(But no debt!)", color = AMBER },
+    [19] = { text = "", color = AMBER },
+    [20] = { text = "", color = AMBER },
+    [21] = buildStartChoiceInputRow(" "),
+    [22] = { text = "", color = AMBER },
+    [23] = { text = "", color = AMBER },
+    [24] = { text = "", color = AMBER },
   }
-  return lines, {
-    type = "key",
-    keys = {"1", "2"},
-    label = "Debt or Cash",
+  return { rows = rows }, {
+    type           = "singlechar",
+    keys           = {"1", "2"},
+    _inputRow      = START_CHOICE_INPUT_ROW,
+    _buildInputRow = buildStartChoiceInputRow,
     onKey = function(key, _s, _a)
       if key == "1" then actions.chooseStart("cash")
       elseif key == "2" then actions.chooseStart("guns")
@@ -751,16 +760,20 @@ end
 
 local function sceneLiYuenDemand(state, actions, localSceneCb)
   local cost = state.liYuenOfferCost or 0
+  -- body lines start at row 19; question+cursor on row 21
   local bodyLines = {
     { text = string.format("Li Yuen asks %s in donation", fmt(cost)), color = GREEN },
     { text = "to the temple of Tin Hau, the Sea", color = GREEN },
-    { text = "Goddess.  Will you pay?", color = GREEN },
-    { text = "", color = AMBER },
-    { text = "(Y)es  (N)o", color = GREEN },
+    { text = "Goddess.  Will you pay? ", color = GREEN },
   }
+  local function buildInputRow(s)
+    return { text = "Goddess.  Will you pay? " .. s, color = GREEN }
+  end
   return sceneWuLayout(state, bodyLines), {
-    type = "key",
-    keys = {"Y", "N"},
+    type           = "singlechar",
+    keys           = {"Y", "N"},
+    _inputRow      = 21,
+    _buildInputRow = buildInputRow,
     onKey = function(key, _s, _a)
       if key == "Y" then
         actions.buyLiYuen()
@@ -772,15 +785,19 @@ local function sceneLiYuenDemand(state, actions, localSceneCb)
 end
 
 local function sceneWuQuestion(state, actions, localSceneCb)
+  -- body lines start at row 19; question+cursor on row 20
   local bodyLines = {
     { text = "Do you have business with Elder", color = GREEN },
-    { text = "Brother Wu, the moneylender?", color = GREEN },
-    { text = "", color = AMBER },
-    { text = "(Y)es  (N)o", color = GREEN },
+    { text = "Brother Wu, the moneylender? ", color = GREEN },
   }
+  local function buildInputRow(s)
+    return { text = "Brother Wu, the moneylender? " .. s, color = GREEN }
+  end
   return sceneWuLayout(state, bodyLines), {
-    type = "key",
-    keys = {"Y", "N"},
+    type           = "singlechar",
+    keys           = {"Y", "N"},
+    _inputRow      = 20,
+    _buildInputRow = buildInputRow,
     onKey = function(key, _s, _a)
       if key == "Y" then
         actions.confirmWu()
@@ -937,7 +954,7 @@ local function sceneBuySellAmount(state, actions, localSceneCb, goodIdx, isBuy)
     onType = function(text, _s, _a)
       local qty = tonumber(text) or 0
       if qty == 0 then
-        if localSceneCb then localSceneCb(isBuy and "buy" or "sell") end
+        if localSceneCb then localSceneCb(nil) end
         return nil
       end
       if isBuy then
@@ -1396,6 +1413,12 @@ function PromptEngine.processState(state, localScene, actions, localSceneCb)
     return sceneBuySellAmount(state, actions, localSceneCb, idx, false)
   end
   if localScene == "travel"       then return sceneTravel(state, actions, localSceneCb) end
+  if localScene == "traveling"   then
+    -- Inert waiting scene: hold display until server notification arrives
+    local rows = buildPortRows(state)
+    for r = 17, 24 do rows[r] = { text = "", color = AMBER } end
+    return { rows = rows }, nil
+  end
   if localScene == "settings"     then return sceneSettings(state, actions, localSceneCb) end
   if localScene == "quit_confirm" then return sceneQuitConfirm(state, actions, localSceneCb) end
   if state.startChoice == nil and (state.turnsElapsed or 1) == 1 and (state.destination or 0) == 0 then

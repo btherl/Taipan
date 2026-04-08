@@ -58,6 +58,7 @@ function Apple2Interface.new(screenGui, actions)
 
   local function advanceNotif(gen)
     if gen ~= notifGen then return end  -- stale callback, discard
+    notifGen += 1                       -- consume this gen; invalidate the twin callback
     if #notifQueue > 0 then
       playNextNotif()
     else

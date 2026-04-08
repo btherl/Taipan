@@ -659,7 +659,17 @@ Remotes.CombatFight.OnServerEvent:Connect(function(player)
       string.format("We've captured some booty worth $%d!!", combat.booty))
     state.combat = nil
     postCombatStorm(player, state, pending)
-    if not state.gameOver then appendArrivalPending(state, pending) end
+    if not state.gameOver then
+      appendArrivalPending(state, pending)
+      -- Re-check Li Yuen offer: booty may have given cash after the arrival-time check ran with cash=0
+      if state.currentPort == Constants.HONG_KONG
+          and state.liYuenProtection == 0
+          and state.cash > 0
+          and not state.liYuenPending then
+        state.liYuenOfferCost = FinanceEngine.liYuenProtectionCost(state)
+        state.liYuenPending   = true
+      end
+    end
     state.pendingMessages = pending; pushState(player); state.pendingMessages = nil
     return
   end

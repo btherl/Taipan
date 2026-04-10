@@ -400,9 +400,7 @@ local function sceneTravel(state, actions, localSceneCb)
 
   local validKeys = {}
   for i = 1, 7 do
-    if i ~= state.currentPort then
-      table.insert(validKeys, tostring(i))
-    end
+    table.insert(validKeys, tostring(i))
   end
 
   return { rows = rows }, {
@@ -413,10 +411,33 @@ local function sceneTravel(state, actions, localSceneCb)
     onKey = function(key, _state, _actions)
       local dest = tonumber(key)
       if dest then
-        actions.travelTo(dest)
-        if localSceneCb then localSceneCb("traveling") end
+        if dest == _state.currentPort then
+          if localSceneCb then localSceneCb("already_here") end
+        else
+          actions.travelTo(dest)
+          if localSceneCb then localSceneCb("traveling") end
+        end
       end
     end,
+  }
+end
+
+local function sceneAlreadyHere(state, _actions, localSceneCb)
+  local rows = buildPortRows(state)
+  rows[17] = { text = "Comprador's Report",                          color = AMBER }
+  rows[18] = { text = "",                                            color = AMBER }
+  rows[19] = { text = "Taipan, do you wish to go to:",              color = AMBER }
+  rows[20] = { text = "1) Hong Kong, 2) Shanghai, 3) Nagasaki,",   color = GREEN }
+  rows[21] = { text = "4) Saigon, 5) Manila, 6) Singapore, or",    color = GREEN }
+  rows[22] = { text = "7) Batavia ?",                               color = GREEN }
+  rows[23] = { text = "",                                            color = AMBER }
+  rows[24] = { text = "You're already here, Taipan.",               color = GREEN }
+  return { rows = rows }, {
+    type         = "key",
+    keys         = {},
+    anyKey       = true,
+    _autoAdvance = { 5, "travel" },
+    onKey        = function() if localSceneCb then localSceneCb("travel") end end,
   }
 end
 
@@ -1473,6 +1494,7 @@ function PromptEngine.processState(state, localScene, actions, localSceneCb)
     return sceneBuySellAmount(state, actions, localSceneCb, idx, false)
   end
   if localScene == "travel"       then return sceneTravel(state, actions, localSceneCb) end
+  if localScene == "already_here" then return sceneAlreadyHere(state, actions, localSceneCb) end
   if localScene == "traveling"   then
     -- Inert waiting scene: hold display until server notification arrives
     local rows = buildPortRows(state)

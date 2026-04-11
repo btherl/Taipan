@@ -935,13 +935,8 @@ local function sceneWuBorrow(state, actions, localSceneCb)
       if amt > 0 then
         actions.wuBorrow(math.floor(amt))
       end
-      -- Transition to repay scene if they have debt or just borrowed
-      if (state.debt or 0) > 0 or amt > 0 then
-        if localSceneCb then localSceneCb("wu_repay") end
-      else
-        actions.leaveWu()
-        if localSceneCb then localSceneCb(nil) end
-      end
+      actions.leaveWu()
+      if localSceneCb then localSceneCb(nil) end
       return nil
     end,
   }
@@ -964,21 +959,20 @@ end
 
 local function sceneWuRepay(state, actions, localSceneCb)
   local bodyLines = {
-    { text = "How much do you wish to", color = AMBER },
+    { text = "How much do you wish to repay", color = AMBER },
   }
   return sceneWuLayout(state, bodyLines), {
     type            = "numeric",
-    typePlaceholder = "repay? ",
+    typePlaceholder = "him? ",
     _inputRow       = 20,
-    _buildInputRow  = function(s) return { text = "repay? " .. s, color = AMBER } end,
+    _buildInputRow  = function(s) return { text = "him? " .. s, color = AMBER } end,
     maxDigits       = 9,
     onType = function(text, _s, _a)
       local amt = tonumber(text) or 0
       if amt > 0 then
         actions.wuRepay(math.floor(amt))
       end
-      actions.leaveWu()
-      if localSceneCb then localSceneCb(nil) end
+      if localSceneCb then localSceneCb("wu_borrow") end
       return nil
     end,
   }
@@ -1461,7 +1455,10 @@ function PromptEngine.processState(state, localScene, actions, localSceneCb)
   end
   if state.currentPort == HONG_KONG and state.inWuSession then
     if localScene == "wu_borrow_err" then return sceneWuBorrowErr(state, actions, localSceneCb) end
-    if localScene == "wu_repay" then return sceneWuRepay(state, actions, localSceneCb) end
+    if localScene == "wu_borrow" then return sceneWuBorrow(state, actions, localSceneCb) end
+    if localScene == "wu_repay" or (localScene == nil and (state.debt or 0) > 0) then
+      return sceneWuRepay(state, actions, localSceneCb)
+    end
     return sceneWuBorrow(state, actions, localSceneCb)
   end
   if state.currentPort == HONG_KONG and state.shipOffer and state.shipOffer.upgradeOffer then

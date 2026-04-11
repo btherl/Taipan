@@ -117,6 +117,7 @@ Remotes.ChooseStart.OnServerEvent:Connect(function(player, startChoice, firmName
     state.uiMode = pendingModes[player]
     pendingModes[player] = nil
   end
+  state.wuPending = true
   playerStates[player] = state
   pushState(player)
 end)

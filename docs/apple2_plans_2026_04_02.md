@@ -16,36 +16,35 @@ While at sea, the top line of the bottom 8 typically shows "  Captain's Report" 
 Comprador's Report
 
 Do you have business with Elder Brother
-Wu, the moneylender?
+Wu, the moneylender? _
 -----
 
 Accept a single character response Y or N.
 
 If N, continue to main port screen
 
-If Y:
+If Y, check if player has debt to Wu.  If no, skip to "How much do you wish to borrow?" below.  If yes, then display:
+
+-----
+Comprador's Report
+
+How much do you wish to repay
+him? _
+-----
+
+The cursor accepts up to 9 digits.  Note that it IS possible to overpay him, and overpayments will accrue interest for the player.  This is a bug in the original Apple 2 version, which we will preserve.
 
 -----
 Comprador's Report
 
 How much do you wish to
-borrow?
+borrow? _
 -----
 
 This is a numeric input, limited to 9 digits.  Left arrow deletes the last digit.  Backspace does not work.  So, this is a different input to the one used for Firm name.
 
 The amount entered will be borrowed, subject to existing borrowing rules.
 
-If any amount is outstanding from a *previous* borrowing (not from borrowing just now), then Wu will ask about repayment:
-
------
-Comprador's Report
-
-How much do you wish to
-repay?
------
-
-Again, numeric input.  The amount entered will be repaid.
 
 ## HK Port dialog
 

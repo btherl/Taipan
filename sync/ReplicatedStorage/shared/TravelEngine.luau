@@ -14,7 +14,7 @@ function TravelEngine.timeAdvance(state)
     state.bankBalance = math.floor(state.bankBalance + state.bankBalance * Constants.BANK_INTEREST_RATE)
   end
 
-  if state.debt > 0 then
+  if state.debt ~= 0 then
     state.debt = math.floor(state.debt + state.debt * Constants.DEBT_INTEREST_RATE)
   end
 

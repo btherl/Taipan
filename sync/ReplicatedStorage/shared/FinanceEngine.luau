@@ -55,12 +55,11 @@ function FinanceEngine.canRepay(state)
   return state.debt > 0 and state.cash > 0
 end
 
--- Repay debt. amount must be > 0, <= cash, <= debt.
+-- Repay debt. amount must be > 0 and <= cash. Overpayment allowed: debt may go negative.
 -- Returns true on success, false otherwise (state unchanged on failure).
 function FinanceEngine.repay(state, amount)
   if amount <= 0 then return false end
   if amount > state.cash then return false end
-  if amount > state.debt then return false end
   state.cash = state.cash - amount
   state.debt = state.debt - amount
   return true

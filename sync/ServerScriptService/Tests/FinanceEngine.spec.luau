@@ -145,10 +145,11 @@ return function()
       expect(s.cash).to.equal(100)  -- unchanged
     end)
 
-    it("returns false when amount > debt", function()
+    it("allows overpayment: debt goes negative", function()
       local s = makeState({ cash = 400, debt = 50 })
-      expect(FinanceEngine.repay(s, 51)).to.equal(false)
-      expect(s.debt).to.equal(50)  -- unchanged
+      expect(FinanceEngine.repay(s, 51)).to.equal(true)
+      expect(s.debt).to.equal(-1)
+      expect(s.cash).to.equal(349)
     end)
   end)
 

@@ -928,6 +928,10 @@ local function sceneWuBorrow(state, actions, localSceneCb)
     maxDigits       = 9,
     onType = function(text, _s, _a)
       local amt = tonumber(text) or 0
+      if amt > 0 and amt > 2 * (state.cash or 0) then
+        if localSceneCb then localSceneCb("wu_borrow_err") end
+        return nil
+      end
       if amt > 0 then
         actions.wuBorrow(math.floor(amt))
       end
@@ -940,6 +944,21 @@ local function sceneWuBorrow(state, actions, localSceneCb)
       end
       return nil
     end,
+  }
+end
+
+local function sceneWuBorrowErr(state, _actions, localSceneCb)
+  return sceneWuLayout(state, {
+    { text = "How much do you wish to",             color = AMBER },
+    { text = "borrow?",                             color = AMBER },
+    { text = "",                                    color = AMBER },
+    { text = "He won't loan you so much, Taipan!", color = GREEN },
+  }), {
+    type         = "key",
+    keys         = {},
+    anyKey       = true,
+    _autoAdvance = { 5, "wu_borrow" },
+    onKey        = function() if localSceneCb then localSceneCb("wu_borrow") end end,
   }
 end
 
@@ -1441,6 +1460,7 @@ function PromptEngine.processState(state, localScene, actions, localSceneCb)
     return sceneWuQuestion(state, actions, localSceneCb)
   end
   if state.currentPort == HONG_KONG and state.inWuSession then
+    if localScene == "wu_borrow_err" then return sceneWuBorrowErr(state, actions, localSceneCb) end
     if localScene == "wu_repay" then return sceneWuRepay(state, actions, localSceneCb) end
     return sceneWuBorrow(state, actions, localSceneCb)
   end

@@ -30,7 +30,8 @@ local function pad(s, width)
 end
 
 local function fmt(n)
-  local s = tostring(math.floor(n))
+  local neg = n < 0
+  local s = tostring(math.abs(math.floor(n)))
   local result = ""
   local count = 0
   for i = #s, 1, -1 do
@@ -38,7 +39,7 @@ local function fmt(n)
     result = s:sub(i, i) .. result
     count = count + 1
   end
-  return "$" .. result
+  return neg and ("$-" .. result) or ("$" .. result)
 end
 
 -- Abbreviated good names for the 26-char inner box (Constants.GOOD_NAMES[4] is "General Cargo", too long)
@@ -87,22 +88,26 @@ end
 
 -- Format number without $ prefix: plain comma int under 1M, "X.XX Suffix" above
 local function fmtBig(n)
-  n = math.floor(math.max(0, n))
+  local neg = n < 0
+  n = math.floor(math.abs(n))
+  local result
   if n < 1000000 then
-    local s, result, count = tostring(n), "", 0
+    local s, r, count = tostring(n), "", 0
     for i = #s, 1, -1 do
-      if count > 0 and count % 3 == 0 then result = "," .. result end
-      result = s:sub(i, i) .. result
+      if count > 0 and count % 3 == 0 then r = "," .. r end
+      r = s:sub(i, i) .. r
       count += 1
     end
-    return result
+    result = r
+  else
+    local II = math.floor(math.log(n) / math.log(10) + 1e-9)
+    local IJ = math.floor(II / 3) * 3
+    local disp = string.format("%.2f", n / (10 ^ IJ)):sub(1, 4)
+    if disp:sub(-1) == "." then disp = disp:sub(1, -2) end
+    local suffix = ({"Thousand","Million","Billion","Trillion"})[IJ/3] or "?"
+    result = disp .. " " .. suffix
   end
-  local II = math.floor(math.log(n) / math.log(10) + 1e-9)
-  local IJ = math.floor(II / 3) * 3
-  local disp = string.format("%.2f", n / (10 ^ IJ)):sub(1, 4)
-  if disp:sub(-1) == "." then disp = disp:sub(1, -2) end
-  local suffix = ({"Thousand","Million","Billion","Trillion"})[IJ/3] or "?"
-  return disp .. " " .. suffix
+  return neg and ("-" .. result) or result
 end
 
 -- Ship status: returns (statusText, isInverted)

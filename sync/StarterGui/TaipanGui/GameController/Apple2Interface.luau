@@ -29,11 +29,11 @@ local SERVER_SCENES = {
   end,
   shipUpgrade = function(s)
     local C = require(ReplicatedStorage.shared.Constants)
-    return s.currentPort == C.HONG_KONG and s.shipOffer ~= nil and s.shipOffer.upgradeOffer ~= nil
+    return s.currentPort == C.HONG_KONG and s.shipOffer ~= nil and s.shipOffer.upgradeOffer ~= nil and not s.inWuSession
   end,
   shipGun = function(s)
     local C = require(ReplicatedStorage.shared.Constants)
-    return s.currentPort == C.HONG_KONG and s.shipOffer ~= nil and s.shipOffer.gunOffer ~= nil
+    return s.currentPort == C.HONG_KONG and s.shipOffer ~= nil and s.shipOffer.gunOffer ~= nil and not s.inWuSession
   end,
 }
 

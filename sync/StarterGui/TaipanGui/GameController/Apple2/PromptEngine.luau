@@ -619,22 +619,22 @@ local function sceneCombatLayout(state, actions, localSceneCb)
   local RIGHT_W   = 9
   local col1Width = 40 - RIGHT_W  -- 31 chars for left column
 
-  local function row17()
+  local function row1()
     local left = pad(string.format("   %d ships attacking, Taipan!", total), col1Width)
     return { text = left .. "| We have", color = AMBER }
   end
 
-  local function row18()
+  local function row2()
     local left = pad("Your orders are to:", col1Width)
     -- Right col: "|" + lpad(guns,3) + " guns" = 9 chars total
     return { text = left .. "|" .. lpad(tostring(guns), 3) .. " guns", color = AMBER }
   end
 
-  local function row19()
+  local function row3()
     return { text = string.rep(" ", col1Width) .. "+--------", color = AMBER }
   end
 
-  local function row20()
+  local function row4()
     local label = swLabel .. " (" .. tostring(sw) .. "%)"
     local seg = {
       { text = "Current seaworthiness: ", color = AMBER },
@@ -643,23 +643,17 @@ local function sceneCombatLayout(state, actions, localSceneCb)
     return { segments = seg }
   end
 
-  local function row21()
+  local function row5()
     return { text = "  Ships: [" .. gridStr .. "]", color = GREEN }
   end
 
   local rows = {}
-  rows[17] = row17()
-  rows[18] = row18()
-  rows[19] = row19()
-  rows[20] = row20()
-  rows[21] = row21()
-  for r = 22, 24 do rows[r] = { text = "", color = AMBER } end
-
-  -- Also populate the status screen (rows 1-16)
-  local statusRows = buildPortRows(state)
-  for r = 1, 16 do
-    rows[r] = statusRows[r]
-  end
+  rows[1] = row1()
+  rows[2] = row2()
+  rows[3] = row3()
+  rows[4] = row4()
+  rows[5] = row5()
+  for r = 6, 24 do rows[r] = { text = "", color = AMBER } end
 
   local promptDef = {
     type = "key",

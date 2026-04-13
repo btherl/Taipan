@@ -170,10 +170,11 @@ local function buildPortRows(state)
   local holdSpace     = state.holdSpace or 0
   local overloaded    = holdSpace < 0
 
-  -- Inner helper: warehouse good row 26 chars: left 12 (good+qty) + right 14 (label/value right-justified)
+  -- Inner helper: warehouse good row 26 chars: left 13 (good+qty) + right 13 (label/value right-justified)
+  -- Format: name(7) + qty right-aligned in 6 = exactly 13 chars, supports up to 10000 with gap
   local function whInner(goodIdx, qty, rightText)
     local name = SHORT_GOOD_NAMES[goodIdx]
-    local left = pad("   " .. pad(name, 7) .. " " .. tostring(qty), 13):sub(1, 13)
+    local left = pad(name, 7) .. lpad(tostring(qty), 6)
     local right = lpad(tostring(rightText), 13)
     return (left .. right):sub(1, INNER_W)
   end

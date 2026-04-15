@@ -619,19 +619,35 @@ local function sceneCombatLayout(state, actions, localSceneCb)
   local RIGHT_W   = 9
   local col1Width = 40 - RIGHT_W  -- 31 chars for left column
 
+  local THICK      = "TaipanThickFont"
+  local VERT_CHAR  = string.char(129)  -- │
+  local BOT_L_CHAR = string.char(156)  -- └
+  local BOT_H_CHAR = string.char(154)  -- ─
+
   local function row1()
     local left = pad(string.format("   %d ships attacking, Taipan!", total), col1Width)
-    return { text = left .. "| We have", color = AMBER }
+    return { segments = {
+      { text = left,       color = AMBER },
+      { text = VERT_CHAR,  color = AMBER, font = THICK },
+      { text = " We have", color = AMBER },
+    }}
   end
 
   local function row2()
     local left = pad("Your orders are to:", col1Width)
-    -- Right col: "|" + lpad(guns,3) + " guns" = 9 chars total
-    return { text = left .. "|" .. lpad(tostring(guns), 3) .. " guns", color = AMBER }
+    -- Right col: "│" + lpad(guns,3) + " guns" = 9 chars total
+    return { segments = {
+      { text = left,                               color = AMBER },
+      { text = VERT_CHAR,                          color = AMBER, font = THICK },
+      { text = lpad(tostring(guns), 3) .. " guns", color = AMBER },
+    }}
   end
 
   local function row3()
-    return { text = string.rep(" ", col1Width) .. "+--------", color = AMBER }
+    return { segments = {
+      { text = string.rep(" ", col1Width),                           color = AMBER },
+      { text = BOT_L_CHAR .. string.rep(BOT_H_CHAR, RIGHT_W - 1),   color = AMBER, font = THICK },
+    }}
   end
 
   local function row4()

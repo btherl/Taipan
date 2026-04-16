@@ -228,7 +228,7 @@ The canonical state table is created by `GameState.newGame(startChoice)`. Key fi
 
 **Derived** (recomputed on load/arrival): holdSpace, warehouseUsed, currentPrices, destination.
 
-**Ephemeral** (not persisted): combat, shipOffer, liYuenOfferCost, inWuSession, pendingTutorial.
+**Ephemeral** (not persisted): combat, shipOffer, liYuenOfferCost, inWuSession, pendingTutorial, wuEscortBraves.
 
 ## Engine Modules
 

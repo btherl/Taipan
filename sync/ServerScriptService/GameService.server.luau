@@ -50,6 +50,36 @@ local function makeCompradorNotif(lines, duration)
   return { rows = rows, duration = duration }
 end
 
+-- Injects the three Wu escort notifications into pendingTable when all of
+-- liYuenPending, repairPending are resolved and wuPending is active.
+-- Clears wuEscortBraves after injecting so the scenes only play once.
+-- Safe to call even when conditions are not yet met — does nothing.
+local function injectWuEscortIfReady(state, pendingTable)
+  if not state.wuEscortBraves then return end
+  if state.liYuenPending or state.repairPending then return end
+  if not state.wuPending then return end
+  local N = state.wuEscortBraves
+  state.wuEscortBraves = nil
+  table.insert(pendingTable, makeCompradorNotif({
+    string.format("Elder Brother Wu has sent %d braves", N),
+    "to escort you to the Wu mansion, Taipan.",
+  }, 5))
+  table.insert(pendingTable, makeCompradorNotif({
+    "Elder Brother Wu reminds you of the",
+    "Confucian ideal of personal worthiness,",
+    "and how this applies to paying one's",
+    "debts.",
+  }, 10))
+  table.insert(pendingTable, makeCompradorNotif({
+    "He is reminded of a fabled barbarian",
+    "who came to a bad end, after not caring",
+    "for his obligations.",
+    "",
+    "He hopes no such fate awaits you, his",
+    "friend, Taipan.",
+  }, 10))
+end
+
 local RunService        = game:GetService("RunService")
 local DataStoreService  = game:GetService("DataStoreService")
 local gameStore         = DataStoreService:GetDataStore("TaipanV1")
@@ -253,8 +283,7 @@ Remotes.TravelTo.OnServerEvent:Connect(function(player, destination)
     if destination == Constants.HONG_KONG then
       local braves = FinanceEngine.wuWarningCheck(state)
       if braves then
-        Remotes.Notify:FireClient(player,
-          string.format("ELDER BROTHER WU has heard of your debt! He is sending %d braves to collect!", braves))
+        state.wuEscortBraves = braves
       end
       if FinanceEngine.isBankrupt(state) then
         local loan, repay = FinanceEngine.bankruptcyLoan(state)
@@ -381,6 +410,7 @@ Remotes.TravelTo.OnServerEvent:Connect(function(player, destination)
     savePlayer(player, state)  -- persist immediately so tutorial never repeats on reconnect
   end
 
+  injectWuEscortIfReady(state, pending)
   state.pendingMessages = pending
   pushState(player)
   state.pendingMessages = nil
@@ -469,7 +499,11 @@ Remotes.BuyLiYuenProtection.OnServerEvent:Connect(function(player)
   if not FinanceEngine.buyLiYuenProtection(state) then pushState(player) return end
   state.liYuenPending = false
   Remotes.Notify:FireClient(player, "Li Yuen smiles. You are under his protection.")
+  local msgs = {}
+  injectWuEscortIfReady(state, msgs)
+  state.pendingMessages = #msgs > 0 and msgs or nil
   pushState(player)
+  state.pendingMessages = nil
 end)
 
 Remotes.DeclineLiYuenTribute.OnServerEvent:Connect(function(player)
@@ -478,7 +512,11 @@ Remotes.DeclineLiYuenTribute.OnServerEvent:Connect(function(player)
   if state.currentPort ~= Constants.HONG_KONG then return end
   state.liYuenPending   = false
   state.liYuenOfferCost = nil
+  local msgs = {}
+  injectWuEscortIfReady(state, msgs)
+  state.pendingMessages = #msgs > 0 and msgs or nil
   pushState(player)
+  state.pendingMessages = nil
 end)
 
 Remotes.ConfirmWu.OnServerEvent:Connect(function(player)
@@ -790,7 +828,11 @@ Remotes.ShipRepair.OnServerEvent:Connect(function(player, amount)
   state.shipOffer.repairRate = nil
   state.repairPending = false
   cleanupShipOffer(state)
+  local msgs = {}
+  injectWuEscortIfReady(state, msgs)
+  state.pendingMessages = #msgs > 0 and msgs or nil
   pushState(player)
+  state.pendingMessages = nil
 end)
 
 Remotes.DeclineRepair.OnServerEvent:Connect(function(player)
@@ -800,7 +842,11 @@ Remotes.DeclineRepair.OnServerEvent:Connect(function(player)
   if state.shipOffer then state.shipOffer.repairRate = nil end
   state.repairPending = false
   cleanupShipOffer(state)
+  local msgs = {}
+  injectWuEscortIfReady(state, msgs)
+  state.pendingMessages = #msgs > 0 and msgs or nil
   pushState(player)
+  state.pendingMessages = nil
 end)
 
 Remotes.AcceptUpgrade.OnServerEvent:Connect(function(player)

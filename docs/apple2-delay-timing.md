@@ -4,12 +4,12 @@ The original Applesoft BASIC source uses a busy-wait delay routine entered at th
 different points (lines 92, 94, 96) to produce pauses of different lengths.
 `T = 300` is set at startup.
 
-| Entry point | Iterations | Estimated wall-clock (1 MHz Apple II) |
-|---|---|---|
-| GOSUB 92 | 600 (T + T/2 + T/2) | ~6–12 seconds |
-| GOSUB 94 | 300 (T/2 + T/2) | ~3–6 seconds |
-| GOSUB 96 | 150 (T/2) | ~1.5–3 seconds |
-| GOSUB 5600 | 100 (T/3) | ~1–2 seconds |
+| Entry point | Iterations | Estimated wall-clock (1 MHz Apple II) | What we implement |
+|---|---|---|---|
+| GOSUB 92 | 600 (T + T/2 + T/2) | ~6–12 seconds | 10 seconds |
+| GOSUB 94 | 300 (T/2 + T/2) | ~3–6 seconds | 5 seconds |
+| GOSUB 96 | 150 (T/2) | ~1.5–3 seconds | 2.5 seconds |
+| GOSUB 5600 | 100 (T/3) | ~1–2 seconds | 1.5 seconds |
 
 The 92/94/96 routine aborts early if the player presses any key (`PEEK -16384 > 127`).
 Line 5600 is a separate combat-specific routine — see below.

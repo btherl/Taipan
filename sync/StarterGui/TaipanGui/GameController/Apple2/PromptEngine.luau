@@ -973,6 +973,22 @@ local function sceneWuBorrowErr(state, _actions, localSceneCb)
   }
 end
 
+local function sceneWuRepayErr(state, _actions, localSceneCb)
+  return sceneWuLayout(state, {
+    { text = "How much do you wish to repay", color = AMBER },
+    { text = "him?",                          color = AMBER },
+    { text = "",                              color = AMBER },
+    { text = "Taipan, you only have " .. fmtBig(state.cash or 0), color = GREEN },
+    { text = "in cash.",                      color = GREEN },
+  }), {
+    type         = "key",
+    keys         = {},
+    anyKey       = true,
+    _autoAdvance = { 5, "wu_repay" },
+    onKey        = function() if localSceneCb then localSceneCb("wu_repay") end end,
+  }
+end
+
 local function sceneWuRepay(state, actions, localSceneCb)
   local bodyLines = {
     { text = "How much do you wish to repay", color = AMBER },
@@ -983,9 +999,13 @@ local function sceneWuRepay(state, actions, localSceneCb)
     _inputRow       = 20,
     _buildInputRow  = function(s) return { text = "him? " .. s, color = AMBER } end,
     maxDigits       = 9,
-    onType = function(text, _s, _a)
+    onType = function(text, s, _a)
       local amt = tonumber(text) or 0
       if amt > 0 then
+        if amt > (s.cash or 0) then
+          if localSceneCb then localSceneCb("wu_repay_err") end
+          return nil
+        end
         actions.wuRepay(math.floor(amt))
       end
       if localSceneCb then localSceneCb("wu_borrow") end
@@ -1471,6 +1491,7 @@ function PromptEngine.processState(state, localScene, actions, localSceneCb)
   end
   if state.currentPort == HONG_KONG and state.inWuSession then
     if localScene == "wu_borrow_err" then return sceneWuBorrowErr(state, actions, localSceneCb) end
+    if localScene == "wu_repay_err" then return sceneWuRepayErr(state, actions, localSceneCb) end
     if localScene == "wu_borrow" then return sceneWuBorrow(state, actions, localSceneCb) end
     if localScene == "wu_repay" or (localScene == nil and (state.debt or 0) > 0) then
       return sceneWuRepay(state, actions, localSceneCb)

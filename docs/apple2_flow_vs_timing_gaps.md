@@ -7,8 +7,8 @@ Items present in the timing doc but absent or incomplete in the flow doc.
 
 - [x] 1. Wu Braves Escort Scenes (GOSUB 92)
 - [ ] 2. Notification Content — Acknowledged but never enumerated
-- [ ] 3. Wu Repay — Insufficient Funds — Missing error scene
-- [ ] 4. Buy — Hold Space Overflow — Missing error path
+- [x] 3. Wu Repay — Insufficient Funds — Missing error scene
+- [x] 4. Buy — Hold Space Overflow — Missing error path
 - [ ] 5. Bank Confirmations — Missing notifications
 
 ---

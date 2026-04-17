@@ -384,7 +384,11 @@ local function sceneAtPort(state, actions, localSceneCb)
       elseif key == "T" then
         if localSceneCb then localSceneCb("warehouse") end
       elseif key == "Q" then
-        if localSceneCb then localSceneCb("travel") end
+        if (_state.holdSpace or 0) < 0 then
+          if localSceneCb then localSceneCb("buy_overload_err") end
+        else
+          if localSceneCb then localSceneCb("travel") end
+        end
       elseif key == "R" then
         actions.retire()
       elseif key == "P" then
@@ -771,6 +775,21 @@ local function sceneRepair(state, actions, localSceneCb)
         actions.declineRepair()
       end
     end,
+  }
+end
+
+local function sceneBuyOverloadErr(state, _actions, localSceneCb)
+  local rows = buildPortRows(state)
+  rows[17] = { text = "Comprador's Report",                   color = AMBER }
+  rows[18] = { text = "",                                     color = AMBER }
+  rows[19] = { text = "You're ship is overloaded, Taipan!!", color = GREEN }
+  for r = 20, 24 do rows[r] = { text = "", color = AMBER } end
+  return { rows = rows }, {
+    type         = "key",
+    keys         = {},
+    anyKey       = true,
+    _autoAdvance = { 5, nil },
+    onKey        = function() if localSceneCb then localSceneCb(nil) end end,
   }
 end
 
@@ -1537,6 +1556,7 @@ function PromptEngine.processState(state, localScene, actions, localSceneCb)
     local n = tonumber(localScene:match("(%d+)"))
     return sceneWarehouseStepErr(state, actions, localSceneCb, n)
   end
+  if localScene == "buy_overload_err" then return sceneBuyOverloadErr(state, actions, localSceneCb) end
   if localScene == "buy"  then return sceneBuySell(state, actions, localSceneCb, true) end
   if localScene == "sell" then return sceneBuySell(state, actions, localSceneCb, false) end
   if localScene and localScene:match("^buy_good_(%d)$") then

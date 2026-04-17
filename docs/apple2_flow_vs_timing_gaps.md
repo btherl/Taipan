@@ -100,7 +100,7 @@ add `pendingMessages` for the following ones, using using `makeCaptainNotif` or
 | Ship progression | Repair confirmation; upgrade success/fail; gun purchase success/fail |
 | Gameplay | retire message |
 
-Bankruptcy emergency loan text:
+# Bankruptcy emergency loan text:
 
 -----
 Elder Brother is aware of your plight,
@@ -123,3 +123,36 @@ Very well, Taipan, the game is over!
 
 Refusing the loan ends the game, displaying the final score.
 
+DONE - implemented
+
+# Cash robbery text:
+
+-----
+Bas joss!!
+You've been beaten up and robbed of
+11476 in cash, Taipan!!
+-----
+
+DONE - implemented
+
+# Not enough cash for Li Yuen:
+
+If Li Yuen requests payment, player answers yes, but does not have enough cash, then 
+the following dialog occurs.  Note that the top line appears for 1 second first,
+only afterwards do the bottom two lines appear.
+
+-----
+Taipan, you do not have enough cash!!
+
+Do you want Elder Brother Wu to make up
+the difference for you? _
+-----
+
+If yes:
+
+-----
+Elder Brother has given Li Yuen the
+difference between what he wanted and
+your cash on hand and added the same
+amount to your debt.
+-----

@@ -366,6 +366,14 @@ Remotes.TravelTo.OnServerEvent:Connect(function(player, destination)
           end
         end
       end
+      -- Robbery notification queued after travel events so it appears last
+      if stolen ~= nil then
+        table.insert(pending, makeCaptainNotif({
+          "Bas joss!!",
+          "You've been beaten up and robbed of",
+          string.format("%d in cash, Taipan!!", stolen),
+        }, 5))
+      end
     end
 
 

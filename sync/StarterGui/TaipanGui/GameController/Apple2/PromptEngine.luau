@@ -927,6 +927,30 @@ local function sceneLiYuenDemand(state, actions, localSceneCb)
   }
 end
 
+local function sceneWuBankruptcy(state, actions, _localSceneCb)
+  local offer    = state.bankruptcyPending or { loan = 0, repay = 0 }
+  local loanStr  = fmt(offer.loan)
+  local repayStr = fmt(offer.repay)
+  local lastLine = repayStr .. ".  Are you willing, Taipan? "
+  local bodyLines = {
+    { text = "Elder Brother is aware of your plight,",            color = GREEN },
+    { text = "Taipan.  He is willing to loan you an",             color = GREEN },
+    { text = "additional " .. loanStr .. " if you will pay back", color = GREEN },
+    { text = lastLine,                                             color = GREEN },
+  }
+  return sceneWuLayout(state, bodyLines), {
+    type           = "singlechar",
+    keys           = {"Y", "N"},
+    _inputRow      = 22,
+    _buildInputRow = function(s) return { text = lastLine .. s, color = GREEN } end,
+    onKey = function(key, _s, _a)
+      if key == "Y" then actions.acceptBankruptcyLoan()
+      else               actions.declineBankruptcyLoan()
+      end
+    end,
+  }
+end
+
 local function sceneWuQuestion(state, actions, localSceneCb)
   -- body lines start at row 19; question+cursor on row 20
   local bodyLines = {
@@ -1509,6 +1533,7 @@ function PromptEngine.processState(state, localScene, actions, localSceneCb)
     return sceneWuQuestion(state, actions, localSceneCb)
   end
   if state.currentPort == HONG_KONG and state.inWuSession then
+    if state.bankruptcyPending then return sceneWuBankruptcy(state, actions, localSceneCb) end
     if localScene == "wu_borrow_err" then return sceneWuBorrowErr(state, actions, localSceneCb) end
     if localScene == "wu_repay_err" then return sceneWuRepayErr(state, actions, localSceneCb) end
     if localScene == "wu_borrow" then return sceneWuBorrow(state, actions, localSceneCb) end

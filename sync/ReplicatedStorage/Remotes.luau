@@ -35,6 +35,8 @@ Remotes.BuyLiYuenProtection   = getOrCreate("RemoteEvent", "BuyLiYuenProtection"
 Remotes.DeclineLiYuenTribute  = getOrCreate("RemoteEvent", "DeclineLiYuenTribute")  -- client->server: skip Li Yuen payment
 Remotes.ConfirmWu             = getOrCreate("RemoteEvent", "ConfirmWu")             -- client->server: enter Wu session
 Remotes.DeclineWu             = getOrCreate("RemoteEvent", "DeclineWu")             -- client->server: skip Wu session
+Remotes.AcceptBankruptcyLoan  = getOrCreate("RemoteEvent", "AcceptBankruptcyLoan")  -- client->server: accept Wu emergency loan
+Remotes.DeclineBankruptcyLoan = getOrCreate("RemoteEvent", "DeclineBankruptcyLoan") -- client->server: refuse Wu emergency loan (game over)
 Remotes.Notify                = getOrCreate("RemoteEvent", "Notify")                -- server->client: message string
 
 -- Phase 4: Game over

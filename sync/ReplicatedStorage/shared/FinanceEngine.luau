@@ -23,6 +23,17 @@ function FinanceEngine.isBankrupt(state)
   return true
 end
 
+-- Pre-compute a bankruptcy loan offer: increments bankruptcyCount, generates values,
+-- but does NOT apply loan/repay to cash/debt.  Store the result in state.bankruptcyPending
+-- and present to the player for Y/N acceptance.
+-- Returns loan, repay.
+function FinanceEngine.prepareBankruptcyOffer(state)
+  state.bankruptcyCount = state.bankruptcyCount + 1
+  local loan  = fnR(1500) + 500
+  local repay = fnR(2000) * state.bankruptcyCount + 1500
+  return loan, repay
+end
+
 -- Emergency loan from Wu when completely broke. Modifies state in place.
 -- BASIC lines 1330-1352:
 --   BL% = BL% + 1

@@ -27,6 +27,10 @@ local SERVER_SCENES = {
     local C = require(ReplicatedStorage.shared.Constants)
     return s.currentPort == C.HONG_KONG and s.wuPending == true
   end,
+  bankruptcyPending = function(s)
+    local C = require(ReplicatedStorage.shared.Constants)
+    return s.currentPort == C.HONG_KONG and s.inWuSession and s.bankruptcyPending ~= nil
+  end,
   shipUpgrade = function(s)
     local C = require(ReplicatedStorage.shared.Constants)
     return s.currentPort == C.HONG_KONG and s.shipOffer ~= nil and s.shipOffer.upgradeOffer ~= nil and not s.inWuSession

@@ -471,14 +471,70 @@ Each step is server-driven: the server clears one flag and sets the next, sendin
 
 ## Notification System
 
-Notifications arrive in `state.pendingMessages` as entries with `{rows, duration}`. They are queued and displayed one at a time:
+Notifications are **not handled by PromptEngine**. They flow through a separate pipeline:
 
-1. `adapter.update()` drains `pendingMessages` into `notifQueue`
-2. `playNextNotif()` writes notification rows to rows 17-24 and sets an anyKey prompt
-3. Each notification can be dismissed by keypress or auto-advances after its `duration`
-4. When the queue empties, `localScene` is reset to `nil` and the main scene renders
+1. Server builds entries via `makeCaptainNotif(lines, duration)` or `makeCompradorNotif(lines, duration)` in `GameService.server.luau`
+2. Entries are attached to `state.pendingMessages` as `{ rows = {[17]...[24]}, duration = N }`
+3. `adapter.update()` drains `pendingMessages` into `notifQueue`
+4. `playNextNotif()` writes notification rows to rows 17-24 and sets an anyKey prompt
+5. Each notification can be dismissed by keypress or auto-advances after its `duration`
+6. When the queue empties, `localScene` is reset to `nil` and the main scene renders
 
-This ensures multi-line event messages (storm warnings, robbery reports, etc.) are seen before returning to gameplay.
+**Note:** `Remotes.Notify` (the text-only channel used by Modern UI) is explicitly ignored by the Apple2 adapter (`Apple2Interface.luau` line 186-188). Only `pendingMessages` entries are displayed.
+
+### Report Types
+
+- **Captain's Report** — header on row 17, used for combat narration and storm events
+- **Comprador's Report** — header on row 17, used for financial events, arrival info, and trade events
+
+### Combat Notifications (Captain's Report)
+
+| Event | Message | Duration |
+|---|---|---|
+| Hostile encounter | "Taipan!! [N] hostile ships approaching!!" | 2.5s |
+| Li Yuen protection active | "Good joss!! Li Yuen's fleet let us be!!" | 2.5s |
+| Li Yuen encounter | "Taipan!! Li Yuen's fleet!! [N] ships!!" | 2.5s |
+| No guns to fight | "We have no guns, Taipan!!" | 1s |
+| Firing on enemies | "We're firing on 'em, Taipan!" | 1s |
+| Sunk enemies | "Sunk [N] of the buggers, Taipan!" | 1s |
+| Hit but no sink | "Hit 'em, but didn't sink 'em, Taipan!" | 1s |
+| Enemy ships flee | "[N] ran away, Taipan!" | 1s |
+| Victory + booty | "We got 'em all, Taipan!!" / "We've captured some booty worth $[N]!!" | 3s |
+| Run — escaped | "We got away from 'em, Taipan!!" | 2.5s |
+| Run — failed | "Can't lose 'em!!" | 1s |
+| Run — partial escape | "But we escaped from [N] of 'em, Taipan!" | 1s |
+| Throw — nothing | "There's nothing there, Taipan!" | 1s |
+| Throw — success | "Threw [N] overboard. Let's hope we lose 'em, Taipan!" | 1s |
+| Enemy hits ship | "We've been hit, Taipan!!" | 1s |
+| Enemy destroys gun | "The buggers hit a gun, Taipan!!" | 1s |
+| Ship sinks (combat) | "The buggers got us, Taipan!!!" | 1s |
+| Li Yuen intervention | "Li Yuen's fleet drove them off!!" | 2.5s |
+
+### Storm Notifications (Captain's Report)
+
+| Event | Message | Duration |
+|---|---|---|
+| Storm encountered | "Storm, Taipan!!" | 5s |
+| Severe storm | "I think we're going down!!" | 5s |
+| Ship sinks (storm) | "We're going down, Taipan!!" | 5s |
+| Storm survived | "We made it!!" | 5s |
+| Blown off course | "We've been blown off course to [PORT]!" | 5s |
+
+### Sea/Arrival Events (Comprador's Report)
+
+| Event | Message | Duration |
+|---|---|---|
+| Arrive at port | "Arriving at [PORT]..." | 2.5s |
+| Price change | "Taipan!! The price of [GOOD] has [risen/dropped] to [N]!!" | 5s |
+| Li Yuen warning | "Li Yuen wishes you to reconsider!..." | 5s |
+
+### Wu/Finance Notifications (Comprador's Report)
+
+| Event | Message | Duration |
+|---|---|---|
+| Wu escort scene 1 | "Elder Brother Wu has sent [N] braves to escort you..." | 5s |
+| Wu escort scene 2 | "Elder Brother Wu reminds you of the Confucian ideal..." | 10s |
+| Wu escort scene 3 | "He is reminded of a fabled barbarian..." | 10s |
 
 ---
 

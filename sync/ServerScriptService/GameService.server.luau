@@ -285,11 +285,6 @@ Remotes.TravelTo.OnServerEvent:Connect(function(player, destination)
       if braves then
         state.wuEscortBraves = braves
       end
-      if FinanceEngine.isBankrupt(state) then
-        local loan, repay = FinanceEngine.bankruptcyLoan(state)
-        Remotes.Notify:FireClient(player,
-          string.format("WU: You have nothing! I will give you $%d... but you owe me $%d!", loan, repay))
-      end
       if state.liYuenProtection == 0 and state.cash > 0 then
         state.liYuenOfferCost = FinanceEngine.liYuenProtectionCost(state)
         state.liYuenPending   = true
@@ -525,6 +520,10 @@ Remotes.ConfirmWu.OnServerEvent:Connect(function(player)
   if state.currentPort ~= Constants.HONG_KONG then return end
   state.wuPending   = false
   state.inWuSession = true
+  if FinanceEngine.isBankrupt(state) then
+    local loan, repay = FinanceEngine.prepareBankruptcyOffer(state)
+    state.bankruptcyPending = { loan = loan, repay = repay }
+  end
   pushState(player)
 end)
 
@@ -924,6 +923,26 @@ end)
 Remotes.QuitGame.OnServerEvent:Connect(function(player)
   local state = playerStates[player]
   if type(state) ~= "table" or state.gameOver then return end
+  setGameOver(state, "quit")
+  pushState(player)
+end)
+
+Remotes.AcceptBankruptcyLoan.OnServerEvent:Connect(function(player)
+  local state = playerStates[player]
+  if type(state) ~= "table" then return end
+  if not state.bankruptcyPending then return end
+  local offer = state.bankruptcyPending
+  state.bankruptcyPending = nil
+  state.cash = state.cash + offer.loan
+  state.debt = state.debt + offer.repay
+  pushState(player)
+end)
+
+Remotes.DeclineBankruptcyLoan.OnServerEvent:Connect(function(player)
+  local state = playerStates[player]
+  if type(state) ~= "table" then return end
+  if not state.bankruptcyPending then return end
+  state.bankruptcyPending = nil
   setGameOver(state, "quit")
   pushState(player)
 end)

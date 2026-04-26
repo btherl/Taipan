@@ -81,4 +81,10 @@ How much, Taipan? _
 If no cargo is available, line 4 changes to:
 There's nothing there, Taipan!
 
+If cargo is available and thrown, we show on line 4:
+
+Let's hope we lose 'em, Taipan!
+
+Followed by run success/failure message, eg "Can't lose 'em!!"
+
 Then it continues to "They're firing on us, Taipan!" on line 4

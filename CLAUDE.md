@@ -322,6 +322,14 @@ Despite intuition, `execute_luau` executes in the **client context** during Play
 - **Can** connect `RemoteEvent.OnClientEvent` to capture server responses
 - **Cannot** directly read server-side local variables (e.g. `playerStates`)
 
+### Luau type gotcha - string vs integer
+
+It's easy to miss how luau treates integers and integer-like strings.
+For example, when iterating over an array with indices, integer 5 and string "5" are not equal,
+and the loop may simply fail because we assume it's one or ther other.
+
+Best practice is to convert the index to the expected type before checking its value.
+
 ### State Verification Pattern
 
 To read current game state, fire `RequestStateUpdate` and capture the `StateUpdate` response:

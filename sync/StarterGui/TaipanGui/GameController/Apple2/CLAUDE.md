@@ -27,7 +27,7 @@ Use `makeCaptainNotif` for everything else that needs a full Captain's Report bl
 
 ```
 Row 1:  "   N ships attacking, Taipan!   | We have"
-Row 2:  "Your orders are to:             |  N guns"
+Row 2:  "Your orders are to: Fight       |  N guns"  <- shows current selection (Fight/Run/Throw cargo) once chosen
 Row 3:  "                                └────────"
 Row 4:  "Current seaworthiness: Perfect (100%)"   ← combat notifs overwrite here
 Row 5:  "  Ships: [##########]"

@@ -602,7 +602,7 @@ local function sceneQuitConfirm(_state, actions, localSceneCb)
   }
 end
 
-local function sceneCombatLayout(state, actions, localSceneCb)
+local function sceneCombatLayout(state, actions, localSceneCb, combatSelection)
   local combat  = state.combat or {}
   local total   = combat.enemyTotal or 0
   local grid    = combat.grid or {}
@@ -638,8 +638,12 @@ local function sceneCombatLayout(state, actions, localSceneCb)
   end
 
   local function row2()
-    local left = pad("Your orders are to:", col1Width)
-    -- Right col: "│" + lpad(guns,3) + " guns" = 9 chars total
+    local label = "Your orders are to:"
+    local sel   = combatSelection and combatSelection.current
+    if sel then
+      label = label .. " " .. sel
+    end
+    local left = pad(label, col1Width)
     return { segments = {
       { text = left,                               color = AMBER },
       { text = VERT_CHAR,                          color = AMBER, font = THICK },
@@ -680,9 +684,14 @@ local function sceneCombatLayout(state, actions, localSceneCb)
     keys = { "F", "R", "T" },
     label = "(F)ight  (R)un  (T)hrow",
     onKey = function(key, _state, _actions)
-      if key == "F" then actions.combatFight()
-      elseif key == "R" then actions.combatRun()
+      if key == "F" then
+        if combatSelection and combatSelection.set then combatSelection.set("Fight") end
+        actions.combatFight()
+      elseif key == "R" then
+        if combatSelection and combatSelection.set then combatSelection.set("Run") end
+        actions.combatRun()
       elseif key == "T" then
+        if combatSelection and combatSelection.set then combatSelection.set("Throw cargo") end
         if localSceneCb then localSceneCb("combat_throw_good") end
       end
     end,
@@ -1497,7 +1506,7 @@ local function sceneFinalStatus(state, actions, _localSceneCb)
   }
 end
 
-function PromptEngine.processState(state, localScene, actions, localSceneCb)
+function PromptEngine.processState(state, localScene, actions, localSceneCb, combatSelection)
   if state.gameOver then
     if state.gameOverReason == "retired" then
       if localScene == "final_status" then
@@ -1515,7 +1524,7 @@ function PromptEngine.processState(state, localScene, actions, localSceneCb)
       local idx = tonumber(localScene:match("(%d)$"))
       return sceneCombatThrowAmount(state, actions, localSceneCb, idx)
     end
-    return sceneCombatLayout(state, actions, localSceneCb)
+    return sceneCombatLayout(state, actions, localSceneCb, combatSelection)
   end
   if state.currentPort == HONG_KONG and state.liYuenPending then
     return sceneLiYuenDemand(state, actions, localSceneCb)

@@ -49,6 +49,7 @@ function Apple2Interface.new(screenGui, actions)
   local ki      = KeyInput.new(screenGui)
 
   local lastState  = nil
+  local selectedCombatAction = nil  -- "Fight" | "Run" | "Throw cargo" | nil; persists during combat, cleared when combat ends
   local localScene = nil  -- nil | "buy" | "sell" | "buy_good_N" | "sell_good_N" |
                           --       "travel" | "warehouse" | "wh_to" | "wh_from" |
                           --       "wh_to_N" | "wh_from_N" | "bank" | "bank_withdraw" |
@@ -113,7 +114,14 @@ function Apple2Interface.new(screenGui, actions)
         -- Local scene transition: set scene, re-render without waiting for StateUpdate
         localScene = newScene
         render(lastState, localScene)
-      end
+      end,
+      {
+        current = selectedCombatAction,
+        set = function(newAction)
+          selectedCombatAction = newAction
+          render(lastState, localScene)
+        end,
+      }
     )
 
     if lines.rows then
@@ -159,6 +167,10 @@ function Apple2Interface.new(screenGui, actions)
 
   function adapter.update(state)
     lastState = state
+
+    if state.combat == nil then
+      selectedCombatAction = nil
+    end
 
     -- Drain any pendingMessages from the state update into the queue
     if type(state.pendingMessages) == "table" then

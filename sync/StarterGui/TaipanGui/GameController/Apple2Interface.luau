@@ -88,10 +88,11 @@ function Apple2Interface.new(screenGui, actions)
     notifGen += 1
     local myGen = notifGen
     local entry = table.remove(notifQueue, 1)
-    -- Write rows 17–24 from entry; blank any unspecified rows
-    for r = 17, 24 do
-      local rows_r = entry.rows[r] or entry.rows[tostring(r)]
-      term.showInputAt(r, rows_r or { text = "", color = GREEN })
+    for r, rowDef in pairs(entry.rows) do
+      local rNum = tonumber(r)
+      if rNum then
+        term.showInputAt(rNum, rowDef)
+      end
     end
     -- Any keypress skips; task.delay auto-advances after duration
     ki.setPrompt({

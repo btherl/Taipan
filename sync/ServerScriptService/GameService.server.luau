@@ -20,13 +20,14 @@ local Remotes     = require(ReplicatedStorage.Remotes)
 -- Colour used in Apple2 notification rows (sent to client via RemoteEvent)
 local AMBER_S = Color3.fromRGB(200, 180, 80)
 
--- Build a pendingMessages entry in Captain's Report format.
+-- Build a pendingMessages entry for the lower 17-24 lines of the screen.
+-- title: Shown on line 17
 -- lines: array of content strings starting at row 19.
 -- duration: seconds the client displays this entry.
-local function makeCaptainNotif(lines, duration)
+local function makeLowerNotif(title, lines, duration)
   local rows = {}
-  rows[17] = { text = "  Captain's Report", color = AMBER_S }
-  rows[18] = { text = "",                   color = AMBER_S }
+  rows[17] = { text = title, color = AMBER_S }
+  rows[18] = { text = "",    color = AMBER_S }
   for i, line in ipairs(lines) do
     rows[18 + i] = { text = line, color = AMBER_S }
   end
@@ -37,16 +38,20 @@ local function makeCaptainNotif(lines, duration)
 end
 
 -- Build a pendingMessages entry in Comprador's Report format.
+local function makeCaptainNotif(lines, duration)
+  return makeLowerNotif("  Captain's Report", lines, duration)
+end
+
+-- Build a pendingMessages entry in Comprador's Report format.
 local function makeCompradorNotif(lines, duration)
+  return makeLowerNotif("Comprador's Report", lines, duration)
+end
+
+-- Build a pendingMessages entry for messages displayed during combat.
+-- This writes to line 4 only, where combat messages display
+local function makeCombatNotif(line, duration)
   local rows = {}
-  rows[17] = { text = "Comprador's Report", color = AMBER_S }
-  rows[18] = { text = "",                   color = AMBER_S }
-  for i, line in ipairs(lines) do
-    rows[18 + i] = { text = line, color = AMBER_S }
-  end
-  for r = 17, 24 do
-    if not rows[r] then rows[r] = { text = "", color = AMBER_S } end
-  end
+  rows[4] = { text = line, color = AMBER_S }
   return { rows = rows, duration = duration }
 end
 
@@ -633,19 +638,19 @@ local function applyEnemyFire(player, state, combat, pending)
   local fireResult = CombatEngine.enemyFire(state, combat)
   if fireResult.gunDestroyed then
     Remotes.Notify:FireClient(player, "The buggers hit a gun, Taipan!!")
-    table.insert(pending, makeCaptainNotif({ "The buggers hit a gun, Taipan!!" }, 2))
+    table.insert(pending, makeCombatNotif("The buggers hit a gun, Taipan!!", 2))
   end
   Remotes.Notify:FireClient(player, "We've been hit, Taipan!!")
-  table.insert(pending, makeCaptainNotif({ "We've been hit, Taipan!!" }, 2))
+  table.insert(pending, makeCombatNotif("We've been hit, Taipan!!", 2))
   if fireResult.sunk then
     Remotes.Notify:FireClient(player, "The buggers got us, Taipan!!! It's all over!!!")
-    table.insert(pending, makeCaptainNotif({ "The buggers got us, Taipan!!! It's all over!!!" }, 5))
+    table.insert(pending, makeCombatNotif("The buggers got us, Taipan!!! It's all over!!!", 5))
     setGameOver(state, "sunk")
     return true
   end
   if fireResult.liYuenIntervened then
     Remotes.Notify:FireClient(player, "Li Yuen's fleet drove them off!!")
-    table.insert(pending, makeCaptainNotif({ "Li Yuen's fleet drove them off!!" }, 3))
+    table.insert(pending, makeCombatNotif("Li Yuen's fleet drove them off!!", 3))
     state.combat = nil
     return true
   end
@@ -663,7 +668,7 @@ Remotes.CombatFight.OnServerEvent:Connect(function(player)
   if result.noGuns then
     combat.lastCommand = 2
     Remotes.Notify:FireClient(player, "We have no guns, Taipan!!")
-    table.insert(pending, makeCaptainNotif({ "We have no guns, Taipan!!" }, 2))
+    table.insert(pending, makeCombatNotif("We have no guns, Taipan!!", 2))
     local combatEnded = applyEnemyFire(player, state, combat, pending)
     if combatEnded and not state.gameOver then appendArrivalPending(state, pending) end
     state.pendingMessages = pending; pushState(player); state.pendingMessages = nil
@@ -671,36 +676,36 @@ Remotes.CombatFight.OnServerEvent:Connect(function(player)
   end
 
   -- Fight narration sequence
-  table.insert(pending, makeCaptainNotif({ "Aye, we'll fight 'em, Taipan!" }, 1))
-  table.insert(pending, makeCaptainNotif({ "We're firing on 'em, Taipan!" }, 1))
+  table.insert(pending, makeCombatNotif("Aye, we'll fight 'em, Taipan!", 1))
+  table.insert(pending, makeCombatNotif("We're firing on 'em, Taipan!", 1))
 
   -- Result message
   if result.sunk > 0 then
     if combat.outcome == "victory" then
-      table.insert(pending, makeCaptainNotif({ "We got 'em all, Taipan!!" }, 3))
+      table.insert(pending, makeCombatNotif("We got 'em all, Taipan!!", 3))
     else
-      table.insert(pending, makeCaptainNotif({
-        string.format("Sunk %d of the buggers, Taipan!", result.sunk),
-      }, 2))
+      table.insert(pending, makeCombatNotif(
+        string.format("Sunk %d of the buggers, Taipan!", result.sunk), 2))
     end
     Remotes.Notify:FireClient(player, string.format("Sunk %d of the buggers, Taipan!", result.sunk))
   else
-    table.insert(pending, makeCaptainNotif({ "Hit 'em, but didn't sink 'em, Taipan!" }, 2))
+    table.insert(pending, makeCombatNotif("Hit 'em, but didn't sink 'em, Taipan!", 2))
     Remotes.Notify:FireClient(player, "Hit 'em, but didn't sink 'em, Taipan!")
   end
   if result.fleeCount > 0 then
-    table.insert(pending, makeCaptainNotif({
-      string.format("%d ran away, Taipan!", result.fleeCount),
-    }, 2))
+    table.insert(pending, makeCombatNotif(
+      string.format("%d ran away, Taipan!", result.fleeCount), 2))
     Remotes.Notify:FireClient(player, string.format("%d ran away, Taipan!", result.fleeCount))
   end
 
   if combat.outcome == "victory" then
     CombatEngine.applyBooty(state, combat)
-    table.insert(pending, makeCaptainNotif({
-      "We've captured some booty",
-      string.format("It's worth %d!", combat.booty),
-    }, 5))
+    -- FIXME: Display status screen here, before booty notification
+    table.insert(pending, makeLowerNotif(
+      "" -- Blank title
+      , { "We've captured some booty", string.format("It's worth %d!", combat.booty) }
+      , 5)
+    )
     Remotes.Notify:FireClient(player,
       string.format("We've captured some booty worth $%d!!", combat.booty))
     state.combat = nil
@@ -736,7 +741,7 @@ Remotes.CombatRun.OnServerEvent:Connect(function(player)
   local escaped = CombatEngine.attemptRun(combat)
   if escaped then
     Remotes.Notify:FireClient(player, "We got away from 'em, Taipan!!")
-    table.insert(pending, makeCaptainNotif({ "We got away from 'em, Taipan!!" }, 3))
+    table.insert(pending, makeCombatNotif("We got away from 'em, Taipan!!", 3))
     state.combat = nil
     postCombatStorm(player, state, pending)
     if not state.gameOver then appendArrivalPending(state, pending) end
@@ -745,14 +750,13 @@ Remotes.CombatRun.OnServerEvent:Connect(function(player)
   end
 
   Remotes.Notify:FireClient(player, "Can't lose 'em!!")
-  table.insert(pending, makeCaptainNotif({ "Can't lose 'em!!" }, 2))
+  table.insert(pending, makeCombatNotif("Can't lose 'em!!", 2))
   local partialCount = CombatEngine.partialEscape(combat)
   if partialCount > 0 then
     Remotes.Notify:FireClient(player,
       string.format("But we escaped from %d of 'em, Taipan!", partialCount))
-    table.insert(pending, makeCaptainNotif({
-      string.format("But we escaped from %d of 'em, Taipan!", partialCount),
-    }, 2))
+    table.insert(pending, makeCombatNotif(
+      string.format("But we escaped from %d of 'em, Taipan!", partialCount), 2))
   end
 
   local combatEnded = applyEnemyFire(player, state, combat, pending)
@@ -771,22 +775,20 @@ Remotes.CombatThrow.OnServerEvent:Connect(function(player, goodIndex, qty)
   local thrown = CombatEngine.throwCargo(state, combat, goodIndex, qty)
   if thrown == 0 then
     Remotes.Notify:FireClient(player, "There's nothing there, Taipan!")
-    table.insert(pending, makeCaptainNotif({ "There's nothing there, Taipan!" }, 2))
+    table.insert(pending, makeCombatNotif("There's nothing there, Taipan!", 2))
     state.pendingMessages = pending; pushState(player); state.pendingMessages = nil
     return
   end
   Remotes.Notify:FireClient(player,
     string.format("Threw %d overboard. Let's hope we lose 'em, Taipan!", thrown))
-  table.insert(pending, makeCaptainNotif({
-    string.format("Threw %d overboard.", thrown),
-    "Let's hope we lose 'em, Taipan!",
-  }, 2))
+  table.insert(pending, makeCombatNotif(
+    string.format("Threw %d overboard. Let's hope we lose 'em, Taipan!", thrown), 2))
 
   CombatEngine.updateRunMomentum(combat)
   local escaped = CombatEngine.attemptRun(combat)
   if escaped then
     Remotes.Notify:FireClient(player, "We got away from 'em, Taipan!!")
-    table.insert(pending, makeCaptainNotif({ "We got away from 'em, Taipan!!" }, 3))
+    table.insert(pending, makeCombatNotif("We got away from 'em, Taipan!!", 3))
     state.combat = nil
     postCombatStorm(player, state, pending)
     if not state.gameOver then appendArrivalPending(state, pending) end
@@ -795,14 +797,13 @@ Remotes.CombatThrow.OnServerEvent:Connect(function(player, goodIndex, qty)
   end
 
   Remotes.Notify:FireClient(player, "Can't lose 'em!!")
-  table.insert(pending, makeCaptainNotif({ "Can't lose 'em!!" }, 2))
+  table.insert(pending, makeCombatNotif("Can't lose 'em!!", 2))
   local partialCount = CombatEngine.partialEscape(combat)
   if partialCount > 0 then
     Remotes.Notify:FireClient(player,
       string.format("But we escaped from %d of 'em, Taipan!", partialCount))
-    table.insert(pending, makeCaptainNotif({
-      string.format("But we escaped from %d of 'em, Taipan!", partialCount),
-    }, 2))
+    table.insert(pending, makeCombatNotif(
+      string.format("But we escaped from %d of 'em, Taipan!", partialCount), 2))
   end
 
   local combatEnded = applyEnemyFire(player, state, combat, pending)

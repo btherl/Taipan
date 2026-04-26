@@ -2,7 +2,7 @@
 
 This document defines the foundational engineering standards and workflows for the Taipan! Roblox project. Adherence to these rules is mandatory.
 
-Also read CLAUDE.md too
+Also read CLAUDE.md too, in this folder and in every folder under `sync`
 
 ## 1. Core Principles
 

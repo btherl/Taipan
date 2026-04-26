@@ -4,7 +4,8 @@ local PromptEngine = require(game:GetService("StarterGui").TaipanGui.GameControl
 local function mockActions()
   return {
     combatFight = function() end, combatRun = function() end,
-    combatThrow = function() end, retire = function() end,
+    combatThrow = function() end, combatNoCommand = function() end,
+    retire = function() end,
     restartGame = function() end, quitGame    = function() end,
     buyGoods = function() end, sellGoods = function() end,
     travelTo = function() end, bankDeposit = function() end,

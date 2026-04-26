@@ -43,9 +43,10 @@ Remotes.Notify                = getOrCreate("RemoteEvent", "Notify")            
 Remotes.RestartGame = getOrCreate("RemoteEvent", "RestartGame")  -- client->server: restart after game over
 
 -- Phase 5: Combat
-Remotes.CombatFight = getOrCreate("RemoteEvent", "CombatFight") -- client->server: fight action
-Remotes.CombatRun   = getOrCreate("RemoteEvent", "CombatRun")   -- client->server: run action
-Remotes.CombatThrow = getOrCreate("RemoteEvent", "CombatThrow") -- client->server: goodIndex, qty
+Remotes.CombatFight     = getOrCreate("RemoteEvent", "CombatFight")     -- client->server: fight action
+Remotes.CombatRun       = getOrCreate("RemoteEvent", "CombatRun")       -- client->server: run action
+Remotes.CombatThrow     = getOrCreate("RemoteEvent", "CombatThrow")     -- client->server: goodIndex, qty
+Remotes.CombatNoCommand = getOrCreate("RemoteEvent", "CombatNoCommand") -- client->server: no command queued, enemy fires unopposed
 
 -- Phase 6: Ship progression + retirement
 Remotes.ShipRepair     = getOrCreate("RemoteEvent", "ShipRepair")     -- amount (cash to spend)

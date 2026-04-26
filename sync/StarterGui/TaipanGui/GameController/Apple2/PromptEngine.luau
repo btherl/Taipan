@@ -686,20 +686,17 @@ local function sceneCombatLayout(state, actions, localSceneCb, combatSelection)
     onKey = function(key, _state, _actions)
       if key == "F" then
         if combatSelection and combatSelection.set then combatSelection.set("Fight") end
-        actions.combatFight()
       elseif key == "R" then
         if combatSelection and combatSelection.set then combatSelection.set("Run") end
-        actions.combatRun()
       elseif key == "T" then
         if combatSelection and combatSelection.set then combatSelection.set("Throw cargo") end
-        if localSceneCb then localSceneCb("combat_throw_good") end
       end
     end,
   }
   return { rows = rows }, promptDef
 end
 
-local function sceneCombatThrowGood(state, actions, localSceneCb)
+local function sceneCombatThrowGood(state, actions, localSceneCb, combatSelection)
   local lines = {
     { text = "Throw which cargo overboard?", color = AMBER },
   }
@@ -715,7 +712,9 @@ local function sceneCombatThrowGood(state, actions, localSceneCb)
     label = "sPices Silk Arms General Cancel",
     onKey = function(key, _s, _a)
       if key == "C" then
+        if combatSelection and combatSelection.set then combatSelection.set(nil) end
         if localSceneCb then localSceneCb(nil) end
+        if actions.combatNoCommand then actions.combatNoCommand() end
       else
         local idx = GOOD_KEY_MAP[key] or tonumber(key)
         if idx and idx >= 1 and idx <= 4 then
@@ -730,7 +729,7 @@ local function sceneCombatThrowGood(state, actions, localSceneCb)
   }
 end
 
-local function sceneCombatThrowAmount(state, actions, localSceneCb, goodIdx)
+local function sceneCombatThrowAmount(state, actions, localSceneCb, goodIdx, combatSelection)
   local goodName = GOOD_NAMES[goodIdx]
   local maxQty   = state.shipCargo[goodIdx] or 0
   local lines = {
@@ -742,7 +741,9 @@ local function sceneCombatThrowAmount(state, actions, localSceneCb, goodIdx)
     maxLength = 8,
     onType = function(text, _s, _a)
       if text == "" then
-        if localSceneCb then localSceneCb("combat_throw_good") end
+        if combatSelection and combatSelection.set then combatSelection.set(nil) end
+        if localSceneCb then localSceneCb(nil) end
+        if actions.combatNoCommand then actions.combatNoCommand() end
         return nil
       end
       local qty
@@ -750,7 +751,9 @@ local function sceneCombatThrowAmount(state, actions, localSceneCb, goodIdx)
       else qty = tonumber(text) end
       if not qty or qty < 0 then return "Enter a positive number or A for all" end
       if qty == 0 then
-        if localSceneCb then localSceneCb("combat_throw_good") end
+        if combatSelection and combatSelection.set then combatSelection.set(nil) end
+        if localSceneCb then localSceneCb(nil) end
+        if actions.combatNoCommand then actions.combatNoCommand() end
         return nil
       end
       if qty > maxQty then return string.format("Only %d available", maxQty) end
@@ -1518,11 +1521,11 @@ function PromptEngine.processState(state, localScene, actions, localSceneCb, com
   end
   if state.combat ~= nil then
     if localScene == "combat_throw_good" then
-      return sceneCombatThrowGood(state, actions, localSceneCb)
+      return sceneCombatThrowGood(state, actions, localSceneCb, combatSelection)
     end
     if localScene and localScene:match("^combat_throw_amt_(%d)$") then
       local idx = tonumber(localScene:match("(%d)$"))
-      return sceneCombatThrowAmount(state, actions, localSceneCb, idx)
+      return sceneCombatThrowAmount(state, actions, localSceneCb, idx, combatSelection)
     end
     return sceneCombatLayout(state, actions, localSceneCb, combatSelection)
   end

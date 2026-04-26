@@ -10,6 +10,7 @@ local KeyInput     = require(script.Parent.Apple2.KeyInput)
 local PromptEngine = require(script.Parent.Apple2.PromptEngine)
 
 local RED   = Color3.fromRGB(220, 80, 80)
+local AMBER = Color3.fromRGB(200, 180, 80)
 
 -- Server-driven scenes that override any localScene
 local SERVER_SCENES = {
@@ -48,8 +49,16 @@ function Apple2Interface.new(screenGui, actions)
   local glitch  = GlitchLayer.new(term._gui)
   local ki      = KeyInput.new(screenGui)
 
+  local PHASE_WAIT_S = 2
+
   local lastState  = nil
-  local selectedCombatAction = nil  -- "Fight" | "Run" | "Throw cargo" | nil; persists during combat, cleared when combat ends
+  local queuedCommand = nil  -- "Fight" | "Run" | "Throw cargo" | nil; persists during combat, cleared when combat ends
+  local roundGen   = 0
+  local roundPhase = nil
+  -- "wait_a"    -- silent 2s wait at round start; F/R/T sets queue for this round
+  -- "wait_b"    -- 2s wait with "Taipan, what shall we do??" prompt on row 4
+  -- "executing" -- phase C dispatched; awaiting server notifs to drain
+  -- nil         -- between rounds (or combat inactive)
   local localScene = nil  -- nil | "buy" | "sell" | "buy_good_N" | "sell_good_N" |
                           --       "travel" | "warehouse" | "wh_to" | "wh_from" |
                           --       "wh_to_N" | "wh_from_N" | "bank" | "bank_withdraw" |
@@ -72,6 +81,8 @@ function Apple2Interface.new(screenGui, actions)
   -- Forward declarations for mutual recursion between advanceNotif and playNextNotif
   local render
   local playNextNotif
+  local startRoundIfCombat
+  local executePhaseC
 
   local function advanceNotif(gen)
     if gen ~= notifGen then return end  -- stale callback, discard
@@ -81,7 +92,9 @@ function Apple2Interface.new(screenGui, actions)
     else
       -- Notifications only fire on state transitions (travel/combat); old local scenes are invalid.
       localScene = nil
+      roundPhase = nil
       render(lastState, localScene)
+      startRoundIfCombat()
     end
   end
 
@@ -95,13 +108,25 @@ function Apple2Interface.new(screenGui, actions)
         term.showInputAt(rNum, rowDef)
       end
     end
-    -- Any keypress skips; task.delay auto-advances after duration
-    ki.setPrompt({
-      type   = "key",
-      keys   = {},
-      anyKey = true,
-      onKey  = function() advanceNotif(myGen) end,
-    }, lastState, actions)
+    -- Detect combat-mode notif: state.combat ~= nil AND entry.rows has only row 4 set.
+    -- For these, leave the F/R/T prompt active so the user can update the queued command mid-notif.
+    local isCombatNotif = false
+    if lastState and lastState.combat ~= nil then
+      local rowCount = 0
+      for _ in pairs(entry.rows) do rowCount += 1 end
+      if rowCount == 1 and entry.rows[4] ~= nil then
+        isCombatNotif = true
+      end
+    end
+    if not isCombatNotif then
+      -- Any keypress skips; task.delay auto-advances after duration
+      ki.setPrompt({
+        type   = "key",
+        keys   = {},
+        anyKey = true,
+        onKey  = function() advanceNotif(myGen) end,
+      }, lastState, actions)
+    end
     task.delay(entry.duration, function() advanceNotif(myGen) end)
   end
 
@@ -116,9 +141,9 @@ function Apple2Interface.new(screenGui, actions)
         render(lastState, localScene)
       end,
       {
-        current = selectedCombatAction,
+        current = queuedCommand,
         set = function(newAction)
-          selectedCombatAction = newAction
+          queuedCommand = newAction
           render(lastState, localScene)
         end,
       }
@@ -163,13 +188,59 @@ function Apple2Interface.new(screenGui, actions)
     end
   end
 
+  startRoundIfCombat = function()
+    if not (lastState and lastState.combat) then return end
+    if roundPhase ~= nil then return end
+    if #notifQueue > 0 then return end
+    roundGen += 1
+    local myGen = roundGen
+    roundPhase = "wait_a"
+    task.delay(PHASE_WAIT_S, function()
+      if myGen ~= roundGen then return end
+      if not (lastState and lastState.combat) then roundPhase = nil; return end
+      if queuedCommand == nil then
+        roundPhase = "wait_b"
+        term.showInputAt(4, { text = "Taipan, what shall we do??", color = AMBER })
+        task.delay(PHASE_WAIT_S, function()
+          if myGen ~= roundGen then return end
+          if not (lastState and lastState.combat) then roundPhase = nil; return end
+          executePhaseC()
+        end)
+      else
+        executePhaseC()
+      end
+    end)
+  end
+
+  executePhaseC = function()
+    roundPhase = "executing"
+    local cmd = queuedCommand
+    if cmd == "Throw cargo" then
+      roundPhase = nil  -- transitioning to throw subscene; no async round work in flight
+      localScene = "combat_throw_good"
+      render(lastState, localScene)
+      return
+    end
+    -- non-throw branches: restore row 4 to seaworthiness via re-render, then fire action
+    render(lastState, localScene)
+    if cmd == nil then
+      actions.combatNoCommand()
+    elseif cmd == "Fight" then
+      actions.combatFight()
+    elseif cmd == "Run" then
+      actions.combatRun()
+    end
+  end
+
   local adapter = {}
 
   function adapter.update(state)
     lastState = state
 
     if state.combat == nil then
-      selectedCombatAction = nil
+      queuedCommand = nil
+      roundPhase = nil
+      roundGen += 1  -- invalidate any in-flight phase callbacks
     end
 
     -- Drain any pendingMessages from the state update into the queue
@@ -197,6 +268,9 @@ function Apple2Interface.new(screenGui, actions)
       playNextNotif()
     else
       render(state, localScene)
+      if state.combat ~= nil and #notifQueue == 0 and roundPhase == nil then
+        startRoundIfCombat()
+      end
     end
   end
 

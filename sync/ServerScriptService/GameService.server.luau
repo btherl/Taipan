@@ -764,6 +764,18 @@ Remotes.CombatRun.OnServerEvent:Connect(function(player)
   state.pendingMessages = pending; pushState(player); state.pendingMessages = nil
 end)
 
+-- CombatNoCommand: no command queued at round-execute time; enemy fires unopposed
+Remotes.CombatNoCommand.OnServerEvent:Connect(function(player)
+  local state = playerStates[player]
+  if type(state) ~= "table" or not state.combat or state.combat.outcome ~= nil then return end
+  local combat = state.combat
+  local pending = {}
+
+  local combatEnded = applyEnemyFire(player, state, combat, pending)
+  if combatEnded and not state.gameOver then appendArrivalPending(state, pending) end
+  state.pendingMessages = pending; pushState(player); state.pendingMessages = nil
+end)
+
 -- CombatThrow: throw cargo, auto-attempt run
 Remotes.CombatThrow.OnServerEvent:Connect(function(player, goodIndex, qty)
   local state = playerStates[player]
@@ -782,7 +794,7 @@ Remotes.CombatThrow.OnServerEvent:Connect(function(player, goodIndex, qty)
   Remotes.Notify:FireClient(player,
     string.format("Threw %d overboard. Let's hope we lose 'em, Taipan!", thrown))
   table.insert(pending, makeCombatNotif(
-    string.format("Threw %d overboard. Let's hope we lose 'em, Taipan!", thrown), 2))
+    string.format("Let's hope we lose 'em, Taipan!", thrown), 2))
 
   CombatEngine.updateRunMomentum(combat)
   local escaped = CombatEngine.attemptRun(combat)

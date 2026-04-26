@@ -52,7 +52,8 @@
       "Bash(C:/Users/User/.claude/plugins/cache/claude-plugins-official/superpowers/5.0.5/skills/brainstorming/scripts/start-server.sh --project-dir D:/dev/taipan)",
       "Bash(xargs cat:*)",
       "Read(//mnt/c/Users/User/.claude/**)",
-      "Read(//mnt/c/Users/**)"
+      "Read(//mnt/c/Users/**)",
+      "Bash(awk *)"
     ]
   }
 }

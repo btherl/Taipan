@@ -2,6 +2,8 @@
 
 This document defines the foundational engineering standards and workflows for the Taipan! Roblox project. Adherence to these rules is mandatory.
 
+Also read CLAUDE.md too
+
 ## 1. Core Principles
 
 - **Server-Authoritative Logic:** ALL game state mutations MUST occur within `sync/ServerScriptService/GameService.server.luau`. The client (`StarterGui`) is a "dumb" view that only receives state snapshots and sends action requests.

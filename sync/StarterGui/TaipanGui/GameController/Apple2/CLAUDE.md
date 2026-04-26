@@ -15,7 +15,7 @@ The server attaches a `pendingMessages` array to the state before calling `pushS
 | `makeCompradorNotif(lines, dur)` | 17–24 (pre-filled, blanks unset) | Port/arrival events (Li Yuen escort, price crash, arrival) |
 | `makeCaptainNotif(lines, dur)` | 17–24 (pre-filled, blanks unset) | Travel-time events (storm, robbery, pirate approach) |
 | `makeCombatNotif(lines, dur)` | 4 (single line only) | In-battle action results (fight/run/throw narration, enemy fire) |
-| `makeLowertNotif(lines, dur)` | 17-24 (allows customized title) | Shared code used by Comprador and Captain notifications, also called directly when no title is required |
+| `makeLowerNotif(title, lines, dur)` | 17-24 (allows customized title) | Shared code used by Comprador and Captain notifications, also called directly when no title is required |
 
 `makeCombatNotif` writes to row 4, overwriting the seaworthiness display.
 

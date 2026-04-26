@@ -104,12 +104,12 @@ D:/dev/Taipan/
 │   │
 │   └── StarterGui/
 │       └── TaipanGui/
-│           ├── GameController.client.luau    # GameController — wires panels, remotes, interfaces
+│           ├── GameController.client.luau    # Entry point — wires Remotes -> active interface (Apple 2 / Modern)
 │           └── GameController/               # Child modules of GameController
 │               ├── Apple2Interface.luau      # Apple II retro terminal interface
 │               ├── ModernInterface.luau      # Modern GUI interface
 │               ├── InterfacePicker.luau      # Interface selection screen
-│               ├── GameActions.luau          # Shared game action helpers
+│               ├── GameActions.luau          # Source of truth for client->server action wiring (Remote:FireServer wrappers)
 │               ├── Apple2/                   # Apple II terminal sub-modules
 │               │   ├── Terminal.luau         # Terminal emulator (character grid)
 │               │   ├── KeyInput.luau         # Keyboard input handling

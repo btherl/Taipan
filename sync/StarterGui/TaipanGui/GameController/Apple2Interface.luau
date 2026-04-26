@@ -102,6 +102,15 @@ function Apple2Interface.new(screenGui, actions)
     notifGen += 1
     local myGen = notifGen
     local entry = table.remove(notifQueue, 1)
+    if entry.includeStatusScreen and type(lastState) == "table" then
+      local statusRows = PromptEngine.buildPortRows(lastState)
+      for r, rowDef in pairs(statusRows) do
+        local rNum = tonumber(r)
+        if rNum then
+          term.showInputAt(rNum, rowDef)
+        end
+      end
+    end
     for r, rowDef in pairs(entry.rows) do
       local rNum = tonumber(r)
       if rNum then

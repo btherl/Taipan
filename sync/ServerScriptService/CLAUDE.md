@@ -12,6 +12,7 @@ The "all mutations happen here" discipline that the project root `CLAUDE.md` des
    - `makeCaptainNotif(lines, duration)` — wraps `makeLowerNotif` with title `"  Captain's Report"`.
    - `makeCompradorNotif(lines, duration)` — wraps with title `"Comprador's Report"`.
    - `makeCombatNotif(line, duration)` — single-line entry on row 4 only.
+   - `makeStatusScreenLowerNotif(title, lines, duration)` — like `makeLowerNotif` but also redraws the lines 1–16 port status screen on the client first. Use for combat-end messages (booty / escape / sunk) that follow the BASIC convention of returning to the status screen before reporting.
    The choice between Captain/Comprador/Combat is enforced by `Apple2/CLAUDE.md` — read it before adding a new notification site.
 3. **DataStore + persistence helpers** (lines 88–113). `savePlayer` / `loadPlayer` skip when `RunService:IsStudio()` is true, so persistence only fires on real Roblox servers. Wraps `PersistenceEngine.dataStoreRetry` for exponential backoff.
 4. **`playerStates`, `pendingModes`, `pendingTutorialSeen` tables** (lines 95–97). Server-private state. Never exposed to clients except via snapshot.

@@ -55,6 +55,17 @@ local function makeCombatNotif(line, duration)
   return { rows = rows, duration = duration }
 end
 
+-- Build a lower-area notif (rows 17-24) that also redraws the lines 1-16
+-- port status screen on the client before painting its own rows.
+-- Used for combat-end messages (booty / escape / sunk) so the player sees
+-- the standard status display under the outcome message, matching the
+-- BASIC original (GOSUB 200/300 at line 5900).
+local function makeStatusScreenLowerNotif(title, lines, duration)
+  local entry = makeLowerNotif(title, lines, duration)
+  entry.includeStatusScreen = true
+  return entry
+end
+
 -- Injects the three Wu escort notifications into pendingTable when all of
 -- liYuenPending, repairPending are resolved and wuPending is active.
 -- Clears wuEscortBraves after injecting so the scenes only play once.
@@ -644,7 +655,8 @@ local function applyEnemyFire(player, state, combat, pending)
   table.insert(pending, makeCombatNotif("We've been hit, Taipan!!", 2))
   if fireResult.sunk then
     Remotes.Notify:FireClient(player, "The buggers got us, Taipan!!! It's all over!!!")
-    table.insert(pending, makeCombatNotif("The buggers got us, Taipan!!! It's all over!!!", 5))
+    table.insert(pending, makeStatusScreenLowerNotif(
+      "", { "The buggers got us, Taipan!!", "It's all over, now!!!" }, 5))
     setGameOver(state, "sunk")
     return true
   end
@@ -700,12 +712,10 @@ Remotes.CombatFight.OnServerEvent:Connect(function(player)
 
   if combat.outcome == "victory" then
     CombatEngine.applyBooty(state, combat)
-    -- FIXME: Display status screen here, before booty notification
-    table.insert(pending, makeLowerNotif(
-      "" -- Blank title
-      , { "We've captured some booty", string.format("It's worth %d!", combat.booty) }
-      , 5)
-    )
+    table.insert(pending, makeStatusScreenLowerNotif(
+      "",
+      { "We've captured some booty", string.format("It's worth %d!", combat.booty) },
+      5))
     Remotes.Notify:FireClient(player,
       string.format("We've captured some booty worth $%d!!", combat.booty))
     state.combat = nil
@@ -742,6 +752,8 @@ Remotes.CombatRun.OnServerEvent:Connect(function(player)
   if escaped then
     Remotes.Notify:FireClient(player, "We got away from 'em, Taipan!!")
     table.insert(pending, makeCombatNotif("We got away from 'em, Taipan!!", 3))
+    table.insert(pending, makeStatusScreenLowerNotif(
+      "", { "We made it, Taipan!" }, 3))
     state.combat = nil
     postCombatStorm(player, state, pending)
     if not state.gameOver then appendArrivalPending(state, pending) end
@@ -801,6 +813,8 @@ Remotes.CombatThrow.OnServerEvent:Connect(function(player, goodIndex, qty)
   if escaped then
     Remotes.Notify:FireClient(player, "We got away from 'em, Taipan!!")
     table.insert(pending, makeCombatNotif("We got away from 'em, Taipan!!", 3))
+    table.insert(pending, makeStatusScreenLowerNotif(
+      "", { "We made it, Taipan!" }, 3))
     state.combat = nil
     postCombatStorm(player, state, pending)
     if not state.gameOver then appendArrivalPending(state, pending) end

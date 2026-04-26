@@ -16,6 +16,7 @@ The server attaches a `pendingMessages` array to the state before calling `pushS
 | `makeCaptainNotif(lines, dur)` | 17–24 (pre-filled, blanks unset) | Travel-time events (storm, robbery, pirate approach) |
 | `makeCombatNotif(lines, dur)` | 4 (single line only) | In-battle action results (fight/run/throw narration, enemy fire) |
 | `makeLowerNotif(title, lines, dur)` | 17-24 (allows customized title) | Shared code used by Comprador and Captain notifications, also called directly when no title is required |
+| `makeStatusScreenLowerNotif(title, lines, dur)` | 1-16 (status screen redraw) + 17-24 | Combat-end messages (booty / escape / sunk) that need the lines 1-16 port status screen restored under them before painting the report rows. Sets `entry.includeStatusScreen = true`; `playNextNotif` honours the flag by calling `PromptEngine.buildPortRows(lastState)` first. |
 
 `makeCombatNotif` writes to row 4, overwriting the seaworthiness display.
 

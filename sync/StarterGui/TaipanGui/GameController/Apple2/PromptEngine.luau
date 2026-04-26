@@ -1623,4 +1623,6 @@ function PromptEngine.processState(state, localScene, actions, localSceneCb, com
   return sceneAtPort(state, actions, localSceneCb)
 end
 
+PromptEngine.buildPortRows = buildPortRows
+
 return PromptEngine

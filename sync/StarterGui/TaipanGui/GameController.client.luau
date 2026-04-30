@@ -29,6 +29,28 @@ local camera = workspace.CurrentCamera
 camera.CameraType = Enum.CameraType.Scriptable
 camera.CFrame     = CFrame.new(0, 1e6, 0)
 
+-- Disable camera controls (like zoom via I/O keys), character movement, and Roblox UI
+local UserInputService = game:GetService("UserInputService")
+local StarterGui = game:GetService("StarterGui")
+
+UserInputService.ModalEnabled = true
+
+-- Disable Chat and all other CoreGuis for the terminal experience
+task.spawn(function()
+  local success
+  repeat
+    success = pcall(function()
+      StarterGui:SetCoreGuiEnabled(Enum.CoreGuiType.All, false)
+    end)
+    task.wait()
+  until success
+end)
+
+-- Disable zoom
+local player = Players.LocalPlayer
+player.CameraMinZoomDistance = 0.5
+player.CameraMaxZoomDistance = 0.5
+
 local Remotes           = require(ReplicatedStorage.Remotes)
 local GameActions       = require(script.GameActions)
 local ModernInterface   = require(script.ModernInterface)

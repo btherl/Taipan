@@ -8,6 +8,7 @@ local Terminal     = require(script.Parent.Apple2.Terminal)
 local GlitchLayer  = require(script.Parent.Apple2.GlitchLayer)
 local KeyInput     = require(script.Parent.Apple2.KeyInput)
 local PromptEngine = require(script.Parent.Apple2.PromptEngine)
+local SoundPlayer  = require(ReplicatedStorage.SoundPlayer)
 
 local RED   = Color3.fromRGB(220, 80, 80)
 local AMBER = Color3.fromRGB(200, 180, 80)
@@ -135,6 +136,9 @@ function Apple2Interface.new(screenGui, actions)
         anyKey = true,
         onKey  = function() advanceNotif(myGen) end,
       }, lastState, actions)
+    end
+    if entry.sound then
+      task.spawn(function() SoundPlayer.play(entry.sound) end)
     end
     task.delay(entry.duration, function() advanceNotif(myGen) end)
   end

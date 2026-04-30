@@ -237,9 +237,11 @@ Remotes.TravelTo.OnServerEvent:Connect(function(player, destination)
       local shipCount = CombatEngine.genericFleetSize(state)
       state.combat = CombatEngine.initCombat(state, shipCount, 1)
       CombatEngine.spawnShips(state.combat, state.enemyBaseHP)
-      table.insert(pending, makeCaptainNotif({
+      local entry = makeCaptainNotif({
         string.format("%d hostile ships approaching, Taipan!!", shipCount),
-      }, 1))
+      }, 1)
+      entry.sound = "underattack"
+      table.insert(pending, entry)
       Remotes.Notify:FireClient(player,
         string.format("Taipan!! %d hostile ships approaching!!", shipCount))
     elseif CombatEngine.liYuenEncounterCheck(state) then
@@ -254,9 +256,11 @@ Remotes.TravelTo.OnServerEvent:Connect(function(player, destination)
         local shipCount = CombatEngine.liYuenFleetSize(state)
         state.combat = CombatEngine.initCombat(state, shipCount, 2)
         CombatEngine.spawnShips(state.combat, state.enemyBaseHP)
-        table.insert(pending, makeCaptainNotif({
+        local entry = makeCaptainNotif({
           "Li Yuen's pirates, Taipan!!",
-        }, 1))
+        }, 1)
+        entry.sound = "underattack"
+        table.insert(pending, entry)
         Remotes.Notify:FireClient(player,
           string.format("Taipan!! Li Yuen's fleet!! %d ships!!", shipCount))
       end

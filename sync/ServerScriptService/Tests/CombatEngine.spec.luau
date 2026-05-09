@@ -410,4 +410,46 @@ return function()
       expect(CombatEngine.seaworthiness(s)).to.equal(0)
     end)
   end)
+
+  describe("fight events", function()
+    it("appends hit events for non-killing shots", function()
+      local s = makeState({ guns = 1, enemyBaseHP = 10000 })
+      local c = CombatEngine.initCombat(s, 1, 1)
+      c.grid[3] = { maxHP = 10000, damage = 0 }
+      c.enemyOnScreen = 1
+      c.enemyWaiting  = 0
+      c.events = {}
+      CombatEngine.fight(s, c)
+      expect(#c.events).to.equal(1)
+      expect(c.events[1].type).to.equal("hit")
+      expect(c.events[1].slot).to.equal(3)
+    end)
+
+    it("appends a sink event immediately after a killing hit on the same slot", function()
+      local s = makeState({ guns = 1, enemyBaseHP = 1 })
+      local c = CombatEngine.initCombat(s, 1, 1)
+      c.grid[5] = { maxHP = 1, damage = 0 }
+      c.enemyOnScreen = 1
+      c.enemyWaiting  = 0
+      c.events = {}
+      CombatEngine.fight(s, c)
+      expect(#c.events).to.equal(2)
+      expect(c.events[1].type).to.equal("hit")
+      expect(c.events[1].slot).to.equal(5)
+      expect(c.events[2].type).to.equal("sink")
+      expect(c.events[2].slot).to.equal(5)
+    end)
+
+    it("auto-initialises events list if absent", function()
+      local s = makeState({ guns = 1, enemyBaseHP = 10000 })
+      local c = CombatEngine.initCombat(s, 1, 1)
+      c.grid[1] = { maxHP = 10000, damage = 0 }
+      c.enemyOnScreen = 1
+      c.enemyWaiting  = 0
+      -- deliberately do NOT set c.events
+      CombatEngine.fight(s, c)
+      expect(type(c.events)).to.equal("table")
+      expect(#c.events >= 1).to.equal(true)
+    end)
+  end)
 end

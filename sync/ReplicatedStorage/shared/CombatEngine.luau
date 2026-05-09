@@ -114,6 +114,9 @@ function CombatEngine.fight(state, combat)
     return { sunk = 0, fleeCount = 0, noGuns = true }
   end
 
+  -- Initialise events list if caller did not pre-create it
+  if not combat.events then combat.events = {} end
+
   local sunk = 0
   -- Fire each gun
   for _ = 1, state.guns do
@@ -127,10 +130,12 @@ function CombatEngine.fight(state, combat)
     until combat.grid[slot] ~= nil or attempts > 50
 
     if combat.grid[slot] ~= nil then
+      table.insert(combat.events, { type = "hit", slot = slot })
       local dmg = fnR(30) + 10  -- 10-39
       combat.grid[slot].damage = combat.grid[slot].damage + dmg
       if combat.grid[slot].damage > combat.grid[slot].maxHP then
         -- Ship sunk
+        table.insert(combat.events, { type = "sink", slot = slot })
         combat.grid[slot] = nil
         combat.enemyTotal    = combat.enemyTotal    - 1
         combat.enemyOnScreen = combat.enemyOnScreen - 1

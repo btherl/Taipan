@@ -77,6 +77,12 @@ function Apple2Interface.new(screenGui, actions)
   local renderGen  = 0   -- incremented each render; used to discard stale _autoAdvance callbacks
   local GREEN      = Color3.fromRGB(140, 200, 80)
 
+  -- Forward declarations for mutual recursion between advanceNotif and playNextNotif
+  local render
+  local playNextNotif
+  local startRoundIfCombat
+  local executePhaseC
+
   local function drainCombatEvents()
     if combatAnimDraining then return end
     combatAnimDraining = true
@@ -115,12 +121,6 @@ function Apple2Interface.new(screenGui, actions)
     end
     return false
   end
-
-  -- Forward declarations for mutual recursion between advanceNotif and playNextNotif
-  local render
-  local playNextNotif
-  local startRoundIfCombat
-  local executePhaseC
 
   local function advanceNotif(gen)
     if gen ~= notifGen then return end  -- stale callback, discard

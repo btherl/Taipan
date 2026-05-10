@@ -451,5 +451,40 @@ return function()
       expect(type(c.events)).to.equal("table")
       expect(#c.events >= 1).to.equal(true)
     end)
+
+    it("emits spawn events right after the sink that empties the screen", function()
+      local s = makeState({ guns = 5, enemyBaseHP = 1 })
+      local c = CombatEngine.initCombat(s, 4, 1)
+      c.grid[1] = { maxHP = 1, damage = 0 }
+      c.enemyOnScreen = 1
+      c.enemyWaiting  = 3
+      c.events = {}
+      CombatEngine.fight(s, c)
+      -- First two events: hit then sink at slot 1
+      expect(c.events[1].type).to.equal("hit")
+      expect(c.events[1].slot).to.equal(1)
+      expect(c.events[2].type).to.equal("sink")
+      expect(c.events[2].slot).to.equal(1)
+      -- Next events should be spawns (3 of them, one per remaining waiting ship)
+      local spawnCount = 0
+      for i = 3, #c.events do
+        if c.events[i].type == "spawn" then spawnCount = spawnCount + 1 end
+        if c.events[i].type ~= "spawn" then break end
+      end
+      expect(spawnCount).to.equal(3)
+    end)
+
+    it("emits no spawn events when waiting=0", function()
+      local s = makeState({ guns = 1, enemyBaseHP = 1 })
+      local c = CombatEngine.initCombat(s, 1, 1)
+      c.grid[2] = { maxHP = 1, damage = 0 }
+      c.enemyOnScreen = 1
+      c.enemyWaiting  = 0
+      c.events = {}
+      CombatEngine.fight(s, c)
+      for _, e in ipairs(c.events) do
+        expect(e.type ~= "spawn").to.equal(true)
+      end
+    end)
   end)
 end

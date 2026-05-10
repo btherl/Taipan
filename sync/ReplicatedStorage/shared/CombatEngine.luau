@@ -63,12 +63,14 @@ end
 -- Spawn ships into empty grid slots until no waiting ships remain.
 -- enemyBaseHP = state.enemyBaseHP (EC). New ship HP = FN_R(EC) + 20.
 function CombatEngine.spawnShips(combat, enemyBaseHP)
+  if not combat.events then combat.events = {} end
   for i = 1, 10 do
     if combat.enemyWaiting <= 0 then break end
     if combat.grid[i] == nil then
       combat.grid[i] = { maxHP = fnR(enemyBaseHP) + 20, damage = 0 }
       combat.enemyOnScreen = combat.enemyOnScreen + 1
       combat.enemyWaiting  = combat.enemyWaiting  - 1
+      table.insert(combat.events, { type = "spawn", slot = i })
     end
   end
 end

@@ -627,6 +627,13 @@
                       ]
                     },
                     {
+                      "name": "ShipGrid",
+                      "className": "ModuleScript",
+                      "filePaths": [
+                        "sync/StarterGui/TaipanGui/GameController/Apple2/ShipGrid.luau"
+                      ]
+                    },
+                    {
                       "name": "ShipSpriteData",
                       "className": "ModuleScript",
                       "filePaths": [

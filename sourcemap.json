@@ -535,6 +535,13 @@
               ]
             },
             {
+              "name": "ShipSpriteData.spec",
+              "className": "ModuleScript",
+              "filePaths": [
+                "sync/ServerScriptService/Tests/ShipSpriteData.spec.luau"
+              ]
+            },
+            {
               "name": "TestRunner",
               "className": "Script",
               "guid": "9969",
@@ -617,6 +624,13 @@
                       "guid": "9898",
                       "filePaths": [
                         "sync/StarterGui/TaipanGui/GameController/Apple2/PromptEngine.luau"
+                      ]
+                    },
+                    {
+                      "name": "ShipSpriteData",
+                      "className": "ModuleScript",
+                      "filePaths": [
+                        "sync/StarterGui/TaipanGui/GameController/Apple2/ShipSpriteData.luau"
                       ]
                     },
                     {

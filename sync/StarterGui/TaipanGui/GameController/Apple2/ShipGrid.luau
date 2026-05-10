@@ -163,6 +163,37 @@ function ShipGrid.new(displayOrder)
     st.animating = false
   end
 
+  -- Hit-flash duration (ms). Tunable.
+  local HIT_FLASH_S = 0.08
+
+  function grid.applyHit(slot, onComplete)
+    local st = slotState[slot]
+    if not st or not st.damageGrid then
+      if onComplete then onComplete() end
+      return
+    end
+
+    -- Pick two random fragments (one per zone, 0=upper, 1=lower).
+    local idx0 = math.random(1, 6)
+    local idx1 = math.random(1, 6)
+    ShipSpriteData.applyDamageFragment(st.damageGrid, idx0, 0)
+    ShipSpriteData.applyDamageFragment(st.damageGrid, idx1, 1)
+    paintSlot(slot, ShipSpriteData.renderRows(st.damageGrid))
+
+    -- Hit-flash: invert glyph colours briefly by toggling ImageColor3.
+    local FLASH_COLOR = Color3.fromRGB(255, 255, 255)
+    local NORMAL_COLOR = Color3.fromRGB(140, 200, 80)
+    for _, g in ipairs(st.glyphs) do
+      if g:IsA("ImageLabel") then g.ImageColor3 = FLASH_COLOR end
+    end
+    task.delay(HIT_FLASH_S, function()
+      for _, g in ipairs(st.glyphs) do
+        if g:IsA("ImageLabel") then g.ImageColor3 = NORMAL_COLOR end
+      end
+      if onComplete then onComplete() end
+    end)
+  end
+
   return grid
 end
 

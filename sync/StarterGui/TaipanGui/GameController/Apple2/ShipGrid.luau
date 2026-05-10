@@ -150,6 +150,19 @@ function ShipGrid.new(displayOrder)
     st.animating = false
   end
 
+  function grid.flee(slot)
+    local st = slotState[slot]
+    if not st then return end
+    st.frame.Visible = false
+    st.damageGrid = nil
+    if st.glyphs then
+      for _, g in ipairs(st.glyphs) do g:Destroy() end
+      st.glyphs = nil
+    end
+    if st.sinkTween then st.sinkTween:Cancel(); st.sinkTween = nil end
+    st.animating = false
+  end
+
   return grid
 end
 

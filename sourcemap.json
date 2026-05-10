@@ -537,6 +537,7 @@
             {
               "name": "ShipSpriteData.spec",
               "className": "ModuleScript",
+              "guid": "409503",
               "filePaths": [
                 "sync/ServerScriptService/Tests/ShipSpriteData.spec.luau"
               ]
@@ -597,60 +598,6 @@
                 "sync/StarterGui/TaipanGui/GameController.client.luau"
               ],
               "children": [
-                {
-                  "name": "Apple2",
-                  "className": "Folder",
-                  "guid": "9866",
-                  "children": [
-                    {
-                      "name": "KeyInput",
-                      "className": "ModuleScript",
-                      "guid": "9897",
-                      "filePaths": [
-                        "sync/StarterGui/TaipanGui/GameController/Apple2/KeyInput.luau"
-                      ]
-                    },
-                    {
-                      "name": "PromptEngine",
-                      "className": "ModuleScript",
-                      "guid": "9898",
-                      "filePaths": [
-                        "sync/StarterGui/TaipanGui/GameController/Apple2/PromptEngine.luau"
-                      ]
-                    },
-                    {
-                      "name": "ShipGrid",
-                      "className": "ModuleScript",
-                      "guid": "9895",
-                      "filePaths": [
-                        "sync/StarterGui/TaipanGui/GameController/Apple2/ShipGrid.luau"
-                      ]
-                    },
-                    {
-                      "name": "ShipSpriteData",
-                      "className": "ModuleScript",
-                      "filePaths": [
-                        "sync/StarterGui/TaipanGui/GameController/Apple2/ShipSpriteData.luau"
-                      ]
-                    },
-                    {
-                      "name": "Terminal",
-                      "className": "ModuleScript",
-                      "guid": "9896",
-                      "filePaths": [
-                        "sync/StarterGui/TaipanGui/GameController/Apple2/Terminal.luau"
-                      ]
-                    },
-                    {
-                      "name": "GlitchLayer",
-                      "className": "ModuleScript",
-                      "guid": "408897",
-                      "filePaths": [
-                        "sync/StarterGui/TaipanGui/GameController/Apple2/GlitchLayer.luau"
-                      ]
-                    }
-                  ]
-                },
                 {
                   "name": "Apple2Interface",
                   "className": "ModuleScript",
@@ -790,6 +737,83 @@
                       "guid": "9891",
                       "filePaths": [
                         "sync/StarterGui/TaipanGui/GameController/Panels/WuPanel.luau"
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "name": "Apple2",
+                  "className": "Folder",
+                  "children": [
+                    {
+                      "name": "ShipGrid",
+                      "className": "ModuleScript",
+                      "guid": "9895",
+                      "filePaths": [
+                        "sync/StarterGui/TaipanGui/GameController/Apple2/ShipGrid.luau"
+                      ]
+                    },
+                    {
+                      "name": "Terminal",
+                      "className": "ModuleScript",
+                      "guid": "9896",
+                      "filePaths": [
+                        "sync/StarterGui/TaipanGui/GameController/Apple2/Terminal.luau"
+                      ]
+                    },
+                    {
+                      "name": "GlitchLayer",
+                      "className": "ModuleScript",
+                      "guid": "408897",
+                      "filePaths": [
+                        "sync/StarterGui/TaipanGui/GameController/Apple2/GlitchLayer.luau"
+                      ]
+                    },
+                    {
+                      "name": "PromptEngine",
+                      "className": "ModuleScript",
+                      "guid": "9898",
+                      "filePaths": [
+                        "sync/StarterGui/TaipanGui/GameController/Apple2/PromptEngine.luau"
+                      ]
+                    },
+                    {
+                      "name": "KeyInput",
+                      "className": "ModuleScript",
+                      "guid": "9897",
+                      "filePaths": [
+                        "sync/StarterGui/TaipanGui/GameController/Apple2/KeyInput.luau"
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "name": "Apple2",
+                  "className": "Folder",
+                  "guid": "9866",
+                  "children": [
+                    {
+                      "name": "ShipGrid",
+                      "className": "ModuleScript",
+                      "guid": "9895",
+                      "filePaths": [
+                        "sync/StarterGui/TaipanGui/GameController/Apple2/ShipGrid.luau"
+                      ]
+                    },
+                    {
+                      "name": "PromptEngine",
+                      "className": "ModuleScript",
+                      "guid": "9898",
+                      "filePaths": [
+                        "sync/StarterGui/TaipanGui/GameController/Apple2/PromptEngine.luau"
+                      ]
+                    },
+                    {
+                      "name": "ShipSpriteData",
+                      "className": "ModuleScript",
+                      "guid": "409453",
+                      "filePaths": [
+                        "sync/StarterGui/TaipanGui/GameController/Apple2/ShipSpriteData.luau"
                       ]
                     }
                   ]

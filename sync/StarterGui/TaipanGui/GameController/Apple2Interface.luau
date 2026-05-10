@@ -74,6 +74,7 @@ function Apple2Interface.new(screenGui, actions)
   local combatAnimQueue = {}
   local combatAnimDraining = false
   local pendingCombatExit = false
+  local pendingCombatShow = false
   local notifGen   = 0
   local renderGen  = 0   -- incremented each render; used to discard stale _autoAdvance callbacks
   local GREEN      = Color3.fromRGB(140, 200, 80)
@@ -242,6 +243,13 @@ function Apple2Interface.new(screenGui, actions)
         end
       end)
     end
+
+    -- Reveal the ship grid once the combat scene's battle lines have replaced
+    -- the port screen. The flag is set on combat entry and consumed here.
+    if pendingCombatShow and state and state.combat ~= nil then
+      pendingCombatShow = false
+      shipGrid.show()
+    end
   end
 
   startRoundIfCombat = function()
@@ -305,8 +313,9 @@ function Apple2Interface.new(screenGui, actions)
     -- Combat boundary transitions
     if nextCombat and not prevCombat then
       shipGrid.clearAll()   -- start fresh
-      shipGrid.show()
-      -- Initial draw of ships currently on screen
+      -- Pre-draw ships invisibly; show() is deferred until the combat scene
+      -- renders, so sprites don't appear over the still-visible port screen
+      -- while entry notifications are playing.
       if type(state.combat.grid) == "table" then
         for slot = 1, 10 do
           if state.combat.grid[slot] ~= nil then
@@ -314,6 +323,7 @@ function Apple2Interface.new(screenGui, actions)
           end
         end
       end
+      pendingCombatShow = true
     elseif prevCombat and not nextCombat then
       local hasTrailing = type(state.combatTrailingEvents) == "table"
                           and #state.combatTrailingEvents > 0

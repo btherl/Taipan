@@ -488,9 +488,9 @@ return function()
     end)
 
     it("emits flee events after the gun loop when enemies retreat", function()
-      -- Setup: 4 ships on screen, no waiting; force the flee branch by setting
-      -- runtime so attemptFlee path triggers. We can't easily seed RNG, so we
-      -- run many trials and verify ordering when flee events do appear.
+      -- Setup: 4 ships on screen, no waiting, originalCount=6 to force the flee
+      -- branch's sn ~= s0 precondition. RNG-driven; we run many trials and
+      -- verify ordering whenever flee events appear.
       local sawOrdering = false
       for trial = 1, 100 do
         local s = makeState({ guns = 1, enemyBaseHP = 10000 })
@@ -498,6 +498,7 @@ return function()
         for i = 1, 4 do c.grid[i] = { maxHP = 10000, damage = 0 } end
         c.enemyOnScreen = 4
         c.enemyWaiting  = 0
+        c.originalCount = 6
         c.events = {}
         CombatEngine.fight(s, c)
         -- If any flee events appeared, all of them must come AFTER all hit/sink/spawn events

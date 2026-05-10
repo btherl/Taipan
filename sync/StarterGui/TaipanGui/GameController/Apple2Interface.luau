@@ -8,6 +8,7 @@ local Terminal     = require(script.Parent.Apple2.Terminal)
 local GlitchLayer  = require(script.Parent.Apple2.GlitchLayer)
 local KeyInput     = require(script.Parent.Apple2.KeyInput)
 local PromptEngine = require(script.Parent.Apple2.PromptEngine)
+local ShipGrid     = require(script.Parent.Apple2.ShipGrid)
 local SoundPlayer  = require(ReplicatedStorage.SoundPlayer)
 
 local RED   = Color3.fromRGB(220, 80, 80)
@@ -47,6 +48,8 @@ local Apple2Interface = {}
 
 function Apple2Interface.new(screenGui, actions)
   local term    = Terminal.new(5)  -- displayOrder 5
+  local shipGrid = ShipGrid.new(6)  -- displayOrder 6 (above terminal)
+  shipGrid.hide()                   -- start hidden; combat scene will show it
   local glitch  = GlitchLayer.new(term._gui)
   local ki      = KeyInput.new(screenGui)
 
@@ -295,6 +298,7 @@ function Apple2Interface.new(screenGui, actions)
     ki.destroy()
     term.destroy()
     glitch.destroy()
+    shipGrid.destroy()
   end
 
   return adapter

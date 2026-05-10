@@ -73,6 +73,7 @@ function Apple2Interface.new(screenGui, actions)
   local notifQueue = {}
   local combatAnimQueue = {}
   local combatAnimDraining = false
+  local pendingCombatExit = false
   local notifGen   = 0
   local renderGen  = 0   -- incremented each render; used to discard stale _autoAdvance callbacks
   local GREEN      = Color3.fromRGB(140, 200, 80)
@@ -110,7 +111,12 @@ function Apple2Interface.new(screenGui, actions)
         task.wait(0.05)  -- 50 ms inter-event gap
       end
       combatAnimDraining = false
-      -- After drain, attempt to start the next round (will no-op if any other guard fails).
+      -- If a combat exit was deferred while animations were running, run it now.
+      if pendingCombatExit and not (lastState and lastState.combat) then
+        pendingCombatExit = false
+        shipGrid.clearAll()
+        shipGrid.hide()
+      end
       startRoundIfCombat()
     end)
   end
@@ -309,8 +315,14 @@ function Apple2Interface.new(screenGui, actions)
         end
       end
     elseif prevCombat and not nextCombat then
-      shipGrid.clearAll()
-      shipGrid.hide()
+      local hasTrailing = type(state.combatTrailingEvents) == "table"
+                          and #state.combatTrailingEvents > 0
+      if hasTrailing or combatAnimDraining or #combatAnimQueue > 0 then
+        pendingCombatExit = true
+      else
+        shipGrid.clearAll()
+        shipGrid.hide()
+      end
     end
 
     -- Drain any pendingMessages from the state update into the queue
@@ -320,9 +332,15 @@ function Apple2Interface.new(screenGui, actions)
       end
     end
 
-    -- Drain any combat.events into the animator queue
+    -- Drain any combat.events into the animator queue (active combat path)
     if nextCombat and type(state.combat.events) == "table" then
       for _, evt in ipairs(state.combat.events) do
+        table.insert(combatAnimQueue, evt)
+      end
+      drainCombatEvents()
+    elseif type(state.combatTrailingEvents) == "table" then
+      -- End-of-combat trailing events (e.g. final sink animation on victory)
+      for _, evt in ipairs(state.combatTrailingEvents) do
         table.insert(combatAnimQueue, evt)
       end
       drainCombatEvents()

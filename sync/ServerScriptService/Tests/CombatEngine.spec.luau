@@ -304,6 +304,31 @@ return function()
     end)
   end)
 
+  describe("partialEscape events", function()
+    it("appends one flee event per slot vacated", function()
+      local fired = false
+      for _ = 1, 200 do
+        local s = makeState()
+        local c = CombatEngine.initCombat(s, 10, 1)
+        for i = 1, 10 do c.grid[i] = { maxHP = 50, damage = 0 } end
+        c.enemyOnScreen = 10
+        c.enemyWaiting  = 0
+        c.events = {}
+        local w = CombatEngine.partialEscape(c)
+        if w > 0 then
+          local fleeEvents = 0
+          for _, e in ipairs(c.events) do
+            if e.type == "flee" then fleeEvents = fleeEvents + 1 end
+          end
+          expect(fleeEvents).to.equal(w)
+          fired = true
+          break
+        end
+      end
+      expect(fired).to.equal(true)
+    end)
+  end)
+
   describe("throwCargo", function()
     it("reduces shipCargo, increases holdSpace, boosts momentum", function()
       local s = makeState({ shipCargo = {50, 0, 0, 0}, holdSpace = 10 })

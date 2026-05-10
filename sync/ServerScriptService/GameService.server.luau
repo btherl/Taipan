@@ -678,6 +678,7 @@ Remotes.CombatFight.OnServerEvent:Connect(function(player)
   local state = playerStates[player]
   if type(state) ~= "table" or not state.combat or state.combat.outcome ~= nil then return end
   local combat = state.combat
+  combat.events = {}
   local pending = {}
 
   local result = CombatEngine.fight(state, combat)
@@ -688,6 +689,7 @@ Remotes.CombatFight.OnServerEvent:Connect(function(player)
     local combatEnded = applyEnemyFire(player, state, combat, pending)
     if combatEnded and not state.gameOver then appendArrivalPending(state, pending) end
     state.pendingMessages = pending; pushState(player); state.pendingMessages = nil
+    if state.combat then state.combat.events = nil end
     return
   end
 
@@ -736,12 +738,14 @@ Remotes.CombatFight.OnServerEvent:Connect(function(player)
       end
     end
     state.pendingMessages = pending; pushState(player); state.pendingMessages = nil
+    if state.combat then state.combat.events = nil end
     return
   end
 
   local combatEnded = applyEnemyFire(player, state, combat, pending)
   if combatEnded and not state.gameOver then appendArrivalPending(state, pending) end
   state.pendingMessages = pending; pushState(player); state.pendingMessages = nil
+  if state.combat then state.combat.events = nil end
 end)
 
 -- CombatRun: attempt to flee
@@ -749,6 +753,7 @@ Remotes.CombatRun.OnServerEvent:Connect(function(player)
   local state = playerStates[player]
   if type(state) ~= "table" or not state.combat or state.combat.outcome ~= nil then return end
   local combat = state.combat
+  combat.events = {}
   local pending = {}
 
   CombatEngine.updateRunMomentum(combat)
@@ -762,6 +767,7 @@ Remotes.CombatRun.OnServerEvent:Connect(function(player)
     postCombatStorm(player, state, pending)
     if not state.gameOver then appendArrivalPending(state, pending) end
     state.pendingMessages = pending; pushState(player); state.pendingMessages = nil
+    if state.combat then state.combat.events = nil end
     return
   end
 
@@ -778,6 +784,7 @@ Remotes.CombatRun.OnServerEvent:Connect(function(player)
   local combatEnded = applyEnemyFire(player, state, combat, pending)
   if combatEnded and not state.gameOver then appendArrivalPending(state, pending) end
   state.pendingMessages = pending; pushState(player); state.pendingMessages = nil
+  if state.combat then state.combat.events = nil end
 end)
 
 -- CombatNoCommand: no command queued at round-execute time; enemy fires unopposed
@@ -785,11 +792,13 @@ Remotes.CombatNoCommand.OnServerEvent:Connect(function(player)
   local state = playerStates[player]
   if type(state) ~= "table" or not state.combat or state.combat.outcome ~= nil then return end
   local combat = state.combat
+  combat.events = {}
   local pending = {}
 
   local combatEnded = applyEnemyFire(player, state, combat, pending)
   if combatEnded and not state.gameOver then appendArrivalPending(state, pending) end
   state.pendingMessages = pending; pushState(player); state.pendingMessages = nil
+  if state.combat then state.combat.events = nil end
 end)
 
 -- CombatThrow: throw cargo, auto-attempt run
@@ -798,6 +807,7 @@ Remotes.CombatThrow.OnServerEvent:Connect(function(player, goodIndex, qty)
   if type(state) ~= "table" or not state.combat or state.combat.outcome ~= nil then return end
   if not validGood(goodIndex) or not validQty(qty) then return end
   local combat = state.combat
+  combat.events = {}
   local pending = {}
 
   local thrown = CombatEngine.throwCargo(state, combat, goodIndex, qty)
@@ -805,6 +815,7 @@ Remotes.CombatThrow.OnServerEvent:Connect(function(player, goodIndex, qty)
     Remotes.Notify:FireClient(player, "There's nothing there, Taipan!")
     table.insert(pending, makeCombatNotif("There's nothing there, Taipan!", 2))
     state.pendingMessages = pending; pushState(player); state.pendingMessages = nil
+    if state.combat then state.combat.events = nil end
     return
   end
   Remotes.Notify:FireClient(player,
@@ -823,6 +834,7 @@ Remotes.CombatThrow.OnServerEvent:Connect(function(player, goodIndex, qty)
     postCombatStorm(player, state, pending)
     if not state.gameOver then appendArrivalPending(state, pending) end
     state.pendingMessages = pending; pushState(player); state.pendingMessages = nil
+    if state.combat then state.combat.events = nil end
     return
   end
 
@@ -839,6 +851,7 @@ Remotes.CombatThrow.OnServerEvent:Connect(function(player, goodIndex, qty)
   local combatEnded = applyEnemyFire(player, state, combat, pending)
   if combatEnded and not state.gameOver then appendArrivalPending(state, pending) end
   state.pendingMessages = pending; pushState(player); state.pendingMessages = nil
+  if state.combat then state.combat.events = nil end
 end)
 
 -- Clears shipOffer when upgrade and gun sub-offers are both resolved.

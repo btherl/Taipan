@@ -225,6 +225,34 @@ function ShipGrid.new(displayOrder)
     tween:Play()
   end
 
+  -- spawn is currently identical to draw; left as a separate API so a future
+  -- "appear-in" flash can be added without touching call sites.
+  function grid.spawn(slot)
+    grid.draw(slot)
+  end
+
+  function grid.clearAll()
+    for slot = 1, 10 do
+      grid.flee(slot)
+    end
+  end
+
+  function grid.show()
+    grid._gui.Enabled = true
+  end
+
+  function grid.hide()
+    grid._gui.Enabled = false
+  end
+
+  -- isAnimating: true if any slot is currently sinking (used by Apple2Interface to gate prompts).
+  function grid.isAnimating()
+    for slot = 1, 10 do
+      if slotState[slot].animating then return true end
+    end
+    return false
+  end
+
   return grid
 end
 

@@ -251,12 +251,31 @@ function Apple2Interface.new(screenGui, actions)
   local adapter = {}
 
   function adapter.update(state)
+    local prevCombat = lastState and lastState.combat ~= nil
+    local nextCombat = state.combat ~= nil
     lastState = state
 
-    if state.combat == nil then
+    if not nextCombat then
       queuedCommand = nil
       roundPhase = nil
       roundGen += 1  -- invalidate any in-flight phase callbacks
+    end
+
+    -- Combat boundary transitions
+    if nextCombat and not prevCombat then
+      shipGrid.clearAll()   -- start fresh
+      shipGrid.show()
+      -- Initial draw of ships currently on screen
+      if type(state.combat.grid) == "table" then
+        for slot = 1, 10 do
+          if state.combat.grid[slot] ~= nil then
+            shipGrid.draw(slot)
+          end
+        end
+      end
+    elseif prevCombat and not nextCombat then
+      shipGrid.clearAll()
+      shipGrid.hide()
     end
 
     -- Drain any pendingMessages from the state update into the queue

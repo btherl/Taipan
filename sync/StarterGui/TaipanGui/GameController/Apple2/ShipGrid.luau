@@ -194,6 +194,37 @@ function ShipGrid.new(displayOrder)
     end)
   end
 
+  -- Sink animation duration range (seconds). Random per ship; matches BASIC's R(R(192)) seed.
+  local SINK_MIN_S = 0.4
+  local SINK_MAX_S = 1.6
+
+  function grid.sink(slot, onComplete)
+    local st = slotState[slot]
+    if not st or st.animating then
+      if onComplete then onComplete() end
+      return
+    end
+    st.animating = true
+
+    local duration = SINK_MIN_S + math.random() * (SINK_MAX_S - SINK_MIN_S)
+    local goal = { Position = UDim2.fromScale(0, SLOT_H_PX / SCREEN_H) }
+    local info = TweenInfo.new(duration, Enum.EasingStyle.Linear, Enum.EasingDirection.Out)
+    local tween = TweenService:Create(st.container, info, goal)
+    st.sinkTween = tween
+    tween.Completed:Connect(function()
+      st.frame.Visible = false
+      if st.glyphs then
+        for _, g in ipairs(st.glyphs) do g:Destroy() end
+        st.glyphs = nil
+      end
+      st.damageGrid = nil
+      st.animating = false
+      st.sinkTween = nil
+      if onComplete then onComplete() end
+    end)
+    tween:Play()
+  end
+
   return grid
 end
 

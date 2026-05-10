@@ -486,5 +486,40 @@ return function()
         expect(e.type ~= "spawn").to.equal(true)
       end
     end)
+
+    it("emits flee events after the gun loop when enemies retreat", function()
+      -- Setup: 4 ships on screen, no waiting; force the flee branch by setting
+      -- runtime so attemptFlee path triggers. We can't easily seed RNG, so we
+      -- run many trials and verify ordering when flee events do appear.
+      local sawOrdering = false
+      for trial = 1, 100 do
+        local s = makeState({ guns = 1, enemyBaseHP = 10000 })
+        local c = CombatEngine.initCombat(s, 4, 1)
+        for i = 1, 4 do c.grid[i] = { maxHP = 10000, damage = 0 } end
+        c.enemyOnScreen = 4
+        c.enemyWaiting  = 0
+        c.events = {}
+        CombatEngine.fight(s, c)
+        -- If any flee events appeared, all of them must come AFTER all hit/sink/spawn events
+        local lastNonFleeIdx = 0
+        local firstFleeIdx = nil
+        for i, e in ipairs(c.events) do
+          if e.type == "flee" then
+            if firstFleeIdx == nil then firstFleeIdx = i end
+          else
+            if firstFleeIdx ~= nil then
+              -- non-flee event after a flee event -> ordering violation
+              error("non-flee event " .. e.type .. " appeared after flee event")
+            end
+            lastNonFleeIdx = i
+          end
+        end
+        if firstFleeIdx ~= nil then
+          sawOrdering = true
+          break
+        end
+      end
+      expect(sawOrdering).to.equal(true)
+    end)
   end)
 end

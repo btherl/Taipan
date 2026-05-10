@@ -173,6 +173,7 @@ function CombatEngine.fight(state, combat)
       for i = 10, 1, -1 do
         if removed >= fromScreen then break end
         if combat.grid[i] ~= nil then
+          table.insert(combat.events, { type = "flee", slot = i })
           combat.grid[i] = nil
           combat.enemyOnScreen = math.max(0, combat.enemyOnScreen - 1)
           removed = removed + 1

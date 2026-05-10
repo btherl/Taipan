@@ -187,8 +187,10 @@ function ShipGrid.new(displayOrder)
       if g:IsA("ImageLabel") then g.ImageColor3 = FLASH_COLOR end
     end
     task.delay(HIT_FLASH_S, function()
-      for _, g in ipairs(st.glyphs) do
-        if g:IsA("ImageLabel") then g.ImageColor3 = NORMAL_COLOR end
+      if st.glyphs then
+        for _, g in ipairs(st.glyphs) do
+          if g:IsA("ImageLabel") then g.ImageColor3 = NORMAL_COLOR end
+        end
       end
       if onComplete then onComplete() end
     end)

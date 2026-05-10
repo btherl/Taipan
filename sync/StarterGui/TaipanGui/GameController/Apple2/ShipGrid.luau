@@ -140,6 +140,16 @@ function ShipGrid.new(displayOrder)
     gui:Destroy()
   end
 
+  function grid.draw(slot)
+    local st = slotState[slot]
+    if not st then return end
+    st.damageGrid = ShipSpriteData.newDamageGrid()
+    st.container.Position = UDim2.fromScale(0, 0)  -- reset any prior sink offset
+    paintSlot(slot, ShipSpriteData.renderRows(st.damageGrid))
+    st.frame.Visible = true
+    st.animating = false
+  end
+
   return grid
 end
 

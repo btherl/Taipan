@@ -603,14 +603,6 @@
                   "guid": "9866",
                   "children": [
                     {
-                      "name": "GlitchLayer",
-                      "className": "ModuleScript",
-                      "guid": "9895",
-                      "filePaths": [
-                        "sync/StarterGui/TaipanGui/GameController/Apple2/GlitchLayer.luau"
-                      ]
-                    },
-                    {
                       "name": "KeyInput",
                       "className": "ModuleScript",
                       "guid": "9897",
@@ -629,6 +621,7 @@
                     {
                       "name": "ShipGrid",
                       "className": "ModuleScript",
+                      "guid": "9895",
                       "filePaths": [
                         "sync/StarterGui/TaipanGui/GameController/Apple2/ShipGrid.luau"
                       ]
@@ -646,6 +639,14 @@
                       "guid": "9896",
                       "filePaths": [
                         "sync/StarterGui/TaipanGui/GameController/Apple2/Terminal.luau"
+                      ]
+                    },
+                    {
+                      "name": "GlitchLayer",
+                      "className": "ModuleScript",
+                      "guid": "408897",
+                      "filePaths": [
+                        "sync/StarterGui/TaipanGui/GameController/Apple2/GlitchLayer.luau"
                       ]
                     }
                   ]

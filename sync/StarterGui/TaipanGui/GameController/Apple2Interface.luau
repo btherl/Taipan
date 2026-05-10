@@ -71,9 +71,43 @@ function Apple2Interface.new(screenGui, actions)
                           --       "quit_confirm" | "combat_throw_good" | "combat_throw_amt_N" |
                           --       "final_status"
   local notifQueue = {}
+  local combatAnimQueue = {}
+  local combatAnimDraining = false
   local notifGen   = 0
   local renderGen  = 0   -- incremented each render; used to discard stale _autoAdvance callbacks
   local GREEN      = Color3.fromRGB(140, 200, 80)
+
+  local function drainCombatEvents()
+    if combatAnimDraining then return end
+    combatAnimDraining = true
+    task.spawn(function()
+      while #combatAnimQueue > 0 do
+        local evt = table.remove(combatAnimQueue, 1)
+        local done = false
+        local function onComplete() done = true end
+
+        if evt.type == "hit" then
+          shipGrid.applyHit(evt.slot, onComplete)
+        elseif evt.type == "sink" then
+          shipGrid.sink(evt.slot, onComplete)
+        elseif evt.type == "spawn" then
+          shipGrid.spawn(evt.slot)
+          done = true
+        elseif evt.type == "flee" then
+          shipGrid.flee(evt.slot)
+          done = true
+        else
+          done = true
+        end
+
+        while not done do task.wait(0.02) end
+        task.wait(0.05)  -- 50 ms inter-event gap
+      end
+      combatAnimDraining = false
+      -- After drain, attempt to start the next round (will no-op if any other guard fails).
+      startRoundIfCombat()
+    end)
+  end
 
   local function isServerDriven(state)
     for _, check in pairs(SERVER_SCENES) do
@@ -208,6 +242,7 @@ function Apple2Interface.new(screenGui, actions)
     if not (lastState and lastState.combat) then return end
     if roundPhase ~= nil then return end
     if #notifQueue > 0 then return end
+    if combatAnimDraining or #combatAnimQueue > 0 then return end
     roundGen += 1
     local myGen = roundGen
     roundPhase = "wait_a"
@@ -283,6 +318,14 @@ function Apple2Interface.new(screenGui, actions)
       for _, entry in ipairs(state.pendingMessages) do
         table.insert(notifQueue, entry)
       end
+    end
+
+    -- Drain any combat.events into the animator queue
+    if nextCombat and type(state.combat.events) == "table" then
+      for _, evt in ipairs(state.combat.events) do
+        table.insert(combatAnimQueue, evt)
+      end
+      drainCombatEvents()
     end
 
     -- Server-driven scenes reset local navigation

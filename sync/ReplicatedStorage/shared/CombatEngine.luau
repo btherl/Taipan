@@ -63,12 +63,14 @@ end
 -- Spawn ships into empty grid slots until no waiting ships remain.
 -- enemyBaseHP = state.enemyBaseHP (EC). New ship HP = FN_R(EC) + 20.
 function CombatEngine.spawnShips(combat, enemyBaseHP)
+  if not combat.events then combat.events = {} end
   for i = 1, 10 do
     if combat.enemyWaiting <= 0 then break end
     if combat.grid[i] == nil then
       combat.grid[i] = { maxHP = fnR(enemyBaseHP) + 20, damage = 0 }
       combat.enemyOnScreen = combat.enemyOnScreen + 1
       combat.enemyWaiting  = combat.enemyWaiting  - 1
+      table.insert(combat.events, { type = "spawn", slot = i })
     end
   end
 end
@@ -114,6 +116,9 @@ function CombatEngine.fight(state, combat)
     return { sunk = 0, fleeCount = 0, noGuns = true }
   end
 
+  -- Initialise events list if caller did not pre-create it
+  if not combat.events then combat.events = {} end
+
   local sunk = 0
   -- Fire each gun
   for _ = 1, state.guns do
@@ -127,10 +132,12 @@ function CombatEngine.fight(state, combat)
     until combat.grid[slot] ~= nil or attempts > 50
 
     if combat.grid[slot] ~= nil then
+      table.insert(combat.events, { type = "hit", slot = slot })
       local dmg = fnR(30) + 10  -- 10-39
       combat.grid[slot].damage = combat.grid[slot].damage + dmg
       if combat.grid[slot].damage > combat.grid[slot].maxHP then
         -- Ship sunk
+        table.insert(combat.events, { type = "sink", slot = slot })
         combat.grid[slot] = nil
         combat.enemyTotal    = combat.enemyTotal    - 1
         combat.enemyOnScreen = combat.enemyOnScreen - 1
@@ -166,6 +173,7 @@ function CombatEngine.fight(state, combat)
       for i = 10, 1, -1 do
         if removed >= fromScreen then break end
         if combat.grid[i] ~= nil then
+          table.insert(combat.events, { type = "flee", slot = i })
           combat.grid[i] = nil
           combat.enemyOnScreen = math.max(0, combat.enemyOnScreen - 1)
           removed = removed + 1
@@ -213,6 +221,7 @@ end
 function CombatEngine.partialEscape(combat)
   if combat.enemyTotal <= 2 then return 0 end
   if math.random(0, 4) ~= 0 then return 0 end
+  if not combat.events then combat.events = {} end
 
   local w = fnR(combat.enemyTotal / 2) + 1
   combat.enemyTotal   = combat.enemyTotal   - w
@@ -224,6 +233,7 @@ function CombatEngine.partialEscape(combat)
   for i = 10, 1, -1 do
     if removed >= fromScreen then break end
     if combat.grid[i] ~= nil then
+      table.insert(combat.events, { type = "flee", slot = i })
       combat.grid[i] = nil
       combat.enemyOnScreen = math.max(0, combat.enemyOnScreen - 1)
       removed = removed + 1

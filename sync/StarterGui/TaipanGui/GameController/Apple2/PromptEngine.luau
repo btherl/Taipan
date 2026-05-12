@@ -605,19 +605,12 @@ end
 local function sceneCombatLayout(state, actions, localSceneCb, combatSelection)
   local combat  = state.combat or {}
   local total   = combat.enemyTotal or 0
-  local grid    = combat.grid or {}
   local guns    = state.guns or 0
   local sw      = math.max(0, 100 - math.floor((state.damage or 0) / (state.shipCapacity or 1) * 100))
   local swLabel = (sw >= 100 and "Perfect") or (sw >= 80 and "Prime") or
                   (sw >= 60 and "Good")    or (sw >= 40 and "Fair")  or
                   (sw >= 20 and "Poor")    or "Critical"
   local swInv   = sw < 40
-
-  -- 10-slot ship grid: # = alive, . = empty
-  local gridStr = ""
-  for i = 1, 10 do
-    gridStr = gridStr .. (grid[i] ~= nil and "#" or ".")
-  end
 
   -- Col 32 onward (9 chars): "| We have" / "|  N guns" / "+--------"
   local RIGHT_W   = 9
@@ -667,17 +660,13 @@ local function sceneCombatLayout(state, actions, localSceneCb, combatSelection)
     return { segments = seg }
   end
 
-  local function row5()
-    return { text = "  Ships: [" .. gridStr .. "]", color = GREEN }
-  end
-
   local rows = {}
   rows[1] = row1()
   rows[2] = row2()
   rows[3] = row3()
   rows[4] = row4()
-  rows[5] = row5()
-  for r = 6, 24 do rows[r] = { text = "", color = AMBER } end
+  -- row 5 intentionally blank: ShipGrid layer renders the actual sprites in rows 7-17
+  for r = 5, 24 do rows[r] = { text = "", color = AMBER } end
 
   local promptDef = {
     type = "key",

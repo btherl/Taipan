@@ -591,6 +591,16 @@ local function combatTruncateDamage(state)
   state.damage = math.floor(state.damage)
 end
 
+-- Stashes the current combat.events into a transient state field that survives
+-- state.combat = nil, so the client can drain end-of-combat animations on the
+-- final state push. Cleared after the next pushState in each combat handler.
+local function endCombatPreservingEvents(state)
+  if state.combat and type(state.combat.events) == "table" and #state.combat.events > 0 then
+    state.combatTrailingEvents = state.combat.events
+  end
+  state.combat = nil
+end
+
 -- Sets game-over state and computes final score/rating.
 local function setGameOver(state, reason)
   state.gameOver       = true
@@ -598,7 +608,7 @@ local function setGameOver(state, reason)
   local sc             = ProgressionEngine.score(state)
   state.finalScore     = sc
   state.finalRating    = ProgressionEngine.rating(sc)
-  state.combat         = nil
+  endCombatPreservingEvents(state)
   state.shipOffer      = nil
   state.pendingArrival = nil  -- no arrival if sunk
 end
@@ -667,7 +677,7 @@ local function applyEnemyFire(player, state, combat, pending)
   if fireResult.liYuenIntervened then
     Remotes.Notify:FireClient(player, "Li Yuen's fleet drove them off!!")
     table.insert(pending, makeCombatNotif("Li Yuen's fleet drove them off!!", 3))
-    state.combat = nil
+    endCombatPreservingEvents(state)
     return true
   end
   return false
@@ -678,6 +688,7 @@ Remotes.CombatFight.OnServerEvent:Connect(function(player)
   local state = playerStates[player]
   if type(state) ~= "table" or not state.combat or state.combat.outcome ~= nil then return end
   local combat = state.combat
+  combat.events = {}
   local pending = {}
 
   local result = CombatEngine.fight(state, combat)
@@ -688,12 +699,18 @@ Remotes.CombatFight.OnServerEvent:Connect(function(player)
     local combatEnded = applyEnemyFire(player, state, combat, pending)
     if combatEnded and not state.gameOver then appendArrivalPending(state, pending) end
     state.pendingMessages = pending; pushState(player); state.pendingMessages = nil
+    if state.combat then state.combat.events = nil end
+    state.combatTrailingEvents = nil
     return
   end
 
   -- Fight narration sequence
   table.insert(pending, makeCombatNotif("Aye, we'll fight 'em, Taipan!", 1))
   table.insert(pending, makeCombatNotif("We're firing on 'em, Taipan!", 1))
+  -- Gate: client pauses notif playback here until the firing/sinking
+  -- animation queue has drained, so the result message lines up with the
+  -- visible outcome instead of overlapping the animations.
+  table.insert(pending, { _animationGate = true })
 
   -- Result message
   if result.sunk > 0 then
@@ -722,7 +739,7 @@ Remotes.CombatFight.OnServerEvent:Connect(function(player)
       5))
     Remotes.Notify:FireClient(player,
       string.format("We've captured some booty worth $%d!!", combat.booty))
-    state.combat = nil
+    endCombatPreservingEvents(state)
     postCombatStorm(player, state, pending)
     if not state.gameOver then
       appendArrivalPending(state, pending)
@@ -736,12 +753,16 @@ Remotes.CombatFight.OnServerEvent:Connect(function(player)
       end
     end
     state.pendingMessages = pending; pushState(player); state.pendingMessages = nil
+    if state.combat then state.combat.events = nil end
+    state.combatTrailingEvents = nil
     return
   end
 
   local combatEnded = applyEnemyFire(player, state, combat, pending)
   if combatEnded and not state.gameOver then appendArrivalPending(state, pending) end
   state.pendingMessages = pending; pushState(player); state.pendingMessages = nil
+  if state.combat then state.combat.events = nil end
+  state.combatTrailingEvents = nil
 end)
 
 -- CombatRun: attempt to flee
@@ -749,6 +770,7 @@ Remotes.CombatRun.OnServerEvent:Connect(function(player)
   local state = playerStates[player]
   if type(state) ~= "table" or not state.combat or state.combat.outcome ~= nil then return end
   local combat = state.combat
+  combat.events = {}
   local pending = {}
 
   CombatEngine.updateRunMomentum(combat)
@@ -758,10 +780,12 @@ Remotes.CombatRun.OnServerEvent:Connect(function(player)
     table.insert(pending, makeCombatNotif("We got away from 'em, Taipan!!", 3))
     table.insert(pending, makeStatusScreenLowerNotif(
       "", { "We made it, Taipan!" }, 3))
-    state.combat = nil
+    endCombatPreservingEvents(state)
     postCombatStorm(player, state, pending)
     if not state.gameOver then appendArrivalPending(state, pending) end
     state.pendingMessages = pending; pushState(player); state.pendingMessages = nil
+    if state.combat then state.combat.events = nil end
+    state.combatTrailingEvents = nil
     return
   end
 
@@ -778,6 +802,8 @@ Remotes.CombatRun.OnServerEvent:Connect(function(player)
   local combatEnded = applyEnemyFire(player, state, combat, pending)
   if combatEnded and not state.gameOver then appendArrivalPending(state, pending) end
   state.pendingMessages = pending; pushState(player); state.pendingMessages = nil
+  if state.combat then state.combat.events = nil end
+  state.combatTrailingEvents = nil
 end)
 
 -- CombatNoCommand: no command queued at round-execute time; enemy fires unopposed
@@ -785,11 +811,14 @@ Remotes.CombatNoCommand.OnServerEvent:Connect(function(player)
   local state = playerStates[player]
   if type(state) ~= "table" or not state.combat or state.combat.outcome ~= nil then return end
   local combat = state.combat
+  combat.events = {}
   local pending = {}
 
   local combatEnded = applyEnemyFire(player, state, combat, pending)
   if combatEnded and not state.gameOver then appendArrivalPending(state, pending) end
   state.pendingMessages = pending; pushState(player); state.pendingMessages = nil
+  if state.combat then state.combat.events = nil end
+  state.combatTrailingEvents = nil
 end)
 
 -- CombatThrow: throw cargo, auto-attempt run
@@ -798,6 +827,7 @@ Remotes.CombatThrow.OnServerEvent:Connect(function(player, goodIndex, qty)
   if type(state) ~= "table" or not state.combat or state.combat.outcome ~= nil then return end
   if not validGood(goodIndex) or not validQty(qty) then return end
   local combat = state.combat
+  combat.events = {}
   local pending = {}
 
   local thrown = CombatEngine.throwCargo(state, combat, goodIndex, qty)
@@ -805,6 +835,8 @@ Remotes.CombatThrow.OnServerEvent:Connect(function(player, goodIndex, qty)
     Remotes.Notify:FireClient(player, "There's nothing there, Taipan!")
     table.insert(pending, makeCombatNotif("There's nothing there, Taipan!", 2))
     state.pendingMessages = pending; pushState(player); state.pendingMessages = nil
+    if state.combat then state.combat.events = nil end
+    state.combatTrailingEvents = nil
     return
   end
   Remotes.Notify:FireClient(player,
@@ -819,10 +851,12 @@ Remotes.CombatThrow.OnServerEvent:Connect(function(player, goodIndex, qty)
     table.insert(pending, makeCombatNotif("We got away from 'em, Taipan!!", 3))
     table.insert(pending, makeStatusScreenLowerNotif(
       "", { "We made it, Taipan!" }, 3))
-    state.combat = nil
+    endCombatPreservingEvents(state)
     postCombatStorm(player, state, pending)
     if not state.gameOver then appendArrivalPending(state, pending) end
     state.pendingMessages = pending; pushState(player); state.pendingMessages = nil
+    if state.combat then state.combat.events = nil end
+    state.combatTrailingEvents = nil
     return
   end
 
@@ -839,6 +873,8 @@ Remotes.CombatThrow.OnServerEvent:Connect(function(player, goodIndex, qty)
   local combatEnded = applyEnemyFire(player, state, combat, pending)
   if combatEnded and not state.gameOver then appendArrivalPending(state, pending) end
   state.pendingMessages = pending; pushState(player); state.pendingMessages = nil
+  if state.combat then state.combat.events = nil end
+  state.combatTrailingEvents = nil
 end)
 
 -- Clears shipOffer when upgrade and gun sub-offers are both resolved.

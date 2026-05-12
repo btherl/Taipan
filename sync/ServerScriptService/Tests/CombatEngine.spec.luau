@@ -304,6 +304,31 @@ return function()
     end)
   end)
 
+  describe("partialEscape events", function()
+    it("appends one flee event per slot vacated", function()
+      local fired = false
+      for _ = 1, 200 do
+        local s = makeState()
+        local c = CombatEngine.initCombat(s, 10, 1)
+        for i = 1, 10 do c.grid[i] = { maxHP = 50, damage = 0 } end
+        c.enemyOnScreen = 10
+        c.enemyWaiting  = 0
+        c.events = {}
+        local w = CombatEngine.partialEscape(c)
+        if w > 0 then
+          local fleeEvents = 0
+          for _, e in ipairs(c.events) do
+            if e.type == "flee" then fleeEvents = fleeEvents + 1 end
+          end
+          expect(fleeEvents).to.equal(w)
+          fired = true
+          break
+        end
+      end
+      expect(fired).to.equal(true)
+    end)
+  end)
+
   describe("throwCargo", function()
     it("reduces shipCargo, increases holdSpace, boosts momentum", function()
       local s = makeState({ shipCargo = {50, 0, 0, 0}, holdSpace = 10 })
@@ -408,6 +433,119 @@ return function()
     it("returns 0 when damage >= shipCapacity", function()
       local s = makeState({ damage = 60, shipCapacity = 60 })
       expect(CombatEngine.seaworthiness(s)).to.equal(0)
+    end)
+  end)
+
+  describe("fight events", function()
+    it("appends hit events for non-killing shots", function()
+      local s = makeState({ guns = 1, enemyBaseHP = 10000 })
+      local c = CombatEngine.initCombat(s, 1, 1)
+      c.grid[3] = { maxHP = 10000, damage = 0 }
+      c.enemyOnScreen = 1
+      c.enemyWaiting  = 0
+      c.events = {}
+      CombatEngine.fight(s, c)
+      expect(#c.events).to.equal(1)
+      expect(c.events[1].type).to.equal("hit")
+      expect(c.events[1].slot).to.equal(3)
+    end)
+
+    it("appends a sink event immediately after a killing hit on the same slot", function()
+      local s = makeState({ guns = 1, enemyBaseHP = 1 })
+      local c = CombatEngine.initCombat(s, 1, 1)
+      c.grid[5] = { maxHP = 1, damage = 0 }
+      c.enemyOnScreen = 1
+      c.enemyWaiting  = 0
+      c.events = {}
+      CombatEngine.fight(s, c)
+      expect(#c.events).to.equal(2)
+      expect(c.events[1].type).to.equal("hit")
+      expect(c.events[1].slot).to.equal(5)
+      expect(c.events[2].type).to.equal("sink")
+      expect(c.events[2].slot).to.equal(5)
+    end)
+
+    it("auto-initialises events list if absent", function()
+      local s = makeState({ guns = 1, enemyBaseHP = 10000 })
+      local c = CombatEngine.initCombat(s, 1, 1)
+      c.grid[1] = { maxHP = 10000, damage = 0 }
+      c.enemyOnScreen = 1
+      c.enemyWaiting  = 0
+      -- deliberately do NOT set c.events
+      CombatEngine.fight(s, c)
+      expect(type(c.events)).to.equal("table")
+      expect(#c.events >= 1).to.equal(true)
+    end)
+
+    it("emits spawn events right after the sink that empties the screen", function()
+      local s = makeState({ guns = 5, enemyBaseHP = 1 })
+      local c = CombatEngine.initCombat(s, 4, 1)
+      c.grid[1] = { maxHP = 1, damage = 0 }
+      c.enemyOnScreen = 1
+      c.enemyWaiting  = 3
+      c.events = {}
+      CombatEngine.fight(s, c)
+      -- First two events: hit then sink at slot 1
+      expect(c.events[1].type).to.equal("hit")
+      expect(c.events[1].slot).to.equal(1)
+      expect(c.events[2].type).to.equal("sink")
+      expect(c.events[2].slot).to.equal(1)
+      -- Next events should be spawns (3 of them, one per remaining waiting ship)
+      local spawnCount = 0
+      for i = 3, #c.events do
+        if c.events[i].type == "spawn" then spawnCount = spawnCount + 1 end
+        if c.events[i].type ~= "spawn" then break end
+      end
+      expect(spawnCount).to.equal(3)
+    end)
+
+    it("emits no spawn events when waiting=0", function()
+      local s = makeState({ guns = 1, enemyBaseHP = 1 })
+      local c = CombatEngine.initCombat(s, 1, 1)
+      c.grid[2] = { maxHP = 1, damage = 0 }
+      c.enemyOnScreen = 1
+      c.enemyWaiting  = 0
+      c.events = {}
+      CombatEngine.fight(s, c)
+      for _, e in ipairs(c.events) do
+        expect(e.type ~= "spawn").to.equal(true)
+      end
+    end)
+
+    it("emits flee events after the gun loop when enemies retreat", function()
+      -- Setup: 4 ships on screen, no waiting, originalCount=6 to force the flee
+      -- branch's sn ~= s0 precondition. RNG-driven; we run many trials and
+      -- verify ordering whenever flee events appear.
+      local sawOrdering = false
+      for trial = 1, 100 do
+        local s = makeState({ guns = 1, enemyBaseHP = 10000 })
+        local c = CombatEngine.initCombat(s, 4, 1)
+        for i = 1, 4 do c.grid[i] = { maxHP = 10000, damage = 0 } end
+        c.enemyOnScreen = 4
+        c.enemyWaiting  = 0
+        c.originalCount = 6
+        c.events = {}
+        CombatEngine.fight(s, c)
+        -- If any flee events appeared, all of them must come AFTER all hit/sink/spawn events
+        local lastNonFleeIdx = 0
+        local firstFleeIdx = nil
+        for i, e in ipairs(c.events) do
+          if e.type == "flee" then
+            if firstFleeIdx == nil then firstFleeIdx = i end
+          else
+            if firstFleeIdx ~= nil then
+              -- non-flee event after a flee event -> ordering violation
+              error("non-flee event " .. e.type .. " appeared after flee event")
+            end
+            lastNonFleeIdx = i
+          end
+        end
+        if firstFleeIdx ~= nil then
+          sawOrdering = true
+          break
+        end
+      end
+      expect(sawOrdering).to.equal(true)
     end)
   end)
 end

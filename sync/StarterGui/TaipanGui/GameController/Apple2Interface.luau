@@ -8,6 +8,7 @@ local Terminal     = require(script.Parent.Apple2.Terminal)
 local GlitchLayer  = require(script.Parent.Apple2.GlitchLayer)
 local KeyInput     = require(script.Parent.Apple2.KeyInput)
 local PromptEngine = require(script.Parent.Apple2.PromptEngine)
+local ShipGrid     = require(script.Parent.Apple2.ShipGrid)
 local SoundPlayer  = require(ReplicatedStorage.SoundPlayer)
 
 local RED   = Color3.fromRGB(220, 80, 80)
@@ -47,6 +48,8 @@ local Apple2Interface = {}
 
 function Apple2Interface.new(screenGui, actions)
   local term    = Terminal.new(5)  -- displayOrder 5
+  local shipGrid = ShipGrid.new(6)  -- displayOrder 6 (above terminal)
+  shipGrid.hide()                   -- start hidden; combat scene will show it
   local glitch  = GlitchLayer.new(term._gui)
   local ki      = KeyInput.new(screenGui)
 
@@ -68,9 +71,63 @@ function Apple2Interface.new(screenGui, actions)
                           --       "quit_confirm" | "combat_throw_good" | "combat_throw_amt_N" |
                           --       "final_status"
   local notifQueue = {}
+  local combatAnimQueue = {}
+  local combatAnimDraining = false
+  local pendingCombatExit = false
+  local pendingCombatShow = false
+  local notifWaitingForAnims = false
   local notifGen   = 0
   local renderGen  = 0   -- incremented each render; used to discard stale _autoAdvance callbacks
   local GREEN      = Color3.fromRGB(140, 200, 80)
+
+  -- Forward declarations for mutual recursion between advanceNotif and playNextNotif
+  local render
+  local playNextNotif
+  local startRoundIfCombat
+  local executePhaseC
+
+  local function drainCombatEvents()
+    if combatAnimDraining then return end
+    combatAnimDraining = true
+    task.spawn(function()
+      while #combatAnimQueue > 0 do
+        local evt = table.remove(combatAnimQueue, 1)
+        local done = false
+        local function onComplete() done = true end
+
+        if evt.type == "hit" then
+          shipGrid.applyHit(evt.slot, onComplete)
+        elseif evt.type == "sink" then
+          shipGrid.sink(evt.slot, onComplete)
+        elseif evt.type == "spawn" then
+          shipGrid.spawn(evt.slot)
+          done = true
+        elseif evt.type == "flee" then
+          shipGrid.flee(evt.slot)
+          done = true
+        else
+          done = true
+        end
+
+        while not done do task.wait(0.02) end
+        task.wait(0.05)  -- 50 ms inter-event gap
+      end
+      combatAnimDraining = false
+      -- If a combat exit was deferred while animations were running, run it now.
+      if pendingCombatExit and not (lastState and lastState.combat) then
+        pendingCombatExit = false
+        shipGrid.clearAll()
+        shipGrid.hide()
+      end
+      -- Resume any notif playback that was paused at an animation gate.
+      if notifWaitingForAnims then
+        notifWaitingForAnims = false
+        playNextNotif()
+        return
+      end
+      startRoundIfCombat()
+    end)
+  end
 
   local function isServerDriven(state)
     for _, check in pairs(SERVER_SCENES) do
@@ -78,12 +135,6 @@ function Apple2Interface.new(screenGui, actions)
     end
     return false
   end
-
-  -- Forward declarations for mutual recursion between advanceNotif and playNextNotif
-  local render
-  local playNextNotif
-  local startRoundIfCombat
-  local executePhaseC
 
   local function advanceNotif(gen)
     if gen ~= notifGen then return end  -- stale callback, discard
@@ -100,6 +151,23 @@ function Apple2Interface.new(screenGui, actions)
   end
 
   playNextNotif = function()
+    -- Consume any leading animation-gate sentinels. If the animator is still
+    -- busy, pause here; drainCombatEvents will resume us when it finishes.
+    while #notifQueue > 0 and notifQueue[1]._animationGate do
+      if combatAnimDraining or #combatAnimQueue > 0 then
+        notifWaitingForAnims = true
+        return
+      end
+      table.remove(notifQueue, 1)
+    end
+    if #notifQueue == 0 then
+      -- Gate(s) drained the queue; fall back to the post-notif scene render.
+      localScene = nil
+      roundPhase = nil
+      render(lastState, localScene)
+      startRoundIfCombat()
+      return
+    end
     notifGen += 1
     local myGen = notifGen
     local entry = table.remove(notifQueue, 1)
@@ -199,12 +267,20 @@ function Apple2Interface.new(screenGui, actions)
         end
       end)
     end
+
+    -- Reveal the ship grid once the combat scene's battle lines have replaced
+    -- the port screen. The flag is set on combat entry and consumed here.
+    if pendingCombatShow and state and state.combat ~= nil then
+      pendingCombatShow = false
+      shipGrid.show()
+    end
   end
 
   startRoundIfCombat = function()
     if not (lastState and lastState.combat) then return end
     if roundPhase ~= nil then return end
     if #notifQueue > 0 then return end
+    if combatAnimDraining or #combatAnimQueue > 0 then return end
     roundGen += 1
     local myGen = roundGen
     roundPhase = "wait_a"
@@ -248,12 +324,39 @@ function Apple2Interface.new(screenGui, actions)
   local adapter = {}
 
   function adapter.update(state)
+    local prevCombat = lastState and lastState.combat ~= nil
+    local nextCombat = state.combat ~= nil
     lastState = state
 
-    if state.combat == nil then
+    if not nextCombat then
       queuedCommand = nil
       roundPhase = nil
       roundGen += 1  -- invalidate any in-flight phase callbacks
+    end
+
+    -- Combat boundary transitions
+    if nextCombat and not prevCombat then
+      shipGrid.clearAll()   -- start fresh
+      -- Pre-draw ships invisibly; show() is deferred until the combat scene
+      -- renders, so sprites don't appear over the still-visible port screen
+      -- while entry notifications are playing.
+      if type(state.combat.grid) == "table" then
+        for slot = 1, 10 do
+          if state.combat.grid[slot] ~= nil then
+            shipGrid.draw(slot)
+          end
+        end
+      end
+      pendingCombatShow = true
+    elseif prevCombat and not nextCombat then
+      local hasTrailing = type(state.combatTrailingEvents) == "table"
+                          and #state.combatTrailingEvents > 0
+      if hasTrailing or combatAnimDraining or #combatAnimQueue > 0 then
+        pendingCombatExit = true
+      else
+        shipGrid.clearAll()
+        shipGrid.hide()
+      end
     end
 
     -- Drain any pendingMessages from the state update into the queue
@@ -261,6 +364,20 @@ function Apple2Interface.new(screenGui, actions)
       for _, entry in ipairs(state.pendingMessages) do
         table.insert(notifQueue, entry)
       end
+    end
+
+    -- Drain any combat.events into the animator queue (active combat path)
+    if nextCombat and type(state.combat.events) == "table" then
+      for _, evt in ipairs(state.combat.events) do
+        table.insert(combatAnimQueue, evt)
+      end
+      drainCombatEvents()
+    elseif type(state.combatTrailingEvents) == "table" then
+      -- End-of-combat trailing events (e.g. final sink animation on victory)
+      for _, evt in ipairs(state.combatTrailingEvents) do
+        table.insert(combatAnimQueue, evt)
+      end
+      drainCombatEvents()
     end
 
     -- Server-driven scenes reset local navigation
@@ -295,6 +412,7 @@ function Apple2Interface.new(screenGui, actions)
     ki.destroy()
     term.destroy()
     glitch.destroy()
+    shipGrid.destroy()
   end
 
   return adapter

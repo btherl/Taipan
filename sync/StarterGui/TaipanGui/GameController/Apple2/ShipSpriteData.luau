@@ -5,13 +5,26 @@
 
 local ShipSpriteData = {}
 
+-- Offset each character in a string by offset value
+-- Used to add 96 to letters to give TaipanThickFont ship sprites
+local function offsetByX(originalString, offset)
+	local shiftedString = string.gsub(originalString, ".", function(char)
+	    local ascii = string.byte(char)
+	    -- Add offset and convert back to a character
+	    return string.char(ascii + offset)
+	end)
+
+	return shiftedString
+end
+
 -- Base 5-row x 7-col ship sprite (from BASIC SH$).
+-- Need to offset by +96 to get the ship sprites, compared to the letters
 ShipSpriteData.baseSprite = {
-	"ABCDEFG",
-	"HIJKLMN",
-	"OIJKLPQ",
-	"RSTUVWX",
-	"YJJJJJZ",
+	offsetByX("ABCDEFG", 96),
+	offsetByX("HIJKLMN", 96),
+	offsetByX("OIJKLPQ", 96),
+	offsetByX("RSTUVWX", 96),
+	offsetByX("YJJJJJZ", 96),
 }
 
 -- Damage fragments. Indexed [1..6][0..1].
@@ -23,7 +36,11 @@ ShipSpriteData.baseSprite = {
 local function frag(chars, code)
 	local dx = math.floor(code / 10)
 	local dy = code - dx * 10
-	return { chars = chars, dx = dx, dy = dy }
+	local offsetChars = {}
+	for key, value in ipairs(chars) do
+		offsetChars[key] = offsetByX(value, 96)
+	end
+	return { chars = offsetChars, dx = dx, dy = dy }
 end
 
 ShipSpriteData.damageFragments = {

@@ -55,15 +55,17 @@ function ShipGrid.new(displayOrder)
   -- Per-slot state. slotState[i] = { frame, container, glyphs, damageGrid, animating, sinkTween }
   local slotState = {}
 
-  -- Helper: build a fresh ImageLabel for one glyph, parented to a Frame, at relative pixel pos.
+  -- Helper: build a fresh ImageLabel for one glyph, parented to a slot container,
+  -- at relative pixel pos. Sizes/positions are fractions of the slot (parent),
+  -- not of the screen — Roblox UDim2.fromScale is relative to parent.
   local function makeGlyph(parent, codepoint, relX, relY)
     local frame = fontData[codepoint]
     if not frame then
       -- Missing glyph; return a blank label so we don't crash on unexpected chars.
       local blank = Instance.new("Frame")
       blank.BackgroundTransparency = 1
-      blank.Size = UDim2.fromScale(CHAR_WIDTH / SCREEN_W, ROW_HEIGHT / SCREEN_H)
-      blank.Position = UDim2.fromScale(relX / SCREEN_W, relY / SCREEN_H)
+      blank.Size = UDim2.fromScale(CHAR_WIDTH / SLOT_W_PX, ROW_HEIGHT / SLOT_H_PX)
+      blank.Position = UDim2.fromScale(relX / SLOT_W_PX, relY / SLOT_H_PX)
       blank.Parent = parent
       return blank
     end
@@ -73,9 +75,9 @@ function ShipGrid.new(displayOrder)
     img.ImageRectOffset = Vector2.new(frame.x, frame.y)
     img.ImageRectSize   = Vector2.new(frame.width, frame.height)
     img.Size            = UDim2.fromScale(
-      (frame.width  * TEXT_SIZE) / SCREEN_W,
-      (frame.height * TEXT_SIZE) / SCREEN_H)
-    img.Position        = UDim2.fromScale(relX / SCREEN_W, relY / SCREEN_H)
+      (frame.width  * TEXT_SIZE) / SLOT_W_PX,
+      (frame.height * TEXT_SIZE) / SLOT_H_PX)
+    img.Position        = UDim2.fromScale(relX / SLOT_W_PX, relY / SLOT_H_PX)
     img.ImageColor3     = Color3.fromRGB(140, 200, 80)  -- terminal green
     img.Parent          = parent
     return img
@@ -209,7 +211,8 @@ function ShipGrid.new(displayOrder)
     st.animating = true
 
     local duration = SINK_MIN_S + math.random() * (SINK_MAX_S - SINK_MIN_S)
-    local goal = { Position = UDim2.fromScale(0, SLOT_H_PX / SCREEN_H) }
+    -- Move container fully below the slot (clipped by ClipsDescendants on the slot frame).
+    local goal = { Position = UDim2.fromScale(0, 1) }
     local info = TweenInfo.new(duration, Enum.EasingStyle.Linear, Enum.EasingDirection.Out)
     local tween = TweenService:Create(st.container, info, goal)
     st.sinkTween = tween

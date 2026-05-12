@@ -75,6 +75,7 @@ function Apple2Interface.new(screenGui, actions)
   local combatAnimDraining = false
   local pendingCombatExit = false
   local pendingCombatShow = false
+  local notifWaitingForAnims = false
   local notifGen   = 0
   local renderGen  = 0   -- incremented each render; used to discard stale _autoAdvance callbacks
   local GREEN      = Color3.fromRGB(140, 200, 80)
@@ -118,6 +119,12 @@ function Apple2Interface.new(screenGui, actions)
         shipGrid.clearAll()
         shipGrid.hide()
       end
+      -- Resume any notif playback that was paused at an animation gate.
+      if notifWaitingForAnims then
+        notifWaitingForAnims = false
+        playNextNotif()
+        return
+      end
       startRoundIfCombat()
     end)
   end
@@ -144,6 +151,23 @@ function Apple2Interface.new(screenGui, actions)
   end
 
   playNextNotif = function()
+    -- Consume any leading animation-gate sentinels. If the animator is still
+    -- busy, pause here; drainCombatEvents will resume us when it finishes.
+    while #notifQueue > 0 and notifQueue[1]._animationGate do
+      if combatAnimDraining or #combatAnimQueue > 0 then
+        notifWaitingForAnims = true
+        return
+      end
+      table.remove(notifQueue, 1)
+    end
+    if #notifQueue == 0 then
+      -- Gate(s) drained the queue; fall back to the post-notif scene render.
+      localScene = nil
+      roundPhase = nil
+      render(lastState, localScene)
+      startRoundIfCombat()
+      return
+    end
     notifGen += 1
     local myGen = notifGen
     local entry = table.remove(notifQueue, 1)

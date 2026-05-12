@@ -707,6 +707,10 @@ Remotes.CombatFight.OnServerEvent:Connect(function(player)
   -- Fight narration sequence
   table.insert(pending, makeCombatNotif("Aye, we'll fight 'em, Taipan!", 1))
   table.insert(pending, makeCombatNotif("We're firing on 'em, Taipan!", 1))
+  -- Gate: client pauses notif playback here until the firing/sinking
+  -- animation queue has drained, so the result message lines up with the
+  -- visible outcome instead of overlapping the animations.
+  table.insert(pending, { _animationGate = true })
 
   -- Result message
   if result.sunk > 0 then

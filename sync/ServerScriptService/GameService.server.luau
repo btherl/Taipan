@@ -76,24 +76,30 @@ local function injectWuEscortIfReady(state, pendingTable)
   if not state.wuPending then return end
   local N = state.wuEscortBraves
   state.wuEscortBraves = nil
-  table.insert(pendingTable, makeCompradorNotif({
+  local e1 = makeCompradorNotif({
     string.format("Elder Brother Wu has sent %d braves", N),
     "to escort you to the Wu mansion, Taipan.",
-  }, 5))
-  table.insert(pendingTable, makeCompradorNotif({
+  }, 5)
+  e1.sound = "badjoss"
+  table.insert(pendingTable, e1)
+  local e2 = makeCompradorNotif({
     "Elder Brother Wu reminds you of the",
     "Confucian ideal of personal worthiness,",
     "and how this applies to paying one's",
     "debts.",
-  }, 10))
-  table.insert(pendingTable, makeCompradorNotif({
+  }, 10)
+  e2.sound = "badjoss"
+  table.insert(pendingTable, e2)
+  local e3 = makeCompradorNotif({
     "He is reminded of a fabled barbarian",
     "who came to a bad end, after not caring",
     "for his obligations.",
     "",
     "He hopes no such fate awaits you, his",
     "friend, Taipan.",
-  }, 10))
+  }, 10)
+  e3.sound = "badjoss"
+  table.insert(pendingTable, e3)
 end
 
 local RunService        = game:GetService("RunService")
@@ -246,11 +252,13 @@ Remotes.TravelTo.OnServerEvent:Connect(function(player, destination)
         string.format("Taipan!! %d hostile ships approaching!!", shipCount))
     elseif CombatEngine.liYuenEncounterCheck(state) then
       if state.liYuenProtection ~= 0 then
-        table.insert(pending, makeCaptainNotif({
+        local entry = makeCaptainNotif({
           "Li Yuen's pirates, Taipan!!",
           "",
           "Good joss!! They let us be!!",
-        }, 5))
+        }, 5)
+        entry.sound = "badjoss"
+        table.insert(pending, entry)
         Remotes.Notify:FireClient(player, "Good joss!! Li Yuen's fleet let us be!!")
       else
         local shipCount = CombatEngine.liYuenFleetSize(state)
@@ -278,20 +286,24 @@ Remotes.TravelTo.OnServerEvent:Connect(function(player, destination)
     if destination ~= Constants.HONG_KONG and FinanceEngine.liYuenWarningFires(state) then
       Remotes.Notify:FireClient(player,
         "Li Yuen wishes you to reconsider! He could protect you for a fee...")
-      table.insert(arrivalPending, makeCompradorNotif({
+      local entry = makeCompradorNotif({
         "Li Yuen has sent a lieutenant,",
         "Taipan.  He says his admiral wishes",
         "to see you in Hong Kong, posthaste!",
-      }, 5))
+      }, 5)
+      entry.sound = "badjoss"
+      table.insert(arrivalPending, entry)
     end
 
   if priceEvent then
     local goodName  = Constants.GOOD_NAMES[priceEvent.good]
     local direction = priceEvent.direction == "drop" and "dropped" or "risen"
-    table.insert(arrivalPending, makeCompradorNotif({
+    local entry = makeCompradorNotif({
       string.format("Taipan!!  The price of %s", goodName),
       string.format("has %s to %d!!", direction, priceEvent.price),
-    }, 5))
+    }, 5)
+    entry.sound = "goodjoss"
+    table.insert(arrivalPending, entry)
   end
 
   if state.combat then
@@ -339,7 +351,9 @@ Remotes.TravelTo.OnServerEvent:Connect(function(player, destination)
           Remotes.Notify:FireClient(player, "I think we're going down!!")
           if EventEngine.stormSinks(state) then
             Remotes.Notify:FireClient(player, "We're going down, Taipan!!")
-            table.insert(pending, makeCaptainNotif({ "Storm, Taipan!!", "", "We're going down!!" }, 5))
+            local stormEntry = makeCaptainNotif({ "Storm, Taipan!!", "", "We're going down!!" }, 5)
+            stormEntry.sound = "underattack"
+            table.insert(pending, stormEntry)
             -- stormSinks already sets state.gameOver = true; add reason + score
             local sc = ProgressionEngine.score(state)
             state.gameOverReason = "sunk"
@@ -355,44 +369,31 @@ Remotes.TravelTo.OnServerEvent:Connect(function(player, destination)
               destination         = newPort  -- sync local so HK offer check uses actual port
               Remotes.Notify:FireClient(player,
                 string.format("We've been blown off course to %s!", Constants.PORT_NAMES[newPort]))
-              table.insert(pending, makeCaptainNotif({
+              local stormEntry = makeCaptainNotif({
                 "Storm, Taipan!!",
                 "",
                 "We've been blown off course",
                 "to " .. Constants.PORT_NAMES[newPort],
-              }, 5))
+              }, 5)
+              stormEntry.sound = "badjoss"
+              table.insert(pending, stormEntry)
             else
-              table.insert(pending, makeCaptainNotif({ "Storm, Taipan!!", "", "    We made it!!" }, 5))
+              local stormEntry = makeCaptainNotif({ "Storm, Taipan!!", "", "    We made it!!" }, 5)
+              stormEntry.sound = "badjoss"
+              table.insert(pending, stormEntry)
             end
-          end
-        else
-          Remotes.Notify:FireClient(player, "We made it!!")
-          local newPort = EventEngine.stormBlownOffCourse(state, destination)
-          if newPort ~= nil then
-            state.currentPort   = newPort
-            state.destination   = newPort
-            state.currentPrices = PriceEngine.calculatePrices(state.basePrices, newPort)
-            destination         = newPort  -- sync local so HK offer check uses actual port
-            Remotes.Notify:FireClient(player,
-              string.format("We've been blown off course to %s!", Constants.PORT_NAMES[newPort]))
-            table.insert(pending, makeCaptainNotif({
-              "Storm, Taipan!!",
-              "",
-              "We've been blown off course",
-              "to " .. Constants.PORT_NAMES[newPort],
-            }, 5))
-          else
-            table.insert(pending, makeCaptainNotif({ "Storm, Taipan!!", "", "    We made it!!" }, 5))
           end
         end
       end
       -- Robbery notification queued after travel events so it appears last
       if stolen ~= nil then
-        table.insert(pending, makeCaptainNotif({
+        local entry = makeCaptainNotif({
           "Bas joss!!",
           "You've been beaten up and robbed of",
           string.format("%d in cash, Taipan!!", stolen),
-        }, 5))
+        }, 5)
+        entry.sound = "underattack"
+        table.insert(pending, entry)
       end
     end
 
@@ -631,7 +632,9 @@ local function postCombatStorm(player, state, pending)
     Remotes.Notify:FireClient(player, "I think we're going down!!")
     if EventEngine.stormSinks(state) then
       Remotes.Notify:FireClient(player, "We're going down, Taipan!!")
-      table.insert(pending, makeCaptainNotif({ "Storm, Taipan!!", "", "We're going down!!" }, 5))
+      local entry = makeCaptainNotif({ "Storm, Taipan!!", "", "We're going down!!" }, 5)
+      entry.sound = "underattack"
+      table.insert(pending, entry)
       setGameOver(state, "sunk")
       return
     end
@@ -643,40 +646,50 @@ local function postCombatStorm(player, state, pending)
     state.currentPrices = PriceEngine.calculatePrices(state.basePrices, newPort)
     Remotes.Notify:FireClient(player,
       string.format("We've been blown off course to %s!", Constants.PORT_NAMES[newPort]))
-    table.insert(pending, makeCaptainNotif({
+    local entry = makeCaptainNotif({
       "Storm, Taipan!!",
       "",
       "We've been blown off course",
       "to " .. Constants.PORT_NAMES[newPort],
-    }, 5))
+    }, 5)
+    entry.sound = "badjoss"
+    table.insert(pending, entry)
   else
     Remotes.Notify:FireClient(player, "We made it!!")
-    table.insert(pending, makeCaptainNotif({ "Storm, Taipan!!", "", "    We made it!!" }, 5))
+    local entry = makeCaptainNotif({ "Storm, Taipan!!", "", "    We made it!!" }, 5)
+    entry.sound = "badjoss"
+    table.insert(pending, entry)
   end
 end
 
--- Shared enemy fire handler: applies one round of enemy fire, clears combat on terminal outcomes.
--- Returns true if combat ended (sunk or Li Yuen intervention).
 local function applyEnemyFire(player, state, combat, pending)
   pending = pending or {}
   combatTruncateDamage(state)
   local fireResult = CombatEngine.enemyFire(state, combat)
   if fireResult.gunDestroyed then
     Remotes.Notify:FireClient(player, "The buggers hit a gun, Taipan!!")
-    table.insert(pending, makeCombatNotif("The buggers hit a gun, Taipan!!", 2))
+    local entry = makeCombatNotif("The buggers hit a gun, Taipan!!", 2)
+    entry.sound = "underattack"
+    table.insert(pending, entry)
   end
   Remotes.Notify:FireClient(player, "We've been hit, Taipan!!")
-  table.insert(pending, makeCombatNotif("We've been hit, Taipan!!", 2))
+  local entryHit = makeCombatNotif("We've been hit, Taipan!!", 2)
+  entryHit.sound = "underattack"
+  table.insert(pending, entryHit)
   if fireResult.sunk then
     Remotes.Notify:FireClient(player, "The buggers got us, Taipan!!! It's all over!!!")
-    table.insert(pending, makeStatusScreenLowerNotif(
-      "", { "The buggers got us, Taipan!!", "It's all over, now!!!" }, 5))
+    local entry = makeStatusScreenLowerNotif(
+      "", { "The buggers got us, Taipan!!", "It's all over, now!!!" }, 5)
+    entry.sound = "badjoss"
+    table.insert(pending, entry)
     setGameOver(state, "sunk")
     return true
   end
   if fireResult.liYuenIntervened then
     Remotes.Notify:FireClient(player, "Li Yuen's fleet drove them off!!")
-    table.insert(pending, makeCombatNotif("Li Yuen's fleet drove them off!!", 3))
+    local entry = makeCombatNotif("Li Yuen's fleet drove them off!!", 3)
+    entry.sound = "goodjoss"
+    table.insert(pending, entry)
     endCombatPreservingEvents(state)
     return true
   end
@@ -695,7 +708,9 @@ Remotes.CombatFight.OnServerEvent:Connect(function(player)
   if result.noGuns then
     combat.lastCommand = 2
     Remotes.Notify:FireClient(player, "We have no guns, Taipan!!")
-    table.insert(pending, makeCombatNotif("We have no guns, Taipan!!", 2))
+    local entry = makeCombatNotif("We have no guns, Taipan!!", 2)
+    entry.sound = "underattack"
+    table.insert(pending, entry)
     local combatEnded = applyEnemyFire(player, state, combat, pending)
     if combatEnded and not state.gameOver then appendArrivalPending(state, pending) end
     state.pendingMessages = pending; pushState(player); state.pendingMessages = nil
@@ -705,8 +720,12 @@ Remotes.CombatFight.OnServerEvent:Connect(function(player)
   end
 
   -- Fight narration sequence
-  table.insert(pending, makeCombatNotif("Aye, we'll fight 'em, Taipan!", 1))
-  table.insert(pending, makeCombatNotif("We're firing on 'em, Taipan!", 1))
+  local entryFight = makeCombatNotif("Aye, we'll fight 'em, Taipan!", 1)
+  entryFight.sound = "underattack"
+  table.insert(pending, entryFight)
+  local entryFire = makeCombatNotif("We're firing on 'em, Taipan!", 1)
+  entryFire.sound = "underattack"
+  table.insert(pending, entryFire)
   -- Gate: client pauses notif playback here until the firing/sinking
   -- animation queue has drained, so the result message lines up with the
   -- visible outcome instead of overlapping the animations.
@@ -715,28 +734,38 @@ Remotes.CombatFight.OnServerEvent:Connect(function(player)
   -- Result message
   if result.sunk > 0 then
     if combat.outcome == "victory" then
-      table.insert(pending, makeCombatNotif("We got 'em all, Taipan!!", 3))
+      local entry = makeCombatNotif("We got 'em all, Taipan!!", 3)
+      entry.sound = "badjoss"
+      table.insert(pending, entry)
     else
-      table.insert(pending, makeCombatNotif(
-        string.format("Sunk %d of the buggers, Taipan!", result.sunk), 2))
+      local entry = makeCombatNotif(
+        string.format("Sunk %d of the buggers, Taipan!", result.sunk), 2)
+      entry.sound = "badjoss"
+      table.insert(pending, entry)
     end
     Remotes.Notify:FireClient(player, string.format("Sunk %d of the buggers, Taipan!", result.sunk))
   else
-    table.insert(pending, makeCombatNotif("Hit 'em, but didn't sink 'em, Taipan!", 2))
+    local entry = makeCombatNotif("Hit 'em, but didn't sink 'em, Taipan!", 2)
+    entry.sound = "underattack"
+    table.insert(pending, entry)
     Remotes.Notify:FireClient(player, "Hit 'em, but didn't sink 'em, Taipan!")
   end
   if result.fleeCount > 0 then
-    table.insert(pending, makeCombatNotif(
-      string.format("%d ran away, Taipan!", result.fleeCount), 2))
+    local entry = makeCombatNotif(
+      string.format("%d ran away, Taipan!", result.fleeCount), 2)
+    entry.sound = "badjoss"
+    table.insert(pending, entry)
     Remotes.Notify:FireClient(player, string.format("%d ran away, Taipan!", result.fleeCount))
   end
 
   if combat.outcome == "victory" then
     CombatEngine.applyBooty(state, combat)
-    table.insert(pending, makeStatusScreenLowerNotif(
+    local entry = makeStatusScreenLowerNotif(
       "",
       { "We've captured some booty", string.format("It's worth %d!", combat.booty) },
-      5))
+      5)
+    entry.sound = "goodjoss"
+    table.insert(pending, entry)
     Remotes.Notify:FireClient(player,
       string.format("We've captured some booty worth $%d!!", combat.booty))
     endCombatPreservingEvents(state)
@@ -777,9 +806,13 @@ Remotes.CombatRun.OnServerEvent:Connect(function(player)
   local escaped = CombatEngine.attemptRun(combat)
   if escaped then
     Remotes.Notify:FireClient(player, "We got away from 'em, Taipan!!")
-    table.insert(pending, makeCombatNotif("We got away from 'em, Taipan!!", 3))
-    table.insert(pending, makeStatusScreenLowerNotif(
-      "", { "We made it, Taipan!" }, 3))
+    local entry1 = makeCombatNotif("We got away from 'em, Taipan!!", 3)
+    entry1.sound = "goodjoss"
+    table.insert(pending, entry1)
+    local entry2 = makeStatusScreenLowerNotif(
+      "", { "We made it, Taipan!" }, 3)
+    entry2.sound = "goodjoss"
+    table.insert(pending, entry2)
     endCombatPreservingEvents(state)
     postCombatStorm(player, state, pending)
     if not state.gameOver then appendArrivalPending(state, pending) end
@@ -790,13 +823,17 @@ Remotes.CombatRun.OnServerEvent:Connect(function(player)
   end
 
   Remotes.Notify:FireClient(player, "Can't lose 'em!!")
-  table.insert(pending, makeCombatNotif("Can't lose 'em!!", 2))
+  local entry = makeCombatNotif("Can't lose 'em!!", 2)
+  entry.sound = "underattack"
+  table.insert(pending, entry)
   local partialCount = CombatEngine.partialEscape(combat)
   if partialCount > 0 then
     Remotes.Notify:FireClient(player,
       string.format("But we escaped from %d of 'em, Taipan!", partialCount))
-    table.insert(pending, makeCombatNotif(
-      string.format("But we escaped from %d of 'em, Taipan!", partialCount), 2))
+    local partialEntry = makeCombatNotif(
+      string.format("But we escaped from %d of 'em, Taipan!", partialCount), 2)
+    partialEntry.sound = "goodjoss"
+    table.insert(pending, partialEntry)
   end
 
   local combatEnded = applyEnemyFire(player, state, combat, pending)
@@ -833,7 +870,9 @@ Remotes.CombatThrow.OnServerEvent:Connect(function(player, goodIndex, qty)
   local thrown = CombatEngine.throwCargo(state, combat, goodIndex, qty)
   if thrown == 0 then
     Remotes.Notify:FireClient(player, "There's nothing there, Taipan!")
-    table.insert(pending, makeCombatNotif("There's nothing there, Taipan!", 2))
+    local entry = makeCombatNotif("There's nothing there, Taipan!", 2)
+    entry.sound = "goodjoss"
+    table.insert(pending, entry)
     state.pendingMessages = pending; pushState(player); state.pendingMessages = nil
     if state.combat then state.combat.events = nil end
     state.combatTrailingEvents = nil
@@ -841,16 +880,22 @@ Remotes.CombatThrow.OnServerEvent:Connect(function(player, goodIndex, qty)
   end
   Remotes.Notify:FireClient(player,
     string.format("Threw %d overboard. Let's hope we lose 'em, Taipan!", thrown))
-  table.insert(pending, makeCombatNotif(
-    string.format("Let's hope we lose 'em, Taipan!", thrown), 2))
+  local thrownEntry = makeCombatNotif(
+    string.format("Let's hope we lose 'em, Taipan!", thrown), 2)
+  thrownEntry.sound = "badjoss"
+  table.insert(pending, thrownEntry)
 
   CombatEngine.updateRunMomentum(combat)
   local escaped = CombatEngine.attemptRun(combat)
   if escaped then
     Remotes.Notify:FireClient(player, "We got away from 'em, Taipan!!")
-    table.insert(pending, makeCombatNotif("We got away from 'em, Taipan!!", 3))
-    table.insert(pending, makeStatusScreenLowerNotif(
-      "", { "We made it, Taipan!" }, 3))
+    local entry1 = makeCombatNotif("We got away from 'em, Taipan!!", 3)
+    entry1.sound = "goodjoss"
+    table.insert(pending, entry1)
+    local entry2 = makeStatusScreenLowerNotif(
+      "", { "We made it, Taipan!" }, 3)
+    entry2.sound = "goodjoss"
+    table.insert(pending, entry2)
     endCombatPreservingEvents(state)
     postCombatStorm(player, state, pending)
     if not state.gameOver then appendArrivalPending(state, pending) end
@@ -861,13 +906,17 @@ Remotes.CombatThrow.OnServerEvent:Connect(function(player, goodIndex, qty)
   end
 
   Remotes.Notify:FireClient(player, "Can't lose 'em!!")
-  table.insert(pending, makeCombatNotif("Can't lose 'em!!", 2))
+  local entry = makeCombatNotif("Can't lose 'em!!", 2)
+  entry.sound = "underattack"
+  table.insert(pending, entry)
   local partialCount = CombatEngine.partialEscape(combat)
   if partialCount > 0 then
     Remotes.Notify:FireClient(player,
       string.format("But we escaped from %d of 'em, Taipan!", partialCount))
-    table.insert(pending, makeCombatNotif(
-      string.format("But we escaped from %d of 'em, Taipan!", partialCount), 2))
+    local partialEntry = makeCombatNotif(
+      string.format("But we escaped from %d of 'em, Taipan!", partialCount), 2)
+    partialEntry.sound = "goodjoss"
+    table.insert(pending, partialEntry)
   end
 
   local combatEnded = applyEnemyFire(player, state, combat, pending)

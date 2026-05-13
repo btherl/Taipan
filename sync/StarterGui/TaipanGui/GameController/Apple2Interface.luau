@@ -168,6 +168,11 @@ function Apple2Interface.new(screenGui, actions)
       startRoundIfCombat()
       return
     end
+    -- Pre-display gate: hold the next entry until the animator is idle.
+    if notifQueue[1].awaitAnimations and (combatAnimDraining or #combatAnimQueue > 0) then
+      notifWaitingForAnims = true
+      return
+    end
     notifGen += 1
     local myGen = notifGen
     local entry = table.remove(notifQueue, 1)
@@ -214,6 +219,19 @@ function Apple2Interface.new(screenGui, actions)
           end
         end,
       }, lastState, actions)
+    end
+
+    -- Animations owned by this notif: enqueue and start draining after the
+    -- configured delay from row display.
+    if entry.animations and #entry.animations > 0 then
+      local startDelay = entry.animationStartDelay or 0
+      task.delay(startDelay, function()
+        if myGen ~= notifGen then return end
+        for _, evt in ipairs(entry.animations) do
+          table.insert(combatAnimQueue, evt)
+        end
+        drainCombatEvents()
+      end)
     end
 
     task.spawn(function()
@@ -370,7 +388,18 @@ function Apple2Interface.new(screenGui, actions)
     elseif prevCombat and not nextCombat then
       local hasTrailing = type(state.combatTrailingEvents) == "table"
                           and #state.combatTrailingEvents > 0
-      if hasTrailing or combatAnimDraining or #combatAnimQueue > 0 then
+      -- Notif-owned animations: defer the grid clear so firing/sinking
+      -- animations remain visible while their narrating notif plays.
+      local hasNotifAnims = false
+      if type(state.pendingMessages) == "table" then
+        for _, entry in ipairs(state.pendingMessages) do
+          if type(entry.animations) == "table" and #entry.animations > 0 then
+            hasNotifAnims = true
+            break
+          end
+        end
+      end
+      if hasTrailing or hasNotifAnims or combatAnimDraining or #combatAnimQueue > 0 then
         pendingCombatExit = true
       else
         shipGrid.clearAll()

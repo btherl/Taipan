@@ -719,34 +719,48 @@ Remotes.CombatFight.OnServerEvent:Connect(function(player)
     return
   end
 
+  -- Partition combat.events at the first flee: everything before = fire phase
+  -- (hits, sinks, mid-fight spawns); flees onward = flee phase. Then clear so
+  -- the client's state-arrival auto-drain is a no-op for fights.
+  local fireEvents, fleeEvents = {}, {}
+  local fleePhase = false
+  for _, evt in ipairs(combat.events or {}) do
+    if evt.type == "flee" then fleePhase = true end
+    if fleePhase then
+      table.insert(fleeEvents, evt)
+    else
+      table.insert(fireEvents, evt)
+    end
+  end
+  combat.events = {}
+
   -- Fight narration sequence
   local entryFight = makeCombatNotif("Aye, we'll fight 'em, Taipan!", 1)
-  entryFight.sound = "underattack"
   table.insert(pending, entryFight)
   local entryFire = makeCombatNotif("We're firing on 'em, Taipan!", 1)
-  entryFire.sound = "underattack"
+  entryFire.animations = fireEvents
+  entryFire.animationStartDelay = 0.1
   table.insert(pending, entryFire)
-  -- Gate: client pauses notif playback here until the firing/sinking
-  -- animation queue has drained, so the result message lines up with the
-  -- visible outcome instead of overlapping the animations.
-  table.insert(pending, { _animationGate = true })
 
-  -- Result message
+  -- Result message — awaitAnimations gates display until fire anims drain.
   if result.sunk > 0 then
     if combat.outcome == "victory" then
       local entry = makeCombatNotif("We got 'em all, Taipan!!", 3)
       entry.sound = "badjoss"
+      entry.awaitAnimations = true
       table.insert(pending, entry)
     else
       local entry = makeCombatNotif(
         string.format("Sunk %d of the buggers, Taipan!", result.sunk), 2)
       entry.sound = "badjoss"
+      entry.awaitAnimations = true
       table.insert(pending, entry)
     end
     Remotes.Notify:FireClient(player, string.format("Sunk %d of the buggers, Taipan!", result.sunk))
   else
     local entry = makeCombatNotif("Hit 'em, but didn't sink 'em, Taipan!", 2)
     entry.sound = "underattack"
+    entry.awaitAnimations = true
     table.insert(pending, entry)
     Remotes.Notify:FireClient(player, "Hit 'em, but didn't sink 'em, Taipan!")
   end
@@ -754,6 +768,7 @@ Remotes.CombatFight.OnServerEvent:Connect(function(player)
     local entry = makeCombatNotif(
       string.format("%d ran away, Taipan!", result.fleeCount), 2)
     entry.sound = "badjoss"
+    entry.animations = fleeEvents
     table.insert(pending, entry)
     Remotes.Notify:FireClient(player, string.format("%d ran away, Taipan!", result.fleeCount))
   end

@@ -196,19 +196,38 @@ function Apple2Interface.new(screenGui, actions)
         isCombatNotif = true
       end
     end
+    local soundPlaying = entry.sound ~= nil
+    local skipDelayRequested = false
+
     if not isCombatNotif then
-      -- Any keypress skips; task.delay auto-advances after duration
+      -- During sound: keypress buffers a "skip post-sound delay" intent.
+      -- After sound: keypress advances immediately (current anyKey behaviour).
       ki.setPrompt({
         type   = "key",
         keys   = {},
         anyKey = true,
-        onKey  = function() advanceNotif(myGen) end,
+        onKey  = function()
+          if soundPlaying then
+            skipDelayRequested = true
+          else
+            advanceNotif(myGen)
+          end
+        end,
       }, lastState, actions)
     end
-    if entry.sound then
-      task.spawn(function() SoundPlayer.play(entry.sound) end)
-    end
-    task.delay(entry.duration, function() advanceNotif(myGen) end)
+
+    task.spawn(function()
+      if entry.sound then
+        SoundPlayer.play(entry.sound)  -- blocks until Ended (or fallback deadline)
+        soundPlaying = false
+        if myGen ~= notifGen then return end
+        if skipDelayRequested then
+          advanceNotif(myGen)
+          return
+        end
+      end
+      task.delay(entry.duration, function() advanceNotif(myGen) end)
+    end)
   end
 
   render = function(state, scene)

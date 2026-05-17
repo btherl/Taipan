@@ -123,13 +123,26 @@ function ShipGrid.new(displayOrder)
     container.Position = UDim2.fromScale(0, 0)
     container.Parent   = frame
 
+    -- Inverse-video backdrop: fills the slot in foreground colour during a
+    -- hit flash so glyphs (re-tinted black) appear as cut-outs. Sits below
+    -- the glyphs because it's added first and we don't set ZIndex.
+    local inverseBackdrop = Instance.new("Frame")
+    inverseBackdrop.Name = "InverseBackdrop"
+    inverseBackdrop.BackgroundColor3 = Color3.fromRGB(140, 200, 80)
+    inverseBackdrop.BackgroundTransparency = 1
+    inverseBackdrop.BorderSizePixel = 0
+    inverseBackdrop.Size     = UDim2.fromScale(1, 1)
+    inverseBackdrop.Position = UDim2.fromScale(0, 0)
+    inverseBackdrop.Parent   = container
+
     slotState[slot] = {
-      frame      = frame,
-      container  = container,
-      glyphs     = nil,
-      damageGrid = nil,
-      animating  = false,
-      sinkTween  = nil,
+      frame            = frame,
+      container        = container,
+      inverseBackdrop  = inverseBackdrop,
+      glyphs           = nil,
+      damageGrid       = nil,
+      animating        = false,
+      sinkTween        = nil,
     }
   end
 
@@ -170,8 +183,8 @@ function ShipGrid.new(displayOrder)
   local HIT_FLASH_COUNT   = 3
   local HIT_FLASH_BURST_S = 0.1
   local HIT_POST_DELAY_S  = 0.4
-  local FLASH_COLOR  = Color3.fromRGB(255, 255, 255)
-  local NORMAL_COLOR = Color3.fromRGB(140, 200, 80)
+  local FG_COLOR         = Color3.fromRGB(140, 200, 80)  -- terminal green
+  local BG_COLOR         = Color3.fromRGB(0, 0, 0)       -- terminal black
 
   function grid.applyHit(slot, onComplete)
     local st = slotState[slot]
@@ -187,19 +200,24 @@ function ShipGrid.new(displayOrder)
     ShipSpriteData.applyDamageFragment(st.damageGrid, idx1, 1)
     paintSlot(slot, ShipSpriteData.renderRows(st.damageGrid))
 
-    local function setGlyphColor(color)
-      if not st.glyphs then return end
-      for _, g in ipairs(st.glyphs) do
-        if g:IsA("ImageLabel") then g.ImageColor3 = color end
+    local function setInverted(inverted)
+      if st.inverseBackdrop then
+        st.inverseBackdrop.BackgroundTransparency = inverted and 0 or 1
+      end
+      if st.glyphs then
+        local color = inverted and BG_COLOR or FG_COLOR
+        for _, g in ipairs(st.glyphs) do
+          if g:IsA("ImageLabel") then g.ImageColor3 = color end
+        end
       end
     end
 
     task.spawn(function()
       local halfPeriod = HIT_FLASH_BURST_S / (HIT_FLASH_COUNT * 2)
       for _ = 1, HIT_FLASH_COUNT do
-        setGlyphColor(FLASH_COLOR)
+        setInverted(true)
         task.wait(halfPeriod)
-        setGlyphColor(NORMAL_COLOR)
+        setInverted(false)
         task.wait(halfPeriod)
       end
       task.wait(HIT_POST_DELAY_S)

@@ -165,8 +165,13 @@ function ShipGrid.new(displayOrder)
     st.animating = false
   end
 
-  -- Hit-flash duration (ms). Tunable.
-  local HIT_FLASH_S = 0.08
+  -- Per-gun firing timing. 3 quick flashes (~0.1s total) then a 0.4s delay,
+  -- giving ~0.5s per gun firing.
+  local HIT_FLASH_COUNT   = 3
+  local HIT_FLASH_BURST_S = 0.1
+  local HIT_POST_DELAY_S  = 0.4
+  local FLASH_COLOR  = Color3.fromRGB(255, 255, 255)
+  local NORMAL_COLOR = Color3.fromRGB(140, 200, 80)
 
   function grid.applyHit(slot, onComplete)
     local st = slotState[slot]
@@ -182,18 +187,22 @@ function ShipGrid.new(displayOrder)
     ShipSpriteData.applyDamageFragment(st.damageGrid, idx1, 1)
     paintSlot(slot, ShipSpriteData.renderRows(st.damageGrid))
 
-    -- Hit-flash: invert glyph colours briefly by toggling ImageColor3.
-    local FLASH_COLOR = Color3.fromRGB(255, 255, 255)
-    local NORMAL_COLOR = Color3.fromRGB(140, 200, 80)
-    for _, g in ipairs(st.glyphs) do
-      if g:IsA("ImageLabel") then g.ImageColor3 = FLASH_COLOR end
-    end
-    task.delay(HIT_FLASH_S, function()
-      if st.glyphs then
-        for _, g in ipairs(st.glyphs) do
-          if g:IsA("ImageLabel") then g.ImageColor3 = NORMAL_COLOR end
-        end
+    local function setGlyphColor(color)
+      if not st.glyphs then return end
+      for _, g in ipairs(st.glyphs) do
+        if g:IsA("ImageLabel") then g.ImageColor3 = color end
       end
+    end
+
+    task.spawn(function()
+      local halfPeriod = HIT_FLASH_BURST_S / (HIT_FLASH_COUNT * 2)
+      for _ = 1, HIT_FLASH_COUNT do
+        setGlyphColor(FLASH_COLOR)
+        task.wait(halfPeriod)
+        setGlyphColor(NORMAL_COLOR)
+        task.wait(halfPeriod)
+      end
+      task.wait(HIT_POST_DELAY_S)
       if onComplete then onComplete() end
     end)
   end

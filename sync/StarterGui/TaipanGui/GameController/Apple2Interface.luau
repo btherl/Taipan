@@ -151,9 +151,19 @@ function Apple2Interface.new(screenGui, actions)
   end
 
   playNextNotif = function()
-    -- Consume any leading animation-gate sentinels. If the animator is still
-    -- busy, pause here; drainCombatEvents will resume us when it finishes.
+    -- Consume any leading animation-gate sentinels. If the gate carries
+    -- animations, enqueue them first so they run during the gate. Then if
+    -- the animator is still busy, pause here; drainCombatEvents will resume
+    -- us when it finishes.
     while #notifQueue > 0 and notifQueue[1]._animationGate do
+      local gateEntry = notifQueue[1]
+      if gateEntry.animations and #gateEntry.animations > 0 then
+        for _, evt in ipairs(gateEntry.animations) do
+          table.insert(combatAnimQueue, evt)
+        end
+        gateEntry.animations = nil
+        drainCombatEvents()
+      end
       if combatAnimDraining or #combatAnimQueue > 0 then
         notifWaitingForAnims = true
         return

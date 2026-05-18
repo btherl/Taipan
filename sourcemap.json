@@ -578,7 +578,7 @@
     {
       "name": "SoundService",
       "className": "SoundService",
-      "guid": "6950"
+      "guid": "6699"
     },
     {
       "name": "StarterGui",
@@ -844,7 +844,7 @@
         {
           "name": "Camera",
           "className": "Camera",
-          "guid": "283635"
+          "guid": "314374"
         },
         {
           "name": "SpawnLocation",

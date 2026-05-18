@@ -112,7 +112,7 @@
         {
           "name": "Images",
           "className": "ModuleScript",
-          "guid": "9800",
+          "guid": "547456",
           "filePaths": [
             "sync/ReplicatedStorage/Images.luau"
           ]
@@ -622,7 +622,7 @@
                     {
                       "name": "HitFlashLayer",
                       "className": "ModuleScript",
-                      "guid": "9801",
+                      "guid": "408953",
                       "filePaths": [
                         "sync/StarterGui/TaipanGui/GameController/Apple2/HitFlashLayer.luau"
                       ]

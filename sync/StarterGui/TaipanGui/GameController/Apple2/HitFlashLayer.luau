@@ -11,8 +11,11 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Images = require(ReplicatedStorage.Images)
 
-local ITERATIONS = 10
-local FRAME_MS   = 16  -- ~one 60 Hz CRT frame
+-- The tradeoff here is we can't display slower than 60FPS, which is
+-- slower than the original Apple 2 page flip speed.
+-- Se we reduce iterations from the original 10.
+local ITERATIONS = 8
+local FRAME_MS   = 16 -- 16 is the lowest possible, 60 FPS
 
 local HitFlashLayer = {}
 

@@ -57,7 +57,10 @@
       "Bash(xxd)",
       "Bash(python -c \"import json; d=json.load\\(open\\('/d/Dev/Taipan/sourcemap.json'\\)\\); print\\('JSON valid'\\)\")",
       "Bash(python -c ' *)",
-      "Bash(python *)"
+      "Bash(python *)",
+      "Skill(superpowers:writing-plans)",
+      "Skill(superpowers:subagent-driven-development)",
+      "Skill(superpowers:requesting-code-review)"
     ]
   }
 }

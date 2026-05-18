@@ -692,6 +692,7 @@ local function applyEnemyFire(player, state, combat, pending)
   Remotes.Notify:FireClient(player, "We've been hit, Taipan!!")
   local entryHit = makeCombatNotif("We've been hit, Taipan!!", 2)
   entryHit.sound = "underattack"
+  entryHit.hitFlash = true
   table.insert(pending, entryHit)
   if fireResult.gunDestroyed then
     Remotes.Notify:FireClient(player, "The buggers hit a gun, Taipan!!")

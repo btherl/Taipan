@@ -6,6 +6,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Terminal     = require(script.Parent.Apple2.Terminal)
 local GlitchLayer  = require(script.Parent.Apple2.GlitchLayer)
+local HitFlashLayer = require(script.Parent.Apple2.HitFlashLayer)
 local KeyInput     = require(script.Parent.Apple2.KeyInput)
 local PromptEngine = require(script.Parent.Apple2.PromptEngine)
 local ShipGrid     = require(script.Parent.Apple2.ShipGrid)
@@ -50,8 +51,9 @@ function Apple2Interface.new(screenGui, actions)
   local term    = Terminal.new(5)  -- displayOrder 5
   local shipGrid = ShipGrid.new(6)  -- displayOrder 6 (above terminal)
   shipGrid.hide()                   -- start hidden; combat scene will show it
-  local glitch  = GlitchLayer.new(term._gui)
-  local ki      = KeyInput.new(screenGui)
+  local glitch   = GlitchLayer.new(term._gui)
+  local hitFlash = HitFlashLayer.new(term._gui)
+  local ki       = KeyInput.new(screenGui)
 
   local PHASE_WAIT_S = 2
 
@@ -186,76 +188,86 @@ function Apple2Interface.new(screenGui, actions)
     notifGen += 1
     local myGen = notifGen
     local entry = table.remove(notifQueue, 1)
-    if entry.includeStatusScreen and type(lastState) == "table" then
-      local statusRows = PromptEngine.buildPortRows(lastState)
-      for r, rowDef in pairs(statusRows) do
+
+    local function runNotif()
+      if myGen ~= notifGen then return end  -- stale (e.g. combat exited during flash)
+      if entry.includeStatusScreen and type(lastState) == "table" then
+        local statusRows = PromptEngine.buildPortRows(lastState)
+        for r, rowDef in pairs(statusRows) do
+          local rNum = tonumber(r)
+          if rNum then
+            term.showInputAt(rNum, rowDef)
+          end
+        end
+      end
+      for r, rowDef in pairs(entry.rows) do
         local rNum = tonumber(r)
         if rNum then
           term.showInputAt(rNum, rowDef)
         end
       end
-    end
-    for r, rowDef in pairs(entry.rows) do
-      local rNum = tonumber(r)
-      if rNum then
-        term.showInputAt(rNum, rowDef)
-      end
-    end
-    -- Detect combat-mode notif: state.combat ~= nil AND entry.rows has only row 4 set.
-    -- For these, leave the F/R/T prompt active so the user can update the queued command mid-notif.
-    local isCombatNotif = false
-    if lastState and lastState.combat ~= nil then
-      local rowCount = 0
-      for _ in pairs(entry.rows) do rowCount += 1 end
-      if rowCount == 1 and entry.rows[4] ~= nil then
-        isCombatNotif = true
-      end
-    end
-    local soundPlaying = entry.sound ~= nil
-    local skipDelayRequested = false
-
-    if not isCombatNotif then
-      -- During sound: keypress buffers a "skip post-sound delay" intent.
-      -- After sound: keypress advances immediately (current anyKey behaviour).
-      ki.setPrompt({
-        type   = "key",
-        keys   = {},
-        anyKey = true,
-        onKey  = function()
-          if soundPlaying then
-            skipDelayRequested = true
-          else
-            advanceNotif(myGen)
-          end
-        end,
-      }, lastState, actions)
-    end
-
-    -- Animations owned by this notif: enqueue and start draining after the
-    -- configured delay from row display.
-    if entry.animations and #entry.animations > 0 then
-      local startDelay = entry.animationStartDelay or 0
-      task.delay(startDelay, function()
-        if myGen ~= notifGen then return end
-        for _, evt in ipairs(entry.animations) do
-          table.insert(combatAnimQueue, evt)
+      -- Detect combat-mode notif: state.combat ~= nil AND entry.rows has only row 4 set.
+      -- For these, leave the F/R/T prompt active so the user can update the queued command mid-notif.
+      local isCombatNotif = false
+      if lastState and lastState.combat ~= nil then
+        local rowCount = 0
+        for _ in pairs(entry.rows) do rowCount += 1 end
+        if rowCount == 1 and entry.rows[4] ~= nil then
+          isCombatNotif = true
         end
-        drainCombatEvents()
+      end
+      local soundPlaying = entry.sound ~= nil
+      local skipDelayRequested = false
+
+      if not isCombatNotif then
+        -- During sound: keypress buffers a "skip post-sound delay" intent.
+        -- After sound: keypress advances immediately (current anyKey behaviour).
+        ki.setPrompt({
+          type   = "key",
+          keys   = {},
+          anyKey = true,
+          onKey  = function()
+            if soundPlaying then
+              skipDelayRequested = true
+            else
+              advanceNotif(myGen)
+            end
+          end,
+        }, lastState, actions)
+      end
+
+      -- Animations owned by this notif: enqueue and start draining after the
+      -- configured delay from row display.
+      if entry.animations and #entry.animations > 0 then
+        local startDelay = entry.animationStartDelay or 0
+        task.delay(startDelay, function()
+          if myGen ~= notifGen then return end
+          for _, evt in ipairs(entry.animations) do
+            table.insert(combatAnimQueue, evt)
+          end
+          drainCombatEvents()
+        end)
+      end
+
+      task.spawn(function()
+        if entry.sound then
+          SoundPlayer.play(entry.sound)  -- blocks until Ended (or fallback deadline)
+          soundPlaying = false
+          if myGen ~= notifGen then return end
+          if skipDelayRequested then
+            advanceNotif(myGen)
+            return
+          end
+        end
+        task.delay(entry.duration, function() advanceNotif(myGen) end)
       end)
     end
 
-    task.spawn(function()
-      if entry.sound then
-        SoundPlayer.play(entry.sound)  -- blocks until Ended (or fallback deadline)
-        soundPlaying = false
-        if myGen ~= notifGen then return end
-        if skipDelayRequested then
-          advanceNotif(myGen)
-          return
-        end
-      end
-      task.delay(entry.duration, function() advanceNotif(myGen) end)
-    end)
+    if entry.hitFlash then
+      hitFlash.play(runNotif)
+    else
+      runNotif()
+    end
   end
 
   render = function(state, scene)
@@ -470,6 +482,7 @@ function Apple2Interface.new(screenGui, actions)
     ki.destroy()
     term.destroy()
     glitch.destroy()
+    hitFlash.destroy()
     shipGrid.destroy()
   end
 

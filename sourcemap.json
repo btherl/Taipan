@@ -620,6 +620,14 @@
                       ]
                     },
                     {
+                      "name": "HitFlashLayer",
+                      "className": "ModuleScript",
+                      "guid": "9801",
+                      "filePaths": [
+                        "sync/StarterGui/TaipanGui/GameController/Apple2/HitFlashLayer.luau"
+                      ]
+                    },
+                    {
                       "name": "KeyInput",
                       "className": "ModuleScript",
                       "guid": "9942",

@@ -29,11 +29,12 @@ function HitFlashLayer.new(terminalGui)
   img.Parent                = terminalGui.TextParent
 
   local playing = false
+  local pendingCallbacks = {}
 
   local function play(onComplete)
     if playing then
-      -- Already strobing; chain the callback so the caller still advances.
-      if onComplete then task.spawn(onComplete) end
+      -- Already strobing; queue the callback to fire when the in-flight strobe ends.
+      if onComplete then table.insert(pendingCallbacks, onComplete) end
       return
     end
     playing = true
@@ -53,6 +54,10 @@ function HitFlashLayer.new(terminalGui)
       img.Visible = false
       playing     = false
       if onComplete then onComplete() end
+      while #pendingCallbacks > 0 do
+        local cb = table.remove(pendingCallbacks, 1)
+        cb()
+      end
     end)
   end
 

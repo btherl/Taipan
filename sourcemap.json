@@ -110,6 +110,14 @@
           "guid": "9987"
         },
         {
+          "name": "Images",
+          "className": "ModuleScript",
+          "guid": "9800",
+          "filePaths": [
+            "sync/ReplicatedStorage/Images.luau"
+          ]
+        },
+        {
           "name": "LeaveWu",
           "className": "RemoteEvent",
           "guid": "9995"

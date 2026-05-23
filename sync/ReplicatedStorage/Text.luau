@@ -115,6 +115,7 @@ function Text:Update(DeltaTime)
 	if self.Text ~= self.OldText then
 		local old_length = string.len(self.OldText)
 		self.OldText = self.Text
+		self.OldPosition = self.Position
 
 		-- Update sprite count
 		local length = string.len(self.Text)
@@ -201,6 +202,34 @@ function Text:Update(DeltaTime)
 
 			self.Sprites[i].Position = Vector2.new(current_x, current_y)
 
+			current_x += x_advance * self.TextSize
+		end
+	end
+
+	-- Reposition glyphs when the text object has moved but its text is unchanged.
+	-- Positions were previously recomputed only on a text change, so a segment that moved
+	-- without changing its text (e.g. a reused box-border "│" after loading a saved game)
+	-- stayed frozen at its old column.
+	if self.Position ~= self.OldPosition then
+		self.OldPosition = self.Position
+		local text = string.split(self.Text, "")
+		local length = string.len(self.Text)
+		local x_start = self.Position.X
+		if self.TextCentered then
+			local total_x_length = 0
+			for i = 1, length do
+				total_x_length += self.FontData[Unicode[text[i]]].xadvance * self.TextSize
+			end
+			x_start -= (total_x_length / 2)
+		end
+		local current_x = x_start
+		local current_y = self.Position.Y
+		for i = 1, length do
+			local letter = text[i + 1] or text[i]
+			local x_advance = self.FontData[Unicode[letter]].xadvance
+			if self.Sprites[i] then
+				self.Sprites[i].Position = Vector2.new(current_x, current_y)
+			end
 			current_x += x_advance * self.TextSize
 		end
 	end

@@ -254,7 +254,6 @@ local function buildPortRows(state)
     local gunsStr = "Guns " .. tostring(state.guns or 0)
 	local holdStr = "Hold " .. tostring(holdSpace)
 	local holdPadStr = pad(holdStr, 15)
-	local gunPadStr = pad(gunsStr, 11)
     local inner9  = holdPadStr .. gunsStr
     rows[9] = boxRowSegs(inner9, {{ text = "    Debt    ", color = AMBER }})
   else

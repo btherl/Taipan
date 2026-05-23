@@ -304,8 +304,9 @@ local function buildPortRows(state)
   local bankPadStr = pad(bankStr, 20)
   rows[15] = { text = cashPadStr .. bankPadStr, color = AMBER }
 
-  -- Row 16: separator line
-  rows[16] = { text = string.rep("_", 40), color = AMBER }
+  -- Row 16: separator line. DIVIDER_MID renders mid-cell, so the rule has clear space
+  -- above and below (a plain "_" sat at the cell bottom and crowded the header on row 17).
+  rows[16] = { segments = {{ text = BoxDrawing.hruleString(40), color = AMBER, font = THICK }}}
 
   return rows
 end

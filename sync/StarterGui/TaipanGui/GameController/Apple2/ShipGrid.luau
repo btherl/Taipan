@@ -9,9 +9,10 @@ local Text              = require(ReplicatedStorage.Text)
 local ShipSpriteData    = require(script.Parent.ShipSpriteData)
 
 -- Coordinate constants must match Terminal.luau exactly so sprites land in the right cells.
-local TEXT_SIZE     = 3
-local CHAR_WIDTH    = 14 * TEXT_SIZE   -- 42 virtual px
-local ROW_HEIGHT    = 16 * TEXT_SIZE   -- 48 virtual px
+local TEXT_SIZE     = 2.7
+local CHAR_WIDTH    = 14 * TEXT_SIZE   -- virtual px per char
+local ROW_HEIGHT    = 16 * TEXT_SIZE   -- row pitch = glyph height (matches Terminal; rows tile, no overlap)
+local TOP_MARGIN    = 32               -- virtual px above row 1's centre (matches Terminal)
 local X_OFFSET      = 30               -- left margin (matches Terminal)
 local SCREEN_W      = 1920
 local SCREEN_H      = 1080
@@ -32,7 +33,7 @@ local function slotPixelTopLeft(slotIndex)
   local charCol = (i % 5) * 8 + 1                  -- 1, 9, 17, 25, 33
   local rowIdx  = math.floor(i / 5) * 6 + 7        -- 7 or 13
   local x = X_OFFSET + (charCol - 1) * CHAR_WIDTH
-  local y = (rowIdx - 1) * ROW_HEIGHT
+  local y = TOP_MARGIN + (rowIdx - 1) * ROW_HEIGHT
   return x, y
 end
 
@@ -49,6 +50,7 @@ function ShipGrid.new(displayOrder)
   local gui = Text.GetTextGUI(displayOrder or 6)   -- > Terminal's 5 so sprites overlay
   gui.Name   = "TaipanShipGrid"
   gui.Parent = Players.LocalPlayer.PlayerGui
+  gui.IgnoreGuiInset = false   -- match Terminal so the ship grid stays aligned with the text
 
   local fontData, imageId = getThickFont()
 

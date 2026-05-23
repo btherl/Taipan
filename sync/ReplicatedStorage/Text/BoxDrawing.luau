@@ -39,6 +39,13 @@ function BoxDrawing.dividerString(width)
 	return DIVIDER_LEFT .. string.rep(DIVIDER_MID, width - 2) .. DIVIDER_RIGHT
 end
 
+-- Free-standing horizontal rule (no corner connectors). Uses TOP_HORIZ, which renders
+-- near the bottom of the cell, but not at the absolute bottom.
+-- This is used as the divider between the 1-16 status screen and 17-24 action screen.
+function BoxDrawing.hruleString(width)
+	return string.rep(TOP_HORIZ, width)
+end
+
 function BoxDrawing.rowBorderString(width)
 	return VERTICAL .. string.rep(SPACE, width - 2) .. VERTICAL
 end

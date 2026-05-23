@@ -1,7 +1,9 @@
 -- Terminal.lua
 -- 24-row bitmap font display using the ReplicatedStorage.Text library.
--- Uses TaipanStandardFont at TextSize=3: 40 cols x ~22 fully-visible rows.
--- Rows 23-24 may be partially clipped (CRT overscan authenticity).
+-- Uses TaipanStandardFont at TextSize=3: 40 cols x 24 rows. The row pitch is compressed
+-- (see ROW_HEIGHT/TOP_MARGIN below) so all 24 rows fit inside the 1080-tall virtual canvas
+-- on the live client, where the 16:9 canvas renders full-bleed (Studio's letterboxed
+-- viewport hid the overflow).
 --
 -- Lines may be single-font: { text = string, color = Color3 }
 -- or multi-font segmented:  { segments = { {text, color, font?}, ... } }
@@ -12,10 +14,16 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Text              = require(ReplicatedStorage.Text)
 
 local ROWS        = 24
-local TEXT_SIZE   = 3
-local ROW_HEIGHT  = 48   -- 16 virtual px * TextSize 3
-local X_OFFSET    = 30   -- left margin: sprites are center-anchored so x=0 clips the first glyph
-local CHAR_WIDTH  = 14 * TEXT_SIZE  -- 42 virtual px per char (both fonts share xadvance=14)
+local TEXT_SIZE   = 2.7
+-- Glyphs are 16px tall and tile edge-to-edge at ROW_HEIGHT = 16 * TEXT_SIZE. At the original
+-- TextSize 3 that was 48px, so 24 rows spanned 1152px and overflowed the 1080-tall virtual
+-- canvas, clipping row 1 (top) and row 24 (bottom) on the live client where the 16:9 canvas
+-- renders full-bleed (Studio's letterboxed viewport hid it). TextSize 2.7 shrinks the glyphs
+-- so all 24 tiled rows fit inside [0, 1080] with safe-area buffers. ShipGrid.luau mirrors these.
+local ROW_HEIGHT  = 16 * TEXT_SIZE   -- row pitch = glyph height (43.2px); rows tile, no overlap
+local TOP_MARGIN  = 32               -- virtual px above row 1's centre
+local X_OFFSET    = 30               -- left margin: sprites are center-anchored so x=0 clips the first glyph
+local CHAR_WIDTH  = 14 * TEXT_SIZE   -- virtual px per char (both fonts share xadvance=14)
 local GREEN       = Color3.fromRGB(140, 200, 80)
 local DEFAULT_FONT = "TaipanStandardFont"
 
@@ -26,6 +34,10 @@ function Terminal.new(displayOrder)
   local gui = Text.GetTextGUI(displayOrder or 5)
   gui.Name   = "TaipanTerminal"
   gui.Parent = Players.LocalPlayer.PlayerGui
+
+  -- Respect the Roblox topbar inset. GetTextGUI defaults IgnoreGuiInset=true; on the live
+  -- client that lets the topbar overlay row 1. Inset the canvas below the topbar instead.
+  gui.IgnoreGuiInset = false
 
   -- Black background frame behind all text
   local bg = Instance.new("Frame")
@@ -42,7 +54,7 @@ function Terminal.new(displayOrder)
   for i = 1, ROWS do
     local t = Text.new(DEFAULT_FONT, true)
     t.Parent     = gui.TextParent
-    t.Position   = Vector2.new(X_OFFSET, (i - 1) * ROW_HEIGHT)
+    t.Position   = Vector2.new(X_OFFSET, TOP_MARGIN + (i - 1) * ROW_HEIGHT)
     t.TextSize   = TEXT_SIZE
     t.TextColor3 = GREEN
     t.ZIndex     = 1
@@ -104,7 +116,7 @@ function Terminal.new(displayOrder)
       obj.TextColor3      = s.color or GREEN
       obj.Inverted        = s.inverted or false
       obj.BackgroundColor3 = s.backgroundColor or Color3.new(0, 0, 0)
-      obj.Position        = Vector2.new(xPos, (i - 1) * ROW_HEIGHT)
+      obj.Position        = Vector2.new(xPos, TOP_MARGIN + (i - 1) * ROW_HEIGHT)
 
       xPos = xPos + #(s.text or "") * CHAR_WIDTH
     end

@@ -1,0 +1,23 @@
+Your final status:
+
+Net Cash: -4600
+
+Ship size: 60 units with 0 guns
+
+You traded for 0 years and 1 month
+
+Your score is -46.
+
+The crew has requested that you stay on
+shore for their safety!!
+
+Your Rating:
+┌──────────────────────────────────────┐
+│ Ma Tsu            50,000 and over    │
+│ Master Taipan      8,000 to 49,999   │
+│ Taipan             1,000 to  7,999   │
+│ Compradore           500 to    999   │
+│ Galley Hand             less than 500│
+└──────────────────────────────────────┘
+
+Play again? _

@@ -68,7 +68,7 @@ function Apple2Interface.new(screenGui, actions)
   local localScene = nil  -- nil | "buy" | "sell" | "buy_good_N" | "sell_good_N" |
                           --       "travel" | "warehouse" | "wh_to" | "wh_from" |
                           --       "wh_to_N" | "wh_from_N" | "bank" | "bank_withdraw" |
-                          --       "wu_repay" | "wu_borrow" | "settings" |
+                          --       "wu_repay" | "wu_borrow" |
                           --       "repair_amount" | "repair_amount_err" |
                           --       "quit_confirm" | "combat_throw_good" | "combat_throw_amt_N" |
                           --       "final_status"
@@ -484,6 +484,15 @@ function Apple2Interface.new(screenGui, actions)
     glitch.destroy()
     hitFlash.destroy()
     shipGrid.destroy()
+  end
+
+  -- Transient boot screen shown while we wait to learn whether this is a returning
+  -- player (a saved StateUpdate is inbound) or a new player (start scene fallback).
+  function adapter.showLoading()
+    term.setRows({
+      [11] = { text = string.rep(" ", 16) .. "TAIPAN!",    color = AMBER },
+      [13] = { text = string.rep(" ", 15) .. "Loading...", color = AMBER },
+    })
   end
 
   return adapter

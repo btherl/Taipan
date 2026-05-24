@@ -344,7 +344,7 @@ local function sceneAtPort(state, actions, localSceneCb)
   rows[21] = { text = "   Arms: "   .. pad(p3, 9) .. "General: " .. p4, color = GREEN }
   rows[22] = { text = "",                                                color = AMBER }
 
-  local validKeys = {"B", "S", "Q", "P"}  -- P = Settings (unlisted)
+  local validKeys = {"B", "S", "Q"}
   local cursorRow, cursorPrefix
   if isHK then
     if canRetire then
@@ -391,8 +391,6 @@ local function sceneAtPort(state, actions, localSceneCb)
         end
       elseif key == "R" then
         actions.retire()
-      elseif key == "P" then
-        if localSceneCb then localSceneCb("settings") end
       end
     end,
   }
@@ -553,34 +551,6 @@ local function sceneGameOver(state, actions, _localSceneCb)
     keys = {"R"},
     label = "(R)estart",
     onKey = function(_key, _s, _a) actions.restartGame() end,
-  }
-end
-
-local function sceneSettings(state, actions, localSceneCb)
-  local currentMode = state.uiMode or "modern"
-  local lines = {
-    { text = "Switch interface?", color = AMBER },
-    { text = "", color = AMBER },
-    { text = "[M] Modern   -- touch panels" .. (currentMode == "modern"  and " *" or ""), color = currentMode == "modern"  and DIM or GREEN },
-    { text = "[A] Apple II -- terminal"     .. (currentMode == "apple2"  and " *" or ""), color = currentMode == "apple2"  and DIM or GREEN },
-    { text = "(* = current mode)", color = DIM },
-    { text = "[C] Cancel",                             color = AMBER },
-  }
-  return lines, {
-    type = "key",
-    keys = {"M", "A", "C"},
-    label = "(M)odern  (A)pple II  (C)ancel",
-    onKey = function(key, _s, _a)
-      if key == "C" then
-        if localSceneCb then localSceneCb(nil) end
-      elseif key == "M" and currentMode ~= "modern" then
-        actions.setUIMode("modern")
-      elseif key == "A" and currentMode ~= "apple2" then
-        actions.setUIMode("apple2")
-      else
-        if localSceneCb then localSceneCb(nil) end
-      end
-    end,
   }
 end
 
@@ -1601,7 +1571,6 @@ function PromptEngine.processState(state, localScene, actions, localSceneCb, com
     for r = 17, 24 do rows[r] = { text = "", color = AMBER } end
     return { rows = rows }, nil
   end
-  if localScene == "settings"     then return sceneSettings(state, actions, localSceneCb) end
   if localScene == "quit_confirm" then return sceneQuitConfirm(state, actions, localSceneCb) end
   if state.startChoice == nil and (state.turnsElapsed or 1) == 1 and (state.destination or 0) == 0 then
     if localScene == "start_choice" then

@@ -73,6 +73,7 @@ function ShipGrid.new(displayOrder)
     end
     local img = Instance.new("ImageLabel")
     img.BackgroundTransparency = 1
+    img.BorderSizePixel = 0  -- drop default 1px border so glyphs abut without dark seams
     img.Image = imageId
     img.ImageRectOffset = Vector2.new(frame.x, frame.y)
     img.ImageRectSize   = Vector2.new(frame.width, frame.height)

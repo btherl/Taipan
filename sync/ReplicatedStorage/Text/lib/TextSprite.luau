@@ -76,6 +76,7 @@ function Sprite.new(instance, automatic_update)
 	}, Sprite)
 	
 	self.Instance.BackgroundTransparency = 1
+	self.Instance.BorderSizePixel = 0  -- default 1px dark border becomes a visible seam between cells when inverted (opaque bg)
 	self.Instance.AnchorPoint = Vector2.new(0.5, 0.5)
 	
 	if automatic_update == false then

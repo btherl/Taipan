@@ -15,6 +15,7 @@ We focus primarily on the Apple 2 interface, with the modern interface being fai
 - **TestEZ** — unit testing framework (bundled at `sync/ReplicatedStorage/TestEZ.luau`)
 - **MCP Studio integration** — Roblox Studio MCP tools for runtime code injection and play-testing
 - **DataStore** — player persistence via `DataStoreService` (store name: `TaipanV1`)
+- **EditableImage** — combat ship sprites are composited via `AssetService` EditableImage. **Requires the Mesh & Image APIs permission** (Experience Settings → Security). See [Combat Ship Sprites](#combat-ship-sprites-editableimage).
 
 ## Critical Workflow: Using Azul to sync with Roblox Studio
 
@@ -423,6 +424,16 @@ Every panel exposes `.update(state)` and optionally `.show(message)` (MessagePan
 ### "A" = All Shortcut
 
 Many input panels support typing "A" in the amount box to mean "all available" (e.g., all cash, all cargo). Each panel stores `latestState` on every update to resolve "A" at click time.
+
+### Combat Ship Sprites (EditableImage)
+
+The Apple II combat enemy ships (`GameController/Apple2/ShipGrid.luau`) are drawn by compositing TaipanThickFont glyphs into a **single `EditableImage` per ship** (one 98×80 image = 7×5 cells of 14×16 glyphs, copied edge-to-edge with no gaps), then displaying that one image scaled 2.7× to the slot.
+
+This replaced the earlier approach of 35 separate glyph `ImageLabel`s per ship, which left thin black seams between glyphs: at the non-integer 2.7× scale, separate glyph quads either faded into the 2px transparent atlas gutter (bilinear sampling) or distorted the ship's shape (pixelated sampling). Compositing first removes all internal glyph boundaries, so there are no internal seams to fade. (The same class of seam on inverted terminal text was fixed separately by setting `BorderSizePixel = 0` on the glyph ImageLabels in `Text/lib/TextSprite.luau`.)
+
+**Requirement — Mesh & Image APIs permission must be enabled:** `AssetService:CreateEditableImageAsync` / `ReadPixelsBuffer` / `WritePixelsBuffer` are gated behind the **Mesh & Image APIs** permission in **Experience Settings → Security**. This is a per-experience setting and is **not** stored in the repo. If it is disabled (e.g. in a fresh place), the API silently returns blank pixels with no error and **combat ships render invisible** — the give-away is `ReadPixelsBuffer` returning all-zero alpha. To verify, read a known ship glyph rect from the atlas EditableImage and count non-zero alpha bytes; a full base ship composites to ~4192/7840 opaque pixels.
+
+The atlas is loaded asynchronously in `ShipGrid.new` (because `CreateEditableImageAsync` yields and `.new` runs during interface construction); `composeSlot` is a no-op until the atlas resolves, then any already-visible slots are recomposited. Combat never starts early enough for this to matter in practice.
 
 ## Coding Conventions
 

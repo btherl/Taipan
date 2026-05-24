@@ -28,31 +28,31 @@ return function()
   end
 
   -- ─────────────────────────────────────────────────────────────────────────
-  describe("spicesSeizure", function()
+  describe("pepperSeizure", function()
 
-    it("returns nil at Hong Kong regardless of spices", function()
+    it("returns nil at Hong Kong regardless of pepper", function()
       -- Run 100 times; HK guard must always short-circuit
       for _ = 1, 100 do
         local s = makeState({ currentPort = Constants.HONG_KONG, shipCargo = {50, 0, 0, 0}, holdSpace = 50 })
-        local result = EventEngine.spicesSeizure(s)
+        local result = EventEngine.pepperSeizure(s)
         expect(result).to.equal(nil)
         expect(s.shipCargo[1]).to.equal(50)
       end
     end)
 
-    it("returns nil when ship has no spices (100 trials)", function()
+    it("returns nil when ship has no pepper (100 trials)", function()
       for _ = 1, 100 do
         local s = makeState({ shipCargo = {0, 5, 0, 0} })
-        local result = EventEngine.spicesSeizure(s)
+        local result = EventEngine.pepperSeizure(s)
         expect(result).to.equal(nil)
       end
     end)
 
-    it("fires at least once in 1000 trials at non-HK with spices", function()
+    it("fires at least once in 1000 trials at non-HK with pepper", function()
       local fired = false
       for _ = 1, 1000 do
         local s = makeState({ cash = 50000, shipCargo = {10, 0, 0, 0}, holdSpace = 90 })
-        local result = EventEngine.spicesSeizure(s)
+        local result = EventEngine.pepperSeizure(s)
         if result ~= nil then
           fired = true
           -- Verify side effects when it fires
@@ -70,7 +70,7 @@ return function()
     it("fine is non-negative (run all firing cases over 2000 trials)", function()
       for _ = 1, 2000 do
         local s = makeState({ cash = 50000, shipCargo = {10, 0, 0, 0}, holdSpace = 90 })
-        local fine = EventEngine.spicesSeizure(s)
+        local fine = EventEngine.pepperSeizure(s)
         if fine ~= nil then
           expect(fine >= 0).to.equal(true)
         end

@@ -9,8 +9,8 @@ return function()
       expect(#prices).to.equal(4)
     end)
 
-    it("_basePrice produces values in expected range for spices", function()
-      -- HK spices BP=11, scale=1000
+    it("_basePrice produces values in expected range for pepper", function()
+      -- HK pepper BP=11, scale=1000
       -- randFactor range: 1-3 -> prices: floor(11/2*1*1000) to floor(11/2*3*1000)
       local minPrice = PriceEngine._basePrice(11, 1, 1)  -- = floor(5.5*1000) = 5500
       local maxPrice = PriceEngine._basePrice(11, 1, 3)  -- = floor(16.5*1000) = 16500
@@ -24,22 +24,22 @@ return function()
       end
     end)
 
-    it("General Cargo price is much lower than Spices", function()
-      -- General Cargo scale=1 vs Spices scale=1000
+    it("General Cargo price is much lower than Pepper", function()
+      -- General Cargo scale=1 vs Pepper scale=1000
       -- Even at max BP=16, General max normal = 16/2*3*1 = 24
-      -- Spices at min BP=10, min normal = 10/2*1*1000 = 5000
+      -- Pepper at min BP=10, min normal = 10/2*1*1000 = 5000
       local bp = Constants.BASE_PRICES
-      local totalSpices, totalGeneral = 0, 0
+      local totalPepper, totalGeneral = 0, 0
       for _ = 1, 50 do
         local prices = PriceEngine.calculatePrices(bp, 1)
-        totalSpices = totalSpices + prices[1]
+        totalPepper = totalPepper + prices[1]
         totalGeneral = totalGeneral + prices[4]
       end
-      expect(totalSpices > totalGeneral * 100).to.equal(true)
+      expect(totalPepper > totalGeneral * 100).to.equal(true)
     end)
 
     it("uses port-specific base prices (HK vs Shanghai differ)", function()
-      -- Shanghai spices BP=16 vs HK BP=11 -- Shanghai prices should average higher
+      -- Shanghai pepper BP=16 vs HK BP=11 -- Shanghai prices should average higher
       local bp = Constants.BASE_PRICES
       local hkTotal, shTotal = 0, 0
       for _ = 1, 500 do

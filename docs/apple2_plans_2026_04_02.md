@@ -52,7 +52,7 @@ The amount entered will be borrowed, subject to existing borrowing rules.
 Comprador's Report
 
 Taipan, present prices per unit here are
-   Spices: 16500  Silk: 110
+   Pepper: 16500  Silk: 110
    Arms: 180      General: 10
 
 Shall I Buy, Sell, Visit bank, Transfer
@@ -153,7 +153,7 @@ After arriving at a port other than Hong Kong, the following displays:
 Comprador's Report
 
 Taipan, present prices per unit here are
-   Spices: 16500  Silk: 110
+   Pepper: 16500  Silk: 110
    Arms: 180      General: 10
 
 Shall I Buy, Sell, or Quit trading?

@@ -11,7 +11,7 @@ return function()
 
     it("has 4 good names", function()
       expect(#Constants.GOOD_NAMES).to.equal(4)
-      expect(Constants.GOOD_NAMES[1]).to.equal("Spices")
+      expect(Constants.GOOD_NAMES[1]).to.equal("Pepper")
       expect(Constants.GOOD_NAMES[4]).to.equal("General Cargo")
     end)
 
@@ -22,7 +22,7 @@ return function()
       end
     end)
 
-    it("has correct base price for HK Spices (11)", function()
+    it("has correct base price for HK Pepper (11)", function()
       expect(Constants.BASE_PRICES[1][1]).to.equal(11)
     end)
 

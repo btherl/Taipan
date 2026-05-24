@@ -6,12 +6,12 @@ return function()
   describe("Validators.canBuy", function()
     it("returns true when player can afford and has hold space", function()
       local s = GameState.newGame("cash")  -- 400 cash, 60 hold
-      expect(Validators.canBuy(s, 1, 1, 100)).to.equal(true)  -- buy 1 spices at 100
+      expect(Validators.canBuy(s, 1, 1, 100)).to.equal(true)  -- buy 1 pepper at 100
     end)
 
     it("returns false when price exceeds cash", function()
       local s = GameState.newGame("cash")
-      expect(Validators.canBuy(s, 1, 1, 1000)).to.equal(false) -- 1 spices at 1000 > 400 cash
+      expect(Validators.canBuy(s, 1, 1, 1000)).to.equal(false) -- 1 pepper at 1000 > 400 cash
     end)
 
     it("returns false when quantity exceeds hold space", function()

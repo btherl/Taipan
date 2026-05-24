@@ -71,13 +71,13 @@ Used by most scenes as the upper portion of the display.
 Row  1: Firm: TAIPAN, Hong Kong          (centered, firm name in ThickFont)
 Row  2: ┌──────────────────────────┐     (box top, 28 wide)
 Row  3: │Hong Kong Warehouse      │    Date
-Row  4: │Spices     0    In use:  │ 15 Jan 1860
+Row  4: │Pepper     0    In use:  │ 15 Jan 1860
 Row  5: │Silk       0         0   │
 Row  6: │Arms       0    Vacant:  │  Location
 Row  7: │General    0     10000   │  Hong Kong
 Row  8: ├──────────────────────────┤     (divider)
 Row  9: │Hold 60       Guns 0    │    Debt
-Row 10: │   Spices  0             │      0
+Row 10: │   Pepper  0             │      0
 Row 11: │   Silk    0             │
 Row 12: │   Arms    0             │ Ship status
 Row 13: │   General 0             │ Perfect:100
@@ -183,7 +183,7 @@ Content varies by scene. Typically:
 #### `sceneBuySell` (localScene: `"buy"` or `"sell"`)
 - **Display**: Status + prices + "What do you wish me to buy/sell, Taipan?"
 - **Input**: `singlechar`, keys=["P","S","A","G"]
-- **Good key map**: P=sPices(1), S=Silk(2), A=Arms(3), G=General(4)
+- **Good key map**: P=Pepper(1), S=Silk(2), A=Arms(3), G=General(4)
 - **Transitions**:
   - P/S/A/G -> localScene `"buy_good_N"` or `"sell_good_N"` (N=1-4)
 
@@ -258,7 +258,7 @@ Content varies by scene. Typically:
 Transfers iterate through all 8 possible moves (4 goods x 2 directions) in order, skipping any with 0 available:
 
 ```
-Step 1: Spices ship->warehouse     Step 2: Spices warehouse->ship
+Step 1: Pepper ship->warehouse     Step 2: Pepper warehouse->ship
 Step 3: Silk ship->warehouse       Step 4: Silk warehouse->ship
 Step 5: Arms ship->warehouse       Step 6: Arms warehouse->ship
 Step 7: General ship->warehouse    Step 8: General warehouse->ship

@@ -82,7 +82,7 @@ fire only through `Remotes.Notify`, making them invisible to Apple II players:
 
 | Category | Events |
 |---|---|
-| Random events | Spice seizure; cargo theft (warehouse); cash robbery (beaten up) |
+| Random events | Pepper seizure; cargo theft (warehouse); cash robbery (beaten up) |
 | Li Yuen | "Li Yuen no longer protects you" (lapse); "Li Yuen smiles" (accepted) |
 | Wu / finance | Bankruptcy emergency loan; Wu's men beat you and take cash |
 | Ship progression | Repair confirmation; upgrade success/fail; gun purchase success/fail |
@@ -95,7 +95,7 @@ add `pendingMessages` for the following ones, using using `makeCaptainNotif` or
 
 | Category | Events |
 |---|---|
-| Random events | Spice seizure; cargo theft (warehouse); cash robbery (beaten up) |
+| Random events | Pepper seizure; cargo theft (warehouse); cash robbery (beaten up) |
 | Wu / finance | Bankruptcy emergency loan; Wu's men beat you and take cash |
 | Ship progression | Repair confirmation; upgrade success/fail; gun purchase success/fail |
 | Gameplay | retire message |

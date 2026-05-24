@@ -338,10 +338,10 @@ Remotes.TravelTo.OnServerEvent:Connect(function(player, destination)
     end
 
     if not state.gameOver then
-      local fine = EventEngine.spicesSeizure(state)
+      local fine = EventEngine.pepperSeizure(state)
       if fine ~= nil then
         Remotes.Notify:FireClient(player,
-          string.format("Bad joss!! The authorities have confiscated your spices and fined you $%d!", fine))
+          string.format("Bad joss!! The authorities have confiscated your pepper and fined you $%d!", fine))
       end
       if EventEngine.cargoTheft(state) then
         Remotes.Notify:FireClient(player, "Bad joss!! Thieves have gotten into your warehouse!")

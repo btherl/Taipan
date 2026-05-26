@@ -528,20 +528,15 @@ local function sceneStartChoice(_state, actions, _localSceneCb)
 end
 
 local function sceneGameOver(state, actions, _localSceneCb)
+  -- Only reached for "quit" (and the nil/unknown fallthrough). processState
+  -- routes "sunk" to sceneFinalStatus and "retired" to sceneMillionaire/
+  -- sceneFinalStatus, so those reasons never land here.
   local reason = state.gameOverReason or "unknown"
   local lines = {
     { text = "GAME OVER", color = RED },
     { text = "",          color = AMBER },
   }
-  if reason == "sunk" then
-    table.insert(lines, { text = "Your ship was sunk, Taipan!", color = RED })
-  elseif reason == "retired" then
-    table.insert(lines, { text = "You have retired, Taipan!", color = GREEN })
-    if state.finalScore then
-      table.insert(lines, { text = string.format("Final score: %d (%s)",
-        state.finalScore, state.finalRating or ""), color = AMBER })
-    end
-  elseif reason == "quit" then
+  if reason == "quit" then
     table.insert(lines, { text = "You quit, Taipan!", color = AMBER })
   end
   table.insert(lines, { text = "", color = AMBER })

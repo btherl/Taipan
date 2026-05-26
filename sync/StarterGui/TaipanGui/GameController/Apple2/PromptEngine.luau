@@ -1489,8 +1489,13 @@ function PromptEngine.processState(state, localScene, actions, localSceneCb, com
         return sceneFinalStatus(state, actions, localSceneCb)
       end
       return sceneMillionaire(state, actions, localSceneCb)
+    elseif state.gameOverReason == "sunk" then
+      -- Faithful to the original (taipan.c:2567 combat, :2602 storm): after the
+      -- "buggers got us" status screen, sinking goes straight to final_stats().
+      -- Skip sceneMillionaire (that screen is retirement-only).
+      return sceneFinalStatus(state, actions, localSceneCb)
     end
-    return sceneGameOver(state, actions, localSceneCb)
+    return sceneGameOver(state, actions, localSceneCb)  -- "quit"
   end
   if state.combat ~= nil then
     if localScene == "combat_throw_good" then

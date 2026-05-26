@@ -92,6 +92,44 @@ return function()
     end)
   end)
 
+  describe("PromptEngine sunk flow", function()
+    local function sunkState(score)
+      return {
+        gameOver = true, gameOverReason = "sunk",
+        finalScore = score, finalRating = "Galley Hand",
+        cash = 0, debt = 5000, bankBalance = 0,
+        shipCapacity = 60, guns = 0, turnsElapsed = 4,
+        month = 5, year = 1860,
+        shipCargo = {0,0,0,0},
+        warehouseCargo = {0,0,0,0}, warehouseUsed = 0,
+        holdSpace = 60, currentPort = 1, damage = 60,
+      }
+    end
+
+    it("sunk: routes straight to final status (inverted score row 9, Y/N keys)", function()
+      -- No localScene: sunk must NOT show the millionaire screen; it goes
+      -- directly to the final-status / rating layout.
+      local lines, promptDef = PromptEngine.processState(
+        sunkState(42), nil, mockActions(), function() end)
+      expect(lines.rows).to.be.ok()
+      -- Row 9 carries the inverted "Your score is N." segment (final-status marker)
+      local r9 = lines.rows[9]
+      expect(r9).to.be.ok()
+      local hasInverted = false
+      if r9.segments then
+        for _, seg in ipairs(r9.segments) do
+          if seg.inverted then hasInverted = true end
+        end
+      end
+      expect(hasInverted).to.equal(true)
+      -- Final-status prompt offers Y/N (Play again?)
+      local keySet = {}
+      for _, k in ipairs(promptDef.keys) do keySet[k] = true end
+      expect(keySet["Y"]).to.equal(true)
+      expect(keySet["N"]).to.equal(true)
+    end)
+  end)
+
   describe("PromptEngine sceneBank sequential", function()
     local function bankState()
       return {

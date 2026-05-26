@@ -35,7 +35,7 @@ return function()
       expect(Constants.CASH_START_CASH).to.equal(400)
       expect(Constants.CASH_START_DEBT).to.equal(5000)
       expect(Constants.CASH_START_HOLD).to.equal(60)
-      expect(Constants.GUNS_START_HOLD).to.equal(10)
+      expect(Constants.GUNS_START_HOLD).to.equal(60)
       expect(Constants.GUNS_START_GUNS).to.equal(5)
     end)
 

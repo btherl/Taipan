@@ -4,6 +4,16 @@
 return function()
 	local ShipSpriteData = require(game:GetService("StarterGui").TaipanGui.GameController.Apple2.ShipSpriteData)
 
+	-- ShipSpriteData stores each sprite char offset by +96 to reach the TaipanThickFont
+	-- ship glyphs (see ShipSpriteData.luau's offsetByX). The BASIC letters below are the
+	-- logical sprite; off() applies the same +96 so expected values match what the module
+	-- actually stores. (Hardcoded 96 here mirrors the module so an offset change is caught.)
+	local function off(s)
+		return (string.gsub(s, ".", function(c)
+			return string.char(string.byte(c) + 96)
+		end))
+	end
+
 	describe("baseSprite", function()
 		it("is a 5-row table of 7-char strings", function()
 			local rows = ShipSpriteData.baseSprite
@@ -15,11 +25,11 @@ return function()
 
 		it("matches the BASIC string ABCDEFG / HIJKLMN / OIJKLPQ / RSTUVWX / YJJJJJZ", function()
 			local rows = ShipSpriteData.baseSprite
-			expect(rows[1]).to.equal("ABCDEFG")
-			expect(rows[2]).to.equal("HIJKLMN")
-			expect(rows[3]).to.equal("OIJKLPQ")
-			expect(rows[4]).to.equal("RSTUVWX")
-			expect(rows[5]).to.equal("YJJJJJZ")
+			expect(rows[1]).to.equal(off("ABCDEFG"))
+			expect(rows[2]).to.equal(off("HIJKLMN"))
+			expect(rows[3]).to.equal(off("OIJKLPQ"))
+			expect(rows[4]).to.equal(off("RSTUVWX"))
+			expect(rows[5]).to.equal(off("YJJJJJZ"))
 		end)
 	end)
 
@@ -54,15 +64,15 @@ return function()
 		it("multi-row fragment (idx 2 J=0) is 'fg' then 'mn' on consecutive rows", function()
 			local f = ShipSpriteData.damageFragments[2][0]
 			expect(#f.chars).to.equal(2)
-			expect(f.chars[1]).to.equal("fg")
-			expect(f.chars[2]).to.equal("mn")
+			expect(f.chars[1]).to.equal(off("fg"))
+			expect(f.chars[2]).to.equal(off("mn"))
 		end)
 
 		it("multi-row fragment (idx 4 J=1) is 'x' then 'z' on consecutive rows", function()
 			local f = ShipSpriteData.damageFragments[4][1]
 			expect(#f.chars).to.equal(2)
-			expect(f.chars[1]).to.equal("x")
-			expect(f.chars[2]).to.equal("z")
+			expect(f.chars[1]).to.equal(off("x"))
+			expect(f.chars[2]).to.equal(off("z"))
 		end)
 	end)
 
@@ -70,18 +80,18 @@ return function()
 		it("overwrites the correct cells of a 5x7 grid", function()
 			local grid = ShipSpriteData.newDamageGrid()
 			ShipSpriteData.applyDamageFragment(grid, 1, 0)  -- "cde" at X+2, Y+0
-			expect(grid[1][3]).to.equal("c")
-			expect(grid[1][4]).to.equal("d")
-			expect(grid[1][5]).to.equal("e")
+			expect(grid[1][3]).to.equal(off("c"))
+			expect(grid[1][4]).to.equal(off("d"))
+			expect(grid[1][5]).to.equal(off("e"))
 		end)
 
 		it("handles multi-row fragments (idx 2 J=0): 'fg' on row 1, 'mn' on row 2 at X+5", function()
 			local grid = ShipSpriteData.newDamageGrid()
 			ShipSpriteData.applyDamageFragment(grid, 2, 0)
-			expect(grid[1][6]).to.equal("f")
-			expect(grid[1][7]).to.equal("g")
-			expect(grid[2][6]).to.equal("m")
-			expect(grid[2][7]).to.equal("n")
+			expect(grid[1][6]).to.equal(off("f"))
+			expect(grid[1][7]).to.equal(off("g"))
+			expect(grid[2][6]).to.equal(off("m"))
+			expect(grid[2][7]).to.equal(off("n"))
 		end)
 	end)
 
@@ -89,17 +99,17 @@ return function()
 		it("returns base sprite when grid is empty", function()
 			local grid = ShipSpriteData.newDamageGrid()
 			local rows = ShipSpriteData.renderRows(grid)
-			expect(rows[1]).to.equal("ABCDEFG")
-			expect(rows[5]).to.equal("YJJJJJZ")
+			expect(rows[1]).to.equal(off("ABCDEFG"))
+			expect(rows[5]).to.equal(off("YJJJJJZ"))
 		end)
 
 		it("overlays damage chars on the base sprite", function()
 			local grid = ShipSpriteData.newDamageGrid()
 			ShipSpriteData.applyDamageFragment(grid, 1, 0)  -- "cde" at row 1 col 3..5
 			local rows = ShipSpriteData.renderRows(grid)
-			expect(rows[1]:sub(3, 5)).to.equal("cde")
-			expect(rows[1]:sub(1, 2)).to.equal("AB")  -- untouched
-			expect(rows[1]:sub(6, 7)).to.equal("FG")  -- untouched
+			expect(rows[1]:sub(3, 5)).to.equal(off("cde"))
+			expect(rows[1]:sub(1, 2)).to.equal(off("AB"))  -- untouched
+			expect(rows[1]:sub(6, 7)).to.equal(off("FG"))  -- untouched
 		end)
 	end)
 end

@@ -17,6 +17,7 @@ return function()
     it("returns false when quantity exceeds hold space", function()
       local s = GameState.newGame("cash")
       s.cash = 1000000
+      s.currentPort = 2  -- non-HK: hold limit enforced (at HK excess goes to warehouse)
       expect(Validators.canBuy(s, 61, 1, 1)).to.equal(false)  -- 61 units, only 60 hold
     end)
 
@@ -29,6 +30,7 @@ return function()
     it("returns true when quantity exactly fills hold", function()
       local s = GameState.newGame("cash")  -- 60 hold
       s.cash = 1000000
+      s.currentPort = 2  -- non-HK: hold limit enforced (at HK excess goes to warehouse)
       expect(Validators.canBuy(s, 60, 4, 1)).to.equal(true)
     end)
   end)

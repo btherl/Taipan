@@ -701,6 +701,17 @@ local function applyEnemyFire(player, state, combat, pending)
     table.insert(pending, entry)
   end
   if fireResult.sunk then
+    -- Standard combat seaworthiness readout at 0%, shown on row 4 the way a
+    -- non-fatal hit would after the layout redraws. A sunk ship is always 0%
+    -- seaworthy, so the label is always "Critical (0%)" (matches the combat
+    -- layout's row 4). No sound; ~2s so the player registers it before the
+    -- "buggers got us" status screen.
+    local swEntry = { rows = { [4] = { segments = {
+      { text = "Current seaworthiness: ", color = AMBER_S },
+      { text = "Critical (0%)",           color = AMBER_S, inverted = true },
+    }}}, duration = 2 }
+    table.insert(pending, swEntry)
+
     Remotes.Notify:FireClient(player, "The buggers got us, Taipan!!! It's all over!!!")
     local entry = makeStatusScreenLowerNotif(
       "", { "The buggers got us, Taipan!!", "It's all over, now!!!" }, 5)

@@ -169,6 +169,14 @@ Remotes.ChooseStart.OnServerEvent:Connect(function(player, startChoice, firmName
     state.uiMode = pendingModes[player]
     pendingModes[player] = nil
   end
+  -- The game begins in Hong Kong, so offer Li Yuen's protection donation just
+  -- as a HK arrival would (BASIC line 1040: offered only when unprotected and
+  -- holding cash -- the cash start sees it; the guns start, CA=0, does not).
+  -- Resolved before the Wu question, matching the PromptEngine scene order.
+  if state.currentPort == Constants.HONG_KONG and state.liYuenProtection == 0 and state.cash > 0 then
+    state.liYuenOfferCost = FinanceEngine.liYuenProtectionCost(state)
+    state.liYuenPending   = true
+  end
   state.wuPending = true
   playerStates[player] = state
   pushState(player)

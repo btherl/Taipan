@@ -11,7 +11,6 @@ local SCALAR_FIELDS = {
   "liYuenProtection", "wuWarningGiven", "bankruptcyCount",
   "enemyBaseDamage", "enemyBaseHP",
   "gameOver", "gameOverReason", "finalScore", "finalRating",
-  "seenTutorial",
 }
 
 function PersistenceEngine.serialize(state)
@@ -50,8 +49,6 @@ function PersistenceEngine.deserialize(data, PriceEngine)
   for _, field in ipairs(SCALAR_FIELDS) do
     state[field] = data[field]
   end
-  -- Default missing field from old saves
-  if state.seenTutorial == nil then state.seenTutorial = false end
 
   -- Restore array fields
   for _, field in ipairs({ "shipCargo", "warehouseCargo" }) do
@@ -83,7 +80,6 @@ function PersistenceEngine.deserialize(data, PriceEngine)
   -- Reset ephemeral fields
   state.liYuenOfferCost = nil
   state.inWuSession     = false
-  state.pendingTutorial = nil
   state.combat          = nil
   state.shipOffer       = nil
   state.repairPending   = nil

@@ -37,7 +37,6 @@ return function()
       gameOverReason   = nil,
       finalScore       = nil,
       finalRating      = nil,
-      seenTutorial     = true,
     }
     if overrides then
       for k, v in pairs(overrides) do s[k] = v end
@@ -56,7 +55,6 @@ return function()
       expect(data.pirateBase).to.equal(10)
       expect(data.wuWarningGiven).to.equal(true)
       expect(data.bankruptcyCount).to.equal(1)
-      expect(data.seenTutorial).to.equal(true)
       expect(data.shipCargo[1]).to.equal(10)
       expect(data.warehouseCargo[1]).to.equal(20)
       expect(data.basePrices[1][1]).to.equal(11)
@@ -96,7 +94,6 @@ return function()
       expect(restored.pirateBase).to.equal(10)
       expect(restored.wuWarningGiven).to.equal(true)
       expect(restored.bankruptcyCount).to.equal(1)
-      expect(restored.seenTutorial).to.equal(true)
       expect(restored.shipCargo[1]).to.equal(10)
       expect(restored.warehouseCargo[1]).to.equal(20)
       expect(restored.basePrices[3][2]).to.equal(s.basePrices[3][2])
@@ -133,14 +130,6 @@ return function()
       expect(restored.shipOffer).to.equal(nil)
       expect(restored.inWuSession).to.equal(false)
       expect(restored.liYuenOfferCost).to.equal(nil)
-      expect(restored.pendingTutorial).to.equal(nil)
-    end)
-
-    it("defaults seenTutorial to false when absent from saved data", function()
-      local data = PE.serialize(makeState())
-      data.seenTutorial = nil  -- simulate save from older build
-      local restored = PE.deserialize(data, PriceEngine)
-      expect(restored.seenTutorial).to.equal(false)
     end)
   end)
 

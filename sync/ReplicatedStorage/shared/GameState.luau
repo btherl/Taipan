@@ -69,7 +69,6 @@ function GameState.newGame(startChoice, firmName)
     combat           = nil,    -- combat sub-table when in combat, nil otherwise
     startChoice      = startChoice,   -- ADD: raw start type for save/load round-trips
     firmName         = type(firmName) == "string" and firmName or "",
-    seenTutorial     = false,         -- ADD: set true after first HK tutorial fires
     uiMode = nil,   -- nil = not yet chosen; "modern" or "apple2" once set
 
     -- Phase 6: progression

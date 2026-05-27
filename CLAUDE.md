@@ -223,15 +223,14 @@ The canonical state table is created by `GameState.newGame(startChoice)`. Key fi
 | `shipOffer` | Ephemeral: `{repairRate, upgradeOffer, gunOffer}` at HK |
 | `combat` | Sub-table during combat, nil otherwise |
 | `startChoice` | `"cash"` or `"guns"` (persisted for save/load) |
-| `seenTutorial` | Bool: onboarding tutorial shown |
 
 ### Canonical vs Derived Fields
 
-**Canonical** (persisted): cash, debt, bankBalance, shipCapacity, guns, damage, shipCargo, warehouseCargo, basePrices, currentPort, month, year, turnsElapsed, pirateBase, liYuenProtection, wuWarningGiven, bankruptcyCount, enemyBaseHP, enemyBaseDamage, gameOver, gameOverReason, finalScore, finalRating, startChoice, seenTutorial.
+**Canonical** (persisted): cash, debt, bankBalance, shipCapacity, guns, damage, shipCargo, warehouseCargo, basePrices, currentPort, month, year, turnsElapsed, pirateBase, liYuenProtection, wuWarningGiven, bankruptcyCount, enemyBaseHP, enemyBaseDamage, gameOver, gameOverReason, finalScore, finalRating, startChoice.
 
 **Derived** (recomputed on load/arrival): holdSpace, warehouseUsed, currentPrices, destination.
 
-**Ephemeral** (not persisted): combat, shipOffer, liYuenOfferCost, inWuSession, pendingTutorial, wuEscortBraves.
+**Ephemeral** (not persisted): combat, shipOffer, liYuenOfferCost, inWuSession, wuEscortBraves.
 
 ## Engine Modules
 

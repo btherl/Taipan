@@ -104,14 +104,20 @@ end
 
 local RunService        = game:GetService("RunService")
 local DataStoreService  = game:GetService("DataStoreService")
-local gameStore         = DataStoreService:GetDataStore("TaipanV1")
+-- Persistence is disabled in Studio (savePlayer/loadPlayer skip when IsStudio()),
+-- so don't open the DataStore here either: GetDataStore would otherwise trigger a
+-- "cannot connect to DataStore" error in Studio, where API access is unavailable.
+-- gameStore stays nil in Studio and is never dereferenced (both accessors return early).
+local gameStore
+if not RunService:IsStudio() then
+  gameStore = DataStoreService:GetDataStore("TaipanV1")
+end
 
 -- Taipan is pure 2D — no 3D world or avatar needed
 Players.CharacterAutoLoads = false
 
 local playerStates: {[Player]: any} = {}
 local pendingModes: {[Player]: string} = {}
-local pendingTutorialSeen: {[Player]: boolean} = {}
 
 local function savePlayer(player, state)
   if RunService:IsStudio() then return end
@@ -156,15 +162,6 @@ Remotes.ChooseStart.OnServerEvent:Connect(function(player, startChoice, firmName
     - state.shipCargo[1] - state.shipCargo[2]
     - state.shipCargo[3] - state.shipCargo[4]
     - state.guns * 10
-  if pendingTutorialSeen[player] ~= nil then
-    state.seenTutorial = pendingTutorialSeen[player]
-    if not pendingTutorialSeen[player] then
-      state.pendingTutorial = true  -- tutorial not yet seen; fires on first HK arrival
-    end
-    pendingTutorialSeen[player] = nil
-  else
-    state.pendingTutorial = true  -- new player; fires tutorial on first HK arrival
-  end
   if pendingModes[player] then
     state.uiMode = pendingModes[player]
     pendingModes[player] = nil
@@ -435,19 +432,6 @@ Remotes.TravelTo.OnServerEvent:Connect(function(player, destination)
     state.repairPending = false
   end
 
-  -- Onboarding: fire tutorial messages on first HK arrival of a new game
-  if destination == Constants.HONG_KONG and state.pendingTutorial then
-    state.pendingTutorial = nil
-    Remotes.Notify:FireClient(player,
-      "Welcome, Taipan! Visit Elder Brother Wu to borrow cash or repay your debt.")
-    Remotes.Notify:FireClient(player,
-      "Use the Warehouse to store goods safely between voyages — holds up to 10,000 units.")
-    Remotes.Notify:FireClient(player,
-      "Li Yuen commands the seas. Pay for his protection in Hong Kong to avoid his fleet.")
-    state.seenTutorial = true
-    savePlayer(player, state)  -- persist immediately so tutorial never repeats on reconnect
-  end
-
   injectWuEscortIfReady(state, pending)
   state.pendingMessages = pending
   pushState(player)
@@ -595,9 +579,7 @@ Remotes.RestartGame.OnServerEvent:Connect(function(player)
     turnsElapsed = 1,
     destination  = 0,
     uiMode       = state.uiMode,
-    seenTutorial = state.seenTutorial,
   }
-  pendingTutorialSeen[player] = state.seenTutorial
   Remotes.StateUpdate:FireClient(player, lobbyState)
   playerStates[player] = nil
 end)
@@ -1165,7 +1147,6 @@ Players.PlayerRemoving:Connect(function(player)
   end
   playerStates[player] = nil
   pendingModes[player] = nil
-  pendingTutorialSeen[player] = nil
 end)
 
 Remotes.SetUIMode.OnServerEvent:Connect(function(player, mode)

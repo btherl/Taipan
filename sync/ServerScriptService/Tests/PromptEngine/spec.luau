@@ -90,6 +90,38 @@ return function()
       expect(keySet["Y"]).to.equal(true)
       expect(keySet["N"]).to.equal(true)
     end)
+
+    -- Apple II lines 20180-20190: low-score parting messages at VTAB 11.
+    it("sceneFinalStatus: score 0-98 → 'land based job' jab on row 11", function()
+      local lines = PromptEngine.processState(
+        retiredState(42), "final_status", mockActions(), function() end)
+      expect(lines.rows[11].text).to.equal("Have you considered a land based job?")
+      expect(lines.rows[12].text).to.equal("")
+    end)
+
+    it("sceneFinalStatus: negative score → 'stay on shore' insult wraps rows 11-12", function()
+      local lines = PromptEngine.processState(
+        retiredState(-5), "final_status", mockActions(), function() end)
+      expect(lines.rows[11].text).to.equal("The crew has requested that you stay on")
+      expect(lines.rows[12].text).to.equal("shore for their safety!!")
+    end)
+
+    it("sceneFinalStatus: score >= 99 → no parting message (rows 11-12 blank)", function()
+      local lines = PromptEngine.processState(
+        retiredState(1234), "final_status", mockActions(), function() end)
+      expect(lines.rows[11].text).to.equal("")
+      expect(lines.rows[12].text).to.equal("")
+    end)
+
+    -- Apple II line 20040 puts "Your Rating:" at VTAB 14; the box + "Play again?"
+    -- follow below it. Guards against the rating block drifting up a row.
+    it("sceneFinalStatus: 'Your Rating:' sits on row 14, 'Play again?' on row 23", function()
+      local lines, promptDef = PromptEngine.processState(
+        retiredState(1234), "final_status", mockActions(), function() end)
+      expect(lines.rows[14].text).to.equal("Your Rating:")
+      expect(lines.rows[23].text).to.equal("Play again? ")
+      expect(promptDef._inputRow).to.equal(23)
+    end)
   end)
 
   describe("PromptEngine sunk flow", function()

@@ -1435,21 +1435,31 @@ local function sceneFinalStatus(state, actions, _localSceneCb)
     { text = string.format("Your score is %d.", score), color = AMBER, inverted = true },
   }}
   rows[10] = { text = "", color = AMBER }
+  -- Faithful to the Apple II (lines 20180-20190): a parting jab at low scores,
+  -- printed at VTAB 11. The negative-score insult is 64 chars, so it wraps to
+  -- row 12 to fit the 40-column screen (the original wrapped it automatically).
   rows[11] = { text = "", color = AMBER }
   rows[12] = { text = "", color = AMBER }
-  rows[13] = { text = "Your Rating:", color = AMBER }
+  if score < 0 then
+    rows[11] = { text = "The crew has requested that you stay on", color = AMBER }
+    rows[12] = { text = "shore for their safety!!", color = AMBER }
+  elseif score < 99 then
+    rows[11] = { text = "Have you considered a land based job?", color = AMBER }
+  end
+  rows[13] = { text = "", color = AMBER }
+  rows[14] = { text = "Your Rating:", color = AMBER }  -- VTAB 14 (BASIC line 20040)
   -- Rating box: thick-font BoxDrawing border around the 31-char inner rating rows.
   local RATING_BOX_W = #RATING_TABLE[1].text  -- 33: 31-char content + 2 borders
   local THICK = "TaipanThickFont"
   local VERT  = string.char(129)
-  rows[14] = { segments = {{ text = BoxDrawing.topString(RATING_BOX_W), color = AMBER, font = THICK }}}
+  rows[15] = { segments = {{ text = BoxDrawing.topString(RATING_BOX_W), color = AMBER, font = THICK }}}
   for i, entry in ipairs(RATING_TABLE) do
     local inner = string.sub(entry.text, 2, -2)  -- strip the ASCII '|' borders
     local isAchieved = (entry.label == rating)
     -- Faithful to the Apple II (lines 20050-20140): only the rating *title* is
     -- inverse-highlighted, and only on the row the player earned. The score
     -- range (the remainder of the line) stays in normal video.
-    rows[14 + i] = isAchieved
+    rows[15 + i] = isAchieved
       and { segments = {
         { text = VERT,                              color = AMBER, font = THICK },
         { text = entry.label,                       color = AMBER, inverted = true },
@@ -1458,16 +1468,15 @@ local function sceneFinalStatus(state, actions, _localSceneCb)
       }}
       or BoxDrawing.boxRow(RATING_BOX_W, inner, AMBER)
   end
-  rows[20] = { segments = {{ text = BoxDrawing.bottomString(RATING_BOX_W), color = AMBER, font = THICK }}}
-  rows[21] = { text = "", color = AMBER }
-  rows[22] = { text = "Play again? ", color = GREEN }
-  rows[23] = { text = "", color = AMBER }
+  rows[21] = { segments = {{ text = BoxDrawing.bottomString(RATING_BOX_W), color = AMBER, font = THICK }}}
+  rows[22] = { text = "", color = AMBER }
+  rows[23] = { text = "Play again? ", color = GREEN }
   rows[24] = { text = "", color = AMBER }
 
   return { rows = rows }, {
     type           = "singlechar",
     keys           = { "Y", "N" },
-    _inputRow      = 22,
+    _inputRow      = 23,
     _buildInputRow = function(s) return { text = "Play again? " .. s, color = GREEN } end,
     onKey = function(key, _s, _a)
       if key == "Y" then actions.restartGame()

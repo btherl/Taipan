@@ -14,7 +14,7 @@ local Images = require(ReplicatedStorage.Images)
 -- The tradeoff here is we can't display slower than 60FPS, which is
 -- slower than the original Apple 2 page flip speed.
 -- Se we reduce iterations from the original 10.
-local ITERATIONS = 8
+local ITERATIONS = 5
 local FRAME_MS   = 16 -- 16 is the lowest possible, 60 FPS
 
 local HitFlashLayer = {}

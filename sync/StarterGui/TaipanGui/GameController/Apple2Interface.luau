@@ -88,6 +88,21 @@ function Apple2Interface.new(screenGui, actions)
   local startRoundIfCombat
   local executePhaseC
 
+  -- Tear down the combat ship grid once the combat screen has actually been
+  -- replaced by a non-combat screen (status / port / game-over). Deferred from
+  -- combat end via pendingCombatExit so the ships stay visible behind the
+  -- end-of-combat dialog, then clear all at once the instant the combat layout
+  -- is gone. Skipped while animations are still draining -- victory's sink/flee
+  -- sequence runs its own teardown when that finishes.
+  local function tearDownCombatGridIfPending(state)
+    if pendingCombatExit and state and state.combat == nil
+        and not combatAnimDraining and #combatAnimQueue == 0 then
+      pendingCombatExit = false
+      shipGrid.clearAll()
+      shipGrid.hide()
+    end
+  end
+
   local function drainCombatEvents()
     if combatAnimDraining then return end
     combatAnimDraining = true
@@ -115,12 +130,9 @@ function Apple2Interface.new(screenGui, actions)
         task.wait(0.05)  -- 50 ms inter-event gap
       end
       combatAnimDraining = false
-      -- If a combat exit was deferred while animations were running, run it now.
-      if pendingCombatExit and not (lastState and lastState.combat) then
-        pendingCombatExit = false
-        shipGrid.clearAll()
-        shipGrid.hide()
-      end
+      -- If a combat exit was deferred while animations were running, run it now
+      -- (victory: clear the grid once the sink/flee sequence has finished).
+      tearDownCombatGridIfPending(lastState)
       -- Resume any notif playback that was paused at an animation gate.
       if notifWaitingForAnims then
         notifWaitingForAnims = false
@@ -199,6 +211,10 @@ function Apple2Interface.new(screenGui, actions)
             term.showInputAt(rNum, rowDef)
           end
         end
+        -- The status screen has just replaced the combat battle layout on lines
+        -- 1-16; tear down the ship grid in the same beat so the ships clear with
+        -- the combat screen instead of lingering over the status rows.
+        tearDownCombatGridIfPending(lastState)
       end
       for r, rowDef in pairs(entry.rows) do
         local rNum = tonumber(r)
@@ -333,6 +349,10 @@ function Apple2Interface.new(screenGui, actions)
       pendingCombatShow = false
       shipGrid.show()
     end
+
+    -- Final guard: if a non-combat scene is drawn while an exit is still pending
+    -- (e.g. combat ended with no status-screen dialog), tear the grid down here.
+    tearDownCombatGridIfPending(state)
   end
 
   startRoundIfCombat = function()
@@ -395,6 +415,7 @@ function Apple2Interface.new(screenGui, actions)
 
     -- Combat boundary transitions
     if nextCombat and not prevCombat then
+      pendingCombatExit = false  -- clear any stale deferral from a prior combat
       shipGrid.clearAll()   -- start fresh
       -- Pre-draw ships invisibly; show() is deferred until the combat scene
       -- renders, so sprites don't appear over the still-visible port screen
@@ -408,25 +429,15 @@ function Apple2Interface.new(screenGui, actions)
       end
       pendingCombatShow = true
     elseif prevCombat and not nextCombat then
-      local hasTrailing = type(state.combatTrailingEvents) == "table"
-                          and #state.combatTrailingEvents > 0
-      -- Notif-owned animations: defer the grid clear so firing/sinking
-      -- animations remain visible while their narrating notif plays.
-      local hasNotifAnims = false
-      if type(state.pendingMessages) == "table" then
-        for _, entry in ipairs(state.pendingMessages) do
-          if type(entry.animations) == "table" and #entry.animations > 0 then
-            hasNotifAnims = true
-            break
-          end
-        end
-      end
-      if hasTrailing or hasNotifAnims or combatAnimDraining or #combatAnimQueue > 0 then
-        pendingCombatExit = true
-      else
-        shipGrid.clearAll()
-        shipGrid.hide()
-      end
+      -- Combat just ended. Never clear the ship grid synchronously here: the
+      -- end-of-combat dialog (sunk / Li Yuen's fleet / escape / booty) plays
+      -- *after* this transition, and the ships must remain on screen behind it.
+      -- The grid is torn down later, all at once, when the combat screen is
+      -- actually replaced -- either by drainCombatEvents once trailing/notif
+      -- animations finish (victory's sink/flee sequence), or by render() when
+      -- the next non-combat scene is drawn after the dialog (sunk / Li Yuen /
+      -- escape, which carry no trailing animations).
+      pendingCombatExit = true
     end
 
     -- Drain any pendingMessages from the state update into the queue

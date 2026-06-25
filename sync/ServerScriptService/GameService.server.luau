@@ -1115,7 +1115,14 @@ Remotes.AcceptBankruptcyLoan.OnServerEvent:Connect(function(player)
   state.bankruptcyPending = nil
   state.cash = state.cash + offer.loan
   state.debt = state.debt + offer.repay
+  local entry = makeCompradorNotif({
+    "Very well, Taipan.",
+    "Good joss!!",
+  }, 5)
+  entry.sound = "badjoss"
+  state.pendingMessages = { entry }
   pushState(player)
+  state.pendingMessages = nil
 end)
 
 Remotes.DeclineBankruptcyLoan.OnServerEvent:Connect(function(player)

@@ -968,12 +968,14 @@ local function sceneWuBorrow(state, actions, localSceneCb)
 end
 
 local function sceneWuBorrowErr(state, _actions, localSceneCb)
-  return sceneWuLayout(state, {
+  local lines = sceneWuLayout(state, {
     { text = "How much do you wish to",             color = AMBER },
     { text = "borrow?",                             color = AMBER },
     { text = "",                                    color = AMBER },
     { text = "He won't loan you so much, Taipan!", color = GREEN },
-  }), {
+  })
+  lines.sound = "goodjoss"
+  return lines, {
     type         = "key",
     keys         = {},
     anyKey       = true,
@@ -983,13 +985,15 @@ local function sceneWuBorrowErr(state, _actions, localSceneCb)
 end
 
 local function sceneWuRepayErr(state, _actions, localSceneCb)
-  return sceneWuLayout(state, {
+  local lines = sceneWuLayout(state, {
     { text = "How much do you wish to repay", color = AMBER },
     { text = "him?",                          color = AMBER },
     { text = "",                              color = AMBER },
     { text = "Taipan, you only have " .. fmtBig(state.cash or 0), color = GREEN },
     { text = "in cash.",                      color = GREEN },
-  }), {
+  })
+  lines.sound = "goodjoss"
+  return lines, {
     type         = "key",
     keys         = {},
     anyKey       = true,

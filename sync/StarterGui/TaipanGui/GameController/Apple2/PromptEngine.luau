@@ -440,7 +440,7 @@ local function sceneAlreadyHere(state, _actions, localSceneCb)
   rows[22] = { text = "7) Batavia ?",                               color = GREEN }
   rows[23] = { text = "",                                            color = AMBER }
   rows[24] = { text = "You're already here, Taipan.",               color = GREEN }
-  return { rows = rows }, {
+  return { rows = rows, sound = "goodjoss" }, {
     type         = "key",
     keys         = {},
     anyKey       = true,
@@ -750,7 +750,7 @@ local function sceneBuyOverloadErr(state, _actions, localSceneCb)
   rows[18] = { text = "",                                     color = AMBER }
   rows[19] = { text = "You're ship is overloaded, Taipan!!", color = GREEN }
   for r = 20, 24 do rows[r] = { text = "", color = AMBER } end
-  return { rows = rows }, {
+  return { rows = rows, sound = "goodjoss" }, {
     type         = "key",
     keys         = {},
     anyKey       = true,
@@ -968,12 +968,14 @@ local function sceneWuBorrow(state, actions, localSceneCb)
 end
 
 local function sceneWuBorrowErr(state, _actions, localSceneCb)
-  return sceneWuLayout(state, {
+  local lines = sceneWuLayout(state, {
     { text = "How much do you wish to",             color = AMBER },
     { text = "borrow?",                             color = AMBER },
     { text = "",                                    color = AMBER },
     { text = "He won't loan you so much, Taipan!", color = GREEN },
-  }), {
+  })
+  lines.sound = "goodjoss"
+  return lines, {
     type         = "key",
     keys         = {},
     anyKey       = true,
@@ -983,13 +985,15 @@ local function sceneWuBorrowErr(state, _actions, localSceneCb)
 end
 
 local function sceneWuRepayErr(state, _actions, localSceneCb)
-  return sceneWuLayout(state, {
+  local lines = sceneWuLayout(state, {
     { text = "How much do you wish to repay", color = AMBER },
     { text = "him?",                          color = AMBER },
     { text = "",                              color = AMBER },
     { text = "Taipan, you only have " .. fmtBig(state.cash or 0), color = GREEN },
     { text = "in cash.",                      color = GREEN },
-  }), {
+  })
+  lines.sound = "goodjoss"
+  return lines, {
     type         = "key",
     keys         = {},
     anyKey       = true,
@@ -1208,7 +1212,7 @@ local function sceneBankDepositErr(state, _actions, localSceneCb)
   local rows = buildBankRows(state)
   rows[21] = { text = "Taipan, you only have " .. fmtBig(state.cash or 0), color = GREEN }
   rows[22] = { text = "in cash.",                                           color = GREEN }
-  return { rows = rows }, {
+  return { rows = rows, sound = "goodjoss" }, {
     type         = "key",
     keys         = {},
     anyKey       = true,
@@ -1221,7 +1225,7 @@ local function sceneBankWithdrawErr(state, _actions, localSceneCb)
   local rows = buildBankRows(state)
   rows[21] = { text = "Taipan, you only have " .. fmtBig(state.bankBalance or 0), color = GREEN }
   rows[22] = { text = "in the bank.",                                              color = GREEN }
-  return { rows = rows }, {
+  return { rows = rows, sound = "goodjoss" }, {
     type         = "key",
     keys         = {},
     anyKey       = true,
@@ -1256,7 +1260,7 @@ local function sceneWarehouseNoCargo(state, _actions, localSceneCb)
   rows[22] = { text = "You have no cargo, Taipan.",                      color = GREEN }
   rows[23] = { text = "",                                                color = AMBER }
   rows[24] = { text = "",                                                color = AMBER }
-  return { rows = rows }, {
+  return { rows = rows, sound = "goodjoss" }, {
     type         = "key",
     keys         = {},
     anyKey       = true,
@@ -1364,7 +1368,7 @@ local function sceneWarehouseStepErr(state, actions, localSceneCb, stepN)
   rows[24] = { text = "",                                           color = AMBER }
 
   local retScene = "wh_step_" .. stepN
-  return { rows = rows }, {
+  return { rows = rows, sound = "goodjoss" }, {
     type         = "key",
     keys         = {},
     anyKey       = true,

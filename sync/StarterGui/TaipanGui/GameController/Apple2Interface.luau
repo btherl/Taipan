@@ -80,6 +80,7 @@ function Apple2Interface.new(screenGui, actions)
   local notifWaitingForAnims = false
   local notifGen   = 0
   local renderGen  = 0   -- incremented each render; used to discard stale _autoAdvance callbacks
+  local lastSoundedScene = nil  -- localScene value whose sound we last played; dedups re-renders
   local GREEN      = Color3.fromRGB(140, 200, 80)
 
   -- Forward declarations for mutual recursion between advanceNotif and playNextNotif
@@ -304,6 +305,18 @@ function Apple2Interface.new(screenGui, actions)
         end,
       }
     )
+
+    -- Local-scene sound: a scene fn may set lines.sound (e.g. "goodjoss" on a
+    -- rejection scene). Play it once per scene entry, not on every re-render
+    -- keystroke. Dedup on localScene; clear the marker on any soundless scene so
+    -- the same error can sound again after the player leaves and re-triggers it.
+    if lines.sound and localScene ~= lastSoundedScene then
+      lastSoundedScene = localScene
+      local soundName = lines.sound
+      task.spawn(function() SoundPlayer.play(soundName) end)  -- play() blocks; must spawn
+    elseif not lines.sound then
+      lastSoundedScene = nil
+    end
 
     if lines.rows then
       term.setRows(lines.rows)

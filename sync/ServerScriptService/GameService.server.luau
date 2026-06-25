@@ -1131,7 +1131,14 @@ Remotes.DeclineBankruptcyLoan.OnServerEvent:Connect(function(player)
   if not state.bankruptcyPending then return end
   state.bankruptcyPending = nil
   setGameOver(state, "quit")
+  local entry = makeCompradorNotif({
+    "Very well, Taipan,",
+    "the game is over!",
+  }, 5)
+  entry.sound = "underattack"
+  state.pendingMessages = { entry }
   pushState(player)
+  state.pendingMessages = nil
 end)
 
 -- With CharacterAutoLoads=false, Roblox never auto-copies StarterGui to PlayerGui.

@@ -483,8 +483,11 @@ local function sceneFirmName(_state, actions, localSceneCb, playSound)
     _buildInputRow  = buildFirmInputRow,
     onType = function(text, _s, _a)
       if (text or ""):match("^%s*$") then
-        -- Empty / whitespace-only name: re-prompt in place with bad joss,
-        -- faithful to the original (taipan.c:758-762 plays bad_joss_sound()).
+        -- Empty / whitespace-only name: re-prompt in place with bad joss.
+        -- Faithful to taipan.c:758-762 (firmlen == 0 plays bad_joss_sound()),
+        -- with the added guard that whitespace-only names are also rejected:
+        -- the original would accept them, but a space-only firm name displays
+        -- blank, so we block it for a cleaner result.
         if playSound then playSound("badjoss") end
         return nil
       end

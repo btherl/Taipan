@@ -490,10 +490,21 @@ Remotes.LeaveWu.OnServerEvent:Connect(function(player)
   if state.currentPort ~= Constants.HONG_KONG then return end
   if not state.inWuSession then return end
   state.inWuSession = false
+  local pending = {}
   if FinanceEngine.wuEnforcers(state) then
     Remotes.Notify:FireClient(player, "WU'S MEN beat you and take all your cash!")
+    local braves = math.random(1, 3)
+    local entry = makeCompradorNotif({
+      string.format("Bad joss!!  %d of your bodyguards have", braves),
+      "been killed by cutthroats and you have",
+      "been robbed of all of your cash, Taipan!",
+    }, 7)
+    entry.sound = "underattack"
+    table.insert(pending, entry)
   end
+  state.pendingMessages = pending
   pushState(player)
+  state.pendingMessages = nil
 end)
 
 Remotes.BankDeposit.OnServerEvent:Connect(function(player, amount)

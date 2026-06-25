@@ -81,6 +81,9 @@ function Apple2Interface.new(screenGui, actions)
   local notifGen   = 0
   local renderGen  = 0   -- incremented each render; used to discard stale _autoAdvance callbacks
   local lastSoundedScene = nil  -- localScene value whose sound we last played; dedups re-renders
+  local function playSound(name)  -- explicit one-shot local sound (same-scene re-prompts)
+    task.spawn(function() SoundPlayer.play(name) end)  -- play() blocks; must spawn
+  end
   local GREEN      = Color3.fromRGB(140, 200, 80)
 
   -- Forward declarations for mutual recursion between advanceNotif and playNextNotif
@@ -303,7 +306,8 @@ function Apple2Interface.new(screenGui, actions)
           queuedCommand = newAction
           render(lastState, localScene)
         end,
-      }
+      },
+      playSound
     )
 
     -- Local-scene sound: a scene fn may set lines.sound (e.g. "goodjoss" on a

@@ -64,6 +64,7 @@ function KeyInput.new(screenGui)
   local connections    = {}   -- active input connections
   local mobileButtons  = {}   -- active mobile TextButton instances
   local mobileFrame    = nil  -- container for mobile buttons
+  local mobileGui      = nil  -- dedicated high-DisplayOrder ScreenGui for the button row
   local typeBuf        = ""
   local cursorPos      = 1    -- 1-based position in buffer (1 to #typeBuf+1)
   local cursorVisible  = true
@@ -99,7 +100,8 @@ function KeyInput.new(screenGui)
   local function cleanup()
     for _, c in ipairs(connections) do c:Disconnect() end
     connections = {}
-    if mobileFrame then mobileFrame:Destroy(); mobileFrame = nil end
+    if mobileGui then mobileGui:Destroy(); mobileGui = nil end
+    mobileFrame = nil
     mobileButtons = {}
     if typeUpdateConn then typeUpdateConn:Disconnect(); typeUpdateConn = nil end
     if blinkConn then blinkConn:Disconnect(); blinkConn = nil end
@@ -113,6 +115,19 @@ function KeyInput.new(screenGui)
 
   -- Build mobile virtual key buttons for "key" mode
   local function buildMobileButtons(keys, onPress)
+    -- The Apple II terminal renders in its own ScreenGui ("TaipanTerminal",
+    -- DisplayOrder 5) with an opaque black background. Across separate
+    -- ScreenGuis, draw order and input are governed by DisplayOrder, not ZIndex,
+    -- so the button row must live in its own ScreenGui with a higher DisplayOrder
+    -- — otherwise the terminal occludes the buttons and absorbs every tap.
+    -- (screenGui.Parent is the LocalPlayer's PlayerGui.)
+    mobileGui = Instance.new("ScreenGui")
+    mobileGui.Name = "MobileKeyGui"
+    mobileGui.DisplayOrder = 100
+    mobileGui.ResetOnSpawn = false
+    mobileGui.IgnoreGuiInset = true
+    mobileGui.Parent = screenGui.Parent
+
     mobileFrame = Instance.new("Frame")
     mobileFrame.Name = "MobileKeyRow"
     mobileFrame.Size = UDim2.new(1, 0, 0, 60)
@@ -120,7 +135,7 @@ function KeyInput.new(screenGui)
     mobileFrame.BackgroundColor3 = Color3.fromRGB(10, 10, 10)
     mobileFrame.BorderSizePixel = 0
     mobileFrame.ZIndex = 50
-    mobileFrame.Parent = screenGui
+    mobileFrame.Parent = mobileGui
 
     local count = #keys
     for i, key in ipairs(keys) do
@@ -236,7 +251,18 @@ function KeyInput.new(screenGui)
         end
       end)
 
-      if not isMobile then
+      if isMobile then
+        -- Mobile: a tap on a virtual key fires immediately (no Enter/confirm
+        -- step). Behaviourally identical to the "key" type on touch. Reuses the
+        -- validKeySet built above and the shared buildMobileButtons helper.
+        local function onPress(key)
+          key = key:upper()
+          if validKeySet[key] then
+            promptDef.onKey(key, state, actions)
+          end
+        end
+        buildMobileButtons(promptDef.keys, onPress)
+      else
         table.insert(connections,
           UserInputService.InputBegan:Connect(function(input, gameProcessed)
             if gameProcessed then return end

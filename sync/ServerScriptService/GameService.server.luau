@@ -490,10 +490,21 @@ Remotes.LeaveWu.OnServerEvent:Connect(function(player)
   if state.currentPort ~= Constants.HONG_KONG then return end
   if not state.inWuSession then return end
   state.inWuSession = false
+  local pending = {}
   if FinanceEngine.wuEnforcers(state) then
     Remotes.Notify:FireClient(player, "WU'S MEN beat you and take all your cash!")
+    local braves = math.random(1, 3)
+    local entry = makeCompradorNotif({
+      string.format("Bad joss!!  %d of your bodyguards have", braves),
+      "been killed by cutthroats and you have",
+      "been robbed of all of your cash, Taipan!",
+    }, 7)
+    entry.sound = "underattack"
+    table.insert(pending, entry)
   end
+  state.pendingMessages = pending
   pushState(player)
+  state.pendingMessages = nil
 end)
 
 Remotes.BankDeposit.OnServerEvent:Connect(function(player, amount)
@@ -1104,7 +1115,14 @@ Remotes.AcceptBankruptcyLoan.OnServerEvent:Connect(function(player)
   state.bankruptcyPending = nil
   state.cash = state.cash + offer.loan
   state.debt = state.debt + offer.repay
+  local entry = makeCompradorNotif({
+    "Very well, Taipan.",
+    "Good joss!!",
+  }, 5)
+  entry.sound = "badjoss"
+  state.pendingMessages = { entry }
   pushState(player)
+  state.pendingMessages = nil
 end)
 
 Remotes.DeclineBankruptcyLoan.OnServerEvent:Connect(function(player)
@@ -1113,7 +1131,14 @@ Remotes.DeclineBankruptcyLoan.OnServerEvent:Connect(function(player)
   if not state.bankruptcyPending then return end
   state.bankruptcyPending = nil
   setGameOver(state, "quit")
+  local entry = makeCompradorNotif({
+    "Very well, Taipan,",
+    "the game is over!",
+  }, 5)
+  entry.sound = "underattack"
+  state.pendingMessages = { entry }
   pushState(player)
+  state.pendingMessages = nil
 end)
 
 -- With CharacterAutoLoads=false, Roblox never auto-copies StarterGui to PlayerGui.

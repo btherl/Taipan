@@ -461,7 +461,7 @@ local function buildFirmInputRow(displayStr)
   }}
 end
 
-local function sceneFirmName(_state, actions, localSceneCb)
+local function sceneFirmName(_state, actions, localSceneCb, playSound)
   local initDisplay = "_" .. string.rep(" ", 22)
   local rows = {
     [8]  = BoxDrawing.boxTop(40, AMBER),
@@ -482,6 +482,15 @@ local function sceneFirmName(_state, actions, localSceneCb)
     _inputRow       = FIRM_INPUT_ROW,
     _buildInputRow  = buildFirmInputRow,
     onType = function(text, _s, _a)
+      if (text or ""):match("^%s*$") then
+        -- Empty / whitespace-only name: re-prompt in place with bad joss.
+        -- Faithful to taipan.c:758-762 (firmlen == 0 plays bad_joss_sound()),
+        -- with the added guard that whitespace-only names are also rejected:
+        -- the original would accept them, but a space-only firm name displays
+        -- blank, so we block it for a cleaner result.
+        if playSound then playSound("badjoss") end
+        return nil
+      end
       actions.setFirmName(text)
       if localSceneCb then localSceneCb("start_choice") end
       return nil
@@ -1490,7 +1499,7 @@ local function sceneFinalStatus(state, actions, _localSceneCb)
   }
 end
 
-function PromptEngine.processState(state, localScene, actions, localSceneCb, combatSelection)
+function PromptEngine.processState(state, localScene, actions, localSceneCb, combatSelection, playSound)
   if state.gameOver then
     if state.gameOverReason == "retired" then
       if localScene == "final_status" then
@@ -1603,7 +1612,7 @@ function PromptEngine.processState(state, localScene, actions, localSceneCb, com
     if localScene == "start_choice" then
       return sceneStartChoice(state, actions, localSceneCb)
     end
-    return sceneFirmName(state, actions, localSceneCb)
+    return sceneFirmName(state, actions, localSceneCb, playSound)
   end
   return sceneAtPort(state, actions, localSceneCb)
 end

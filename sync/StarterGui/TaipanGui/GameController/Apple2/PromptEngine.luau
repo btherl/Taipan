@@ -1071,7 +1071,7 @@ local function sceneBuySell(state, actions, localSceneCb, isBuy)
   }
 end
 
-local function sceneBuySellAmount(state, actions, localSceneCb, goodIdx, isBuy)
+local function sceneBuySellAmount(state, actions, localSceneCb, goodIdx, isBuy, playSound)
   local goodName = SHORT_GOOD_NAMES[goodIdx]
   local price    = (state.currentPrices or {})[goodIdx] or 0
   local cash     = state.cash or 0
@@ -1138,14 +1138,17 @@ local function sceneBuySellAmount(state, actions, localSceneCb, goodIdx, isBuy)
       end
       if isBuy then
         if qty * price > cash then
-          -- Exceeds available cash: stay on same scene (input already cleared)
+          -- Exceeds available cash: beep and stay on same scene (input already cleared).
+          -- Faithful to the original CALL 2524 submit-time beep.
+          if playSound then playSound("beep") end
           if localSceneCb then localSceneCb("buy_good_" .. goodIdx) end
           return nil
         end
         actions.buyGoods(goodIdx, math.floor(qty))
       else
         if qty > cargoAmt then
-          -- Exceeds available cargo: stay on same scene
+          -- Exceeds available cargo: beep and stay on same scene.
+          if playSound then playSound("beep") end
           if localSceneCb then localSceneCb("sell_good_" .. goodIdx) end
           return nil
         end
@@ -1593,11 +1596,11 @@ function PromptEngine.processState(state, localScene, actions, localSceneCb, com
   if localScene == "sell" then return sceneBuySell(state, actions, localSceneCb, false) end
   if localScene and localScene:match("^buy_good_(%d)$") then
     local idx = tonumber(localScene:match("(%d)$"))
-    return sceneBuySellAmount(state, actions, localSceneCb, idx, true)
+    return sceneBuySellAmount(state, actions, localSceneCb, idx, true, playSound)
   end
   if localScene and localScene:match("^sell_good_(%d)$") then
     local idx = tonumber(localScene:match("(%d)$"))
-    return sceneBuySellAmount(state, actions, localSceneCb, idx, false)
+    return sceneBuySellAmount(state, actions, localSceneCb, idx, false, playSound)
   end
   if localScene == "travel"       then return sceneTravel(state, actions, localSceneCb) end
   if localScene == "already_here" then return sceneAlreadyHere(state, actions, localSceneCb) end

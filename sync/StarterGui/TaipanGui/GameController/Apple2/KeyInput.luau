@@ -16,6 +16,9 @@ local isMobile = UserInputService.TouchEnabled
 local NUMKEY_MAP = {
   One = "1", Two = "2", Three = "3", Four = "4",
   Five = "5", Six = "6", Seven = "7", Eight = "8", Nine = "9", Zero = "0",
+  KeypadOne = "1", KeypadTwo = "2", KeypadThree = "3", KeypadFour = "4",
+  KeypadFive = "5", KeypadSix = "6", KeypadSeven = "7", KeypadEight = "8",
+  KeypadNine = "9", KeypadZero = "0",
 }
 
 -- Printable non-letter, non-digit keys: {unshifted, shifted}
@@ -385,7 +388,7 @@ function KeyInput.new(screenGui)
         table.insert(connections,
           UserInputService.InputBegan:Connect(function(input, gameProcessed)
             if gameProcessed then return end
-            if input.KeyCode == Enum.KeyCode.Return then
+            if input.KeyCode == Enum.KeyCode.Return or input.KeyCode == Enum.KeyCode.KeypadEnter then
               local submitted = typeBuf
               typeBuf = ""
               cursorPos = 1
@@ -501,7 +504,7 @@ function KeyInput.new(screenGui)
         table.insert(connections,
           UserInputService.InputBegan:Connect(function(input, gameProcessed)
             if gameProcessed then return end
-            if input.KeyCode == Enum.KeyCode.Return then
+            if input.KeyCode == Enum.KeyCode.Return or input.KeyCode == Enum.KeyCode.KeypadEnter then
               local submitted = typeBuf
               typeBuf = ""
               cursorPos = 1

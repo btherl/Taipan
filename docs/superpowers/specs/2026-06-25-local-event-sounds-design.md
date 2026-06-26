@@ -18,7 +18,7 @@ The original game's sound-to-event mapping is documented in:
 
 The original had exactly **three** sounds — `bad_joss`, `good_joss`, `under_attack` — which are precisely the three assets we already have in `Sounds.luau` (`badjoss`, `goodjoss`, `underattack`). No new assets are required.
 
-Per the original, **every local validation rejection played `good_joss`**. (Note: the original also played `good_joss` for the "you have only X in cash" buy/sell over-limit cases and `bad_joss` for an empty firm name, but those are out of scope — see Non-Goals.)
+Per the original, **every local validation rejection played `good_joss`**. (Note: the original played `bad_joss` for an empty firm name, out of scope here — see Non-Goals. The buy/sell over-limit case played the plain system beep `CALL 2524`, not `good_joss`; it is implemented separately — see `docs/superpowers/specs/2026-06-26-input-beeps-design.md`.)
 
 ## Goals
 
@@ -42,7 +42,7 @@ All eight play `goodjoss`, faithful to the original.
 These are explicitly **excluded** from this work:
 
 - **`repair_amount_err`** (bad repair amount): a modern addition with no equivalent in the original game. No sound. We only add sounds the original had.
-- **Buy/sell over-limit silent-clear** (`PromptEngine.luau:1127-1136`): when the player tries to buy more than they can afford or sell more than they hold, our implementation silently clears the input and re-renders the *same* scene — it shows no rejection message. The original played `good_joss` here, but since our implementation presents no distinct rejection scene, wiring it is deferred.
+- **Buy/sell over-limit silent-clear** (`PromptEngine.luau:1127-1136`): when the player tries to buy more than they can afford or sell more than they hold, our implementation silently clears the input and re-renders the *same* scene — it shows no rejection message. The original played the plain system beep (`CALL 2524`) here, not `good_joss`. This was deferred at the time and is now implemented in `docs/superpowers/specs/2026-06-26-input-beeps-design.md`.
 - **Empty firm name**: our `sceneFirmName.onType` (`PromptEngine.luau:484`) does not block an empty name — there is no rejection event to attach a sound to. (This was also the only sound in the original reconstructed from source rather than confirmed in the emulator.)
 - **Server-driven notification sounds**: already handled via `entry.sound`; out of scope.
 - **New sound assets / additional categories**: not needed.

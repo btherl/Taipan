@@ -723,9 +723,19 @@ local function applyEnemyFire(player, state, combat, pending)
   end
   if fireResult.liYuenIntervened then
     Remotes.Notify:FireClient(player, "Li Yuen's fleet drove them off!!")
+    -- Beat 1: announce the rescue on the combat battle layout, enemy ships still
+    -- on screen (matches escape's "We got away from 'em" combat beat).
     local entry = makeCombatNotif("Li Yuen's fleet drove them off!!", 3)
     entry.sound = "goodjoss"
     table.insert(pending, entry)
+    -- Beat 2: redraw the "at port" status screen (lines 1-16) before any arrival
+    -- Comprador's Report. includeStatusScreen also clears the enemy ship grid on
+    -- the client at this beat -- so the ships persist through beat 1 and leave
+    -- only after the player has been told Li Yuen drove them off, matching the
+    -- victory/escape paths (BASIC line 5900 GOSUB 200/300).
+    local statusEntry = makeStatusScreenLowerNotif("", { "We made it, Taipan!" }, 3)
+    statusEntry.sound = "goodjoss"
+    table.insert(pending, statusEntry)
     endCombatPreservingEvents(state)
     return true
   end

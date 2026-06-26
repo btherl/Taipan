@@ -136,7 +136,14 @@ function Apple2Interface.new(screenGui, actions)
       combatAnimDraining = false
       -- If a combat exit was deferred while animations were running, run it now
       -- (victory: clear the grid once the sink/flee sequence has finished).
-      tearDownCombatGridIfPending(lastState)
+      -- BUT only when no end-of-combat dialog is still queued: a Li Yuen rescue
+      -- leaves surviving ships on the grid that must stay visible behind the
+      -- "We've been hit" / "Li Yuen's fleet drove them off!!" notifs. In that
+      -- case the teardown is deferred to the trailing status-screen notif
+      -- (includeStatusScreen) or the final render once the dialog has played.
+      if #notifQueue == 0 and not notifWaitingForAnims then
+        tearDownCombatGridIfPending(lastState)
+      end
       -- Resume any notif playback that was paused at an animation gate.
       if notifWaitingForAnims then
         notifWaitingForAnims = false

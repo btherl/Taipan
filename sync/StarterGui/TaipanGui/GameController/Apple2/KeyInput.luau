@@ -416,21 +416,28 @@ function KeyInput.new(screenGui)
               resetBlink()
               updateDisplay()
             else
+              if MODIFIER_KEYS[input.KeyCode.Name] then return end  -- never beep on bare modifiers
               local char = toPrintableChar(input.KeyCode.Name)
               if char then
                 if cursorPos <= #typeBuf then
                   -- Overwrite mode: replace char at cursor position
                   typeBuf = typeBuf:sub(1, cursorPos - 1) .. char .. typeBuf:sub(cursorPos + 1)
                   cursorPos = cursorPos + 1
+                  resetBlink()
+                  updateDisplay()
                 else
                   -- Append mode: add char at end (if under maxLength)
                   if not maxLength or #typeBuf < maxLength then
                     typeBuf = typeBuf .. char
                     cursorPos = cursorPos + 1
+                    resetBlink()
+                    updateDisplay()
+                  else
+                    beep(promptDef)  -- buffer already at max length
                   end
                 end
-                resetBlink()
-                updateDisplay()
+              else
+                beep(promptDef)  -- non-printable key
               end
             end
           end)

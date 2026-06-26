@@ -477,6 +477,7 @@ local function sceneFirmName(_state, actions, localSceneCb, playSound)
   }
   return { rows = rows }, {
     type            = "type",
+    noBeep          = true,  -- customized dialog; takes no input beeps (spec Decision 2)
     typePlaceholder = "",
     maxLength       = 22,
     _inputRow       = FIRM_INPUT_ROW,
@@ -644,6 +645,7 @@ local function sceneCombatLayout(state, actions, localSceneCb, combatSelection)
 
   local promptDef = {
     type = "key",
+    noBeep = true,  -- combat main loop has its own handling; never beeps
     keys = { "F", "R", "T" },
     label = "(F)ight  (R)un  (T)hrow",
     onKey = function(key, _state, _actions)

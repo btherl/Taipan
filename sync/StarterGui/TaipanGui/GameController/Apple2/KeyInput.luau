@@ -5,6 +5,9 @@
 local UserInputService = game:GetService("UserInputService")
 local RunService       = game:GetService("RunService")
 local Players          = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local SoundPlayer = require(ReplicatedStorage.SoundPlayer)
 
 local isMobile = UserInputService.TouchEnabled
 
@@ -59,6 +62,21 @@ local function toPrintableChar(name)
 end
 
 local KeyInput = {}
+
+-- Bare modifier presses produce no character and must never beep.
+local MODIFIER_KEYS = {
+  LeftShift = true, RightShift = true,
+  LeftControl = true, RightControl = true,
+  LeftAlt = true, RightAlt = true,
+  CapsLock = true, LeftMeta = true, RightMeta = true,
+  Unknown = true,
+}
+
+-- Play the Apple II input-rejection beep, unless this prompt opts out.
+local function beep(promptDef)
+  if promptDef and promptDef.noBeep then return end
+  task.spawn(function() SoundPlayer.play("beep") end)
+end
 
 function KeyInput.new(screenGui)
   local connections    = {}   -- active input connections
@@ -174,6 +192,8 @@ function KeyInput.new(screenGui)
         key = key:upper()
         if acceptAny or validKeys[key] then         -- NEW: acceptAny path
           promptDef.onKey(key, state, actions)
+        else
+          beep(promptDef)
         end
       end
 
@@ -188,6 +208,7 @@ function KeyInput.new(screenGui)
           UserInputService.InputBegan:Connect(function(input, gameProcessed)
             if gameProcessed then return end
             local name = input.KeyCode.Name  -- e.g. "F", "R", "T", "One", "Two"
+            if MODIFIER_KEYS[name] then return end  -- never beep on bare modifiers
             -- Map common keys to their character
             local char = name
             if #name == 1 then char = name:upper()

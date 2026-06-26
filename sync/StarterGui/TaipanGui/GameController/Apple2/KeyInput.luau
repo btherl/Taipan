@@ -509,25 +509,34 @@ function KeyInput.new(screenGui)
               if terminal then terminal.showInputLine(placeholder) end
               local err = promptDef.onType("", state, actions)
               if err and promptDef._onError then promptDef._onError(err) end
-            elseif input.KeyCode == Enum.KeyCode.Left then
-              -- Left arrow: delete last digit (Apple II behaviour)
+            elseif input.KeyCode == Enum.KeyCode.Left
+                or input.KeyCode == Enum.KeyCode.Backspace then
+              -- Left arrow deletes the last digit (Apple II). Backspace mirrors it
+              -- for usability (spec Decision 1). Beep when there is nothing to delete.
               if #typeBuf > 0 then
                 typeBuf = typeBuf:sub(1, -2)
                 cursorPos = #typeBuf + 1
+              else
+                beep(promptDef)
               end
               resetBlink()
               updateDisplay()
             else
-              -- Accept digit keys only; Backspace is silently ignored
+              if MODIFIER_KEYS[input.KeyCode.Name] then return end  -- never beep on bare modifiers
+              -- Accept digit keys only. Backspace is handled with Left above.
               local char = input.KeyCode.Name
               if NUMKEY_MAP[char] then char = NUMKEY_MAP[char] end
               if #char == 1 and char:match("%d") then
                 if not maxLength or #typeBuf < maxLength then
                   typeBuf = typeBuf .. char
                   cursorPos = #typeBuf + 1
+                  resetBlink()
+                  updateDisplay()
+                else
+                  beep(promptDef)  -- buffer already at max digits
                 end
-                resetBlink()
-                updateDisplay()
+              else
+                beep(promptDef)  -- non-digit key
               end
             end
           end)

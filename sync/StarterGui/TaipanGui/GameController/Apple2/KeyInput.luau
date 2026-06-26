@@ -303,6 +303,8 @@ function KeyInput.new(screenGui)
               return
             end
 
+            if MODIFIER_KEYS[name] then return end  -- never beep on bare modifiers
+
             local char = name
             if #name == 1 then char = name:upper()
             elseif NUMKEY_MAP[name] then char = NUMKEY_MAP[name]
@@ -312,6 +314,7 @@ function KeyInput.new(screenGui)
               stored = char
             else
               stored = ""
+              beep(promptDef)
             end
             resetBlink()
             updateDisplay()

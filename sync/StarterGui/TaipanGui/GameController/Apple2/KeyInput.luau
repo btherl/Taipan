@@ -352,6 +352,14 @@ function KeyInput.new(screenGui)
               hiddenBox.Text = ""
               local err = promptDef.onType(submitted, state, actions)
               if err and promptDef._onError then promptDef._onError(err) end
+            else
+              -- Focus lost without submitting (e.g. orientation change drops
+              -- TextBox focus and closes the soft keyboard). Re-capture focus on
+              -- the next frame while this prompt is still active. The Parent
+              -- guard prevents re-summoning after cleanup() destroys the box.
+              task.defer(function()
+                if hiddenBox and hiddenBox.Parent then hiddenBox:CaptureFocus() end
+              end)
             end
           end)
         )
@@ -497,6 +505,14 @@ function KeyInput.new(screenGui)
               hiddenBox.Text = ""
               local err = promptDef.onType(submitted, state, actions)
               if err and promptDef._onError then promptDef._onError(err) end
+            else
+              -- Focus lost without submitting (e.g. orientation change drops
+              -- TextBox focus and closes the soft keyboard). Re-capture focus on
+              -- the next frame while this prompt is still active. The Parent
+              -- guard prevents re-summoning after cleanup() destroys the box.
+              task.defer(function()
+                if hiddenBox and hiddenBox.Parent then hiddenBox:CaptureFocus() end
+              end)
             end
           end)
         )

@@ -314,6 +314,9 @@ function KeyInput.new(screenGui)
         -- canvas is centred with a large bottom letterbox band in portrait; read
         -- its actual rendered bottom (insets included) rather than guessing, since
         -- the topbar inset could otherwise push the keypad up over the text.
+        -- MobileKeypadGui uses IgnoreGuiInset=true (see makeMobileContainer), so a
+        -- frame offset Y shares the same screen-absolute origin as the canvas's
+        -- AbsolutePosition.Y — they align without a topbar-inset correction.
         local vpY = Workspace.CurrentCamera.ViewportSize.Y
         local topY
         if canvas and canvas.AbsoluteSize.Y > 0 then
@@ -321,6 +324,8 @@ function KeyInput.new(screenGui)
         else
           topY = vpY - 320  -- fallback: fixed bottom band
         end
+        -- Guarantee a usable keypad height. On near-square screens (rare) this can
+        -- push the top up over the lowest text rows; a tappable keypad wins.
         local minH = 240
         if vpY - topY < minH then topY = vpY - minH end
         if topY < 0 then topY = 0 end

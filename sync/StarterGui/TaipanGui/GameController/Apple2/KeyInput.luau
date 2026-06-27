@@ -74,6 +74,29 @@ local function isLandscape()
   return vp.X > vp.Y
 end
 
+-- Fraction of the terminal's 16:9 canvas width occupied by the 40-column text
+-- (column 40's right edge). The terminal text lives in a 1920x1080 virtual canvas
+-- (Terminal.luau: X_OFFSET=30, CHAR_WIDTH=14*2.7=37.8, 40 cols), so the text ends
+-- at (30 + 40*37.8)/1920 of the canvas width. Used to dock landscape controls just
+-- right of the text instead of a fixed width from the screen edge — the canvas is
+-- centred, so on wide screens (extra pillarbox) a fixed dock would overlap the
+-- rightmost columns.
+local TEXT_RIGHT_FRAC = (30 + 40 * (14 * 2.7)) / 1920  -- = 0.803125
+
+-- Screen-space X just right of the terminal text (plus an 8px margin), and the
+-- width from there to the right edge, for docking a landscape control strip. The
+-- canvas is height-constrained in landscape, so its width = viewport height*16/9;
+-- using full viewport height (ignoring the topbar inset) slightly over-estimates,
+-- leaving a small safe gap rather than overlapping. minW guarantees a usable strip.
+local function rightStrip(minW)
+  local vp = Workspace.CurrentCamera.ViewportSize
+  local canvasW = vp.Y * (16 / 9)
+  local leftX = vp.X / 2 + (TEXT_RIGHT_FRAC - 0.5) * canvasW + 8
+  if vp.X - leftX < minW then leftX = vp.X - minW end
+  if leftX < 0 then leftX = 0 end
+  return leftX, vp.X - leftX
+end
+
 local KeyInput = {}
 
 -- Bare modifier presses produce no character and must never beep.
@@ -276,9 +299,11 @@ function KeyInput.new(screenGui)
     local ROWFRAC = 1 / 5  -- 4 digit rows + 1 OK row
     local function layout()
       if isLandscape() then
-        local w = 240
+        -- Dock to the empty strip right of the text, not a fixed width from the
+        -- screen edge (which overlaps the rightmost columns on wide screens).
+        local leftX, w = rightStrip(170)
         mobileFrame.Size = UDim2.new(0, w, 1, 0)
-        mobileFrame.Position = UDim2.new(1, -w, 0, 0)
+        mobileFrame.Position = UDim2.new(0, leftX, 0, 0)
       else
         local h = 320
         mobileFrame.Size = UDim2.new(1, 0, 0, h)

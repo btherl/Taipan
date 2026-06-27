@@ -144,29 +144,44 @@ function KeyInput.new(screenGui)
     maxLength = nil
   end
 
-  -- Build mobile virtual key buttons for "key"/"singlechar" mode.
-  -- Portrait: a horizontal row docked to the bottom (in the bottom letterbox band).
-  -- Landscape: a vertical column docked to the right edge (in the empty right
-  -- strip), so it never covers the prices/prompt on the left. Re-lays out on
-  -- ViewportSize change so rotating mid-prompt re-flows the buttons.
-  local function buildMobileButtons(keys, onPress)
-    -- Across separate ScreenGuis, draw order and input are governed by
-    -- DisplayOrder, not ZIndex; the terminal (DisplayOrder 5) is opaque, so the
-    -- button row must live in its own higher-DisplayOrder ScreenGui or the
-    -- terminal occludes it and absorbs every tap. (screenGui.Parent is PlayerGui.)
+  -- Create the mobile input container (its own high-DisplayOrder ScreenGui plus a
+  -- backing Frame) and assign the shared mobileGui/mobileFrame upvalues. Across
+  -- separate ScreenGuis, draw order and input are governed by DisplayOrder, not
+  -- ZIndex; the terminal (DisplayOrder 5) is opaque, so mobile input must live in
+  -- its own higher-DisplayOrder ScreenGui or the terminal occludes it and absorbs
+  -- every tap. (screenGui.Parent is the LocalPlayer's PlayerGui.)
+  local function makeMobileContainer(guiName, frameName)
     mobileGui = Instance.new("ScreenGui")
-    mobileGui.Name = "MobileKeyGui"
+    mobileGui.Name = guiName
     mobileGui.DisplayOrder = 100
     mobileGui.ResetOnSpawn = false
     mobileGui.IgnoreGuiInset = true
     mobileGui.Parent = screenGui.Parent
 
     mobileFrame = Instance.new("Frame")
-    mobileFrame.Name = "MobileKeyRow"
+    mobileFrame.Name = frameName
     mobileFrame.BackgroundColor3 = Color3.fromRGB(10, 10, 10)
     mobileFrame.BorderSizePixel = 0
     mobileFrame.ZIndex = 50
     mobileFrame.Parent = mobileGui
+  end
+
+  -- Run layout once and re-run it on every viewport (orientation) change so the
+  -- mobile controls re-flow live. The connection is tracked in `connections`, so
+  -- cleanup() disconnects it when the prompt ends.
+  local function bindLayout(layout)
+    layout()
+    table.insert(connections,
+      Workspace.CurrentCamera:GetPropertyChangedSignal("ViewportSize"):Connect(layout))
+  end
+
+  -- Build mobile virtual key buttons for "key"/"singlechar" mode.
+  -- Portrait: a horizontal row docked to the bottom (in the bottom letterbox band).
+  -- Landscape: a vertical column docked to the right edge (in the empty right
+  -- strip), so it never covers the prices/prompt on the left. Re-lays out on
+  -- ViewportSize change so rotating mid-prompt re-flows the buttons.
+  local function buildMobileButtons(keys, onPress)
+    makeMobileContainer("MobileKeyGui", "MobileKeyRow")
 
     local count = #keys
     for i, key in ipairs(keys) do
@@ -204,9 +219,7 @@ function KeyInput.new(screenGui)
       end
     end
 
-    layout()
-    table.insert(connections,
-      Workspace.CurrentCamera:GetPropertyChangedSignal("ViewportSize"):Connect(layout))
+    bindLayout(layout)
   end
 
   -- Build a custom numeric keypad for "numeric" prompts on mobile, replacing the
@@ -214,19 +227,7 @@ function KeyInput.new(screenGui)
   -- to the bottom band. Landscape: a block docked to the right strip. onKey is
   -- called with "0".."9", "DEL", "ALL", or "OK". ALL is shown only when hasAll.
   local function buildMobileKeypad(hasAll, onKey)
-    mobileGui = Instance.new("ScreenGui")
-    mobileGui.Name = "MobileKeypadGui"
-    mobileGui.DisplayOrder = 100
-    mobileGui.ResetOnSpawn = false
-    mobileGui.IgnoreGuiInset = true
-    mobileGui.Parent = screenGui.Parent
-
-    mobileFrame = Instance.new("Frame")
-    mobileFrame.Name = "MobileKeypad"
-    mobileFrame.BackgroundColor3 = Color3.fromRGB(10, 10, 10)
-    mobileFrame.BorderSizePixel = 0
-    mobileFrame.ZIndex = 50
-    mobileFrame.Parent = mobileGui
+    makeMobileContainer("MobileKeypadGui", "MobileKeypad")
 
     -- 4 digit/util rows of 3 cells; bottom-left is ALL (or blank), bottom-right
     -- is delete. A full-width OK occupies a 5th visual row.
@@ -291,9 +292,7 @@ function KeyInput.new(screenGui)
       okBtn.Position = UDim2.new(0, 3, 4 * ROWFRAC, 3)
     end
 
-    layout()
-    table.insert(connections,
-      Workspace.CurrentCamera:GetPropertyChangedSignal("ViewportSize"):Connect(layout))
+    bindLayout(layout)
   end
 
   local ki = {}

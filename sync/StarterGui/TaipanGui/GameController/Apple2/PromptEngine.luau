@@ -1132,6 +1132,7 @@ local function sceneBuySellAmount(state, actions, localSceneCb, goodIdx, isBuy, 
     _inputRow       = 23,
     _buildInputRow  = buildAmountRow,
     maxDigits       = 9,
+    maxValue        = isBuy and affordable or cargoAmt,
     onType = function(text, _s, _a)
       local qty = tonumber(text) or 0
       if qty == 0 then
@@ -1183,6 +1184,7 @@ local function sceneBank(state, actions, localSceneCb)
     _inputRow       = 19,
     _buildInputRow  = function(s) return { text = question .. s, color = AMBER } end,
     maxDigits       = 9,
+    maxValue        = maxDeposit,
     onType = function(text, _s, _a)
       local amt = tonumber(text) or 0
       if amt > maxDeposit then
@@ -1208,6 +1210,7 @@ local function sceneWithdraw(state, actions, localSceneCb)
     _inputRow       = 19,
     _buildInputRow  = function(s) return { text = question .. s, color = AMBER } end,
     maxDigits       = 9,
+    maxValue        = maxWithdraw,
     onType = function(text, _s, _a)
       local amt = tonumber(text) or 0
       if amt > maxWithdraw then

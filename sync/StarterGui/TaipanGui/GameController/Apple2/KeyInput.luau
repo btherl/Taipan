@@ -249,8 +249,13 @@ function KeyInput.new(screenGui)
   -- native soft keyboard so we control size/placement. Portrait: a block docked
   -- to the bottom band. Landscape: a block docked to the right strip. onKey is
   -- called with "0".."9", "DEL", "ALL", or "OK". ALL is shown only when hasAll.
-  local function buildMobileKeypad(hasAll, onKey)
+  local function buildMobileKeypad(hasAll, onKey, term)
     makeMobileContainer("MobileKeypadGui", "MobileKeypad")
+
+    -- The terminal's 16:9 text canvas (centred, with letterbox bands). Used to
+    -- dock the keypad below the actual rendered text bottom in portrait, rather
+    -- than a fixed band height that would cover the lowest rows on tall screens.
+    local canvas = term and term._gui and term._gui:FindFirstChild("TextParent")
 
     -- 4 digit/util rows of 3 cells; bottom-left is ALL (or blank), bottom-right
     -- is delete. A full-width OK occupies a 5th visual row.
@@ -305,9 +310,22 @@ function KeyInput.new(screenGui)
         mobileFrame.Size = UDim2.new(0, w, 1, 0)
         mobileFrame.Position = UDim2.new(0, leftX, 0, 0)
       else
-        local h = 320
-        mobileFrame.Size = UDim2.new(1, 0, 0, h)
-        mobileFrame.Position = UDim2.new(0, 0, 1, -h)
+        -- Dock below the terminal text so it doesn't cover the bottom rows. The
+        -- canvas is centred with a large bottom letterbox band in portrait; read
+        -- its actual rendered bottom (insets included) rather than guessing, since
+        -- the topbar inset could otherwise push the keypad up over the text.
+        local vpY = Workspace.CurrentCamera.ViewportSize.Y
+        local topY
+        if canvas and canvas.AbsoluteSize.Y > 0 then
+          topY = canvas.AbsolutePosition.Y + canvas.AbsoluteSize.Y + 6
+        else
+          topY = vpY - 320  -- fallback: fixed bottom band
+        end
+        local minH = 240
+        if vpY - topY < minH then topY = vpY - minH end
+        if topY < 0 then topY = 0 end
+        mobileFrame.Size = UDim2.new(1, 0, 0, vpY - topY)
+        mobileFrame.Position = UDim2.new(0, 0, 0, topY)
       end
       for _, cell in ipairs(cells) do
         cell.btn.Size = UDim2.new(1 / COLS, -6, ROWFRAC, -6)
@@ -318,6 +336,13 @@ function KeyInput.new(screenGui)
     end
 
     bindLayout(layout)
+    -- Re-flow when the canvas resizes (e.g. orientation change updates its bottom
+    -- edge) so the portrait dock tracks the text; AbsoluteSize is current here,
+    -- unlike when reading it during the ViewportSize signal.
+    if canvas then
+      table.insert(connections,
+        canvas:GetPropertyChangedSignal("AbsoluteSize"):Connect(layout))
+    end
   end
 
   local ki = {}
@@ -669,7 +694,7 @@ function KeyInput.new(screenGui)
               beep(promptDef)  -- buffer already at max digits
             end
           end
-        end)
+        end, terminal)
       else
         table.insert(connections,
           UserInputService.InputBegan:Connect(function(input, gameProcessed)

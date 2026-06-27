@@ -809,6 +809,7 @@ local function sceneRepairAmount(state, actions, localSceneCb)
     _inputRow       = 23,
     _buildInputRow  = function(s) return { text = prompt_base .. s, color = GREEN } end,
     maxDigits       = 9,
+    maxValue        = math.min(state.cash or 0, maxCost),
     onType = function(text, _s, _a)
       local amt = tonumber(text) or 0
       if amt > (state.cash or 0) then
@@ -1023,6 +1024,7 @@ local function sceneWuRepay(state, actions, localSceneCb)
     _inputRow       = 20,
     _buildInputRow  = function(s) return { text = "him? " .. s, color = AMBER } end,
     maxDigits       = 9,
+    maxValue        = math.min(state.cash or 0, state.debt or 0),
     onType = function(text, s, _a)
       local amt = tonumber(text) or 0
       if amt > 0 then
@@ -1337,6 +1339,7 @@ local function sceneWarehouseStep(state, actions, localSceneCb, startN)
     _inputRow       = 20,
     _buildInputRow  = function(s) return { text = secondLine .. s, color = AMBER } end,
     maxDigits       = 9,
+    maxValue        = maxAvail,
     onType = function(text, _s, _a)
       local qty = tonumber(text) or 0
       if qty == 0 then

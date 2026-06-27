@@ -209,6 +209,93 @@ function KeyInput.new(screenGui)
       Workspace.CurrentCamera:GetPropertyChangedSignal("ViewportSize"):Connect(layout))
   end
 
+  -- Build a custom numeric keypad for "numeric" prompts on mobile, replacing the
+  -- native soft keyboard so we control size/placement. Portrait: a block docked
+  -- to the bottom band. Landscape: a block docked to the right strip. onKey is
+  -- called with "0".."9", "DEL", "ALL", or "OK". ALL is shown only when hasAll.
+  local function buildMobileKeypad(hasAll, onKey)
+    mobileGui = Instance.new("ScreenGui")
+    mobileGui.Name = "MobileKeypadGui"
+    mobileGui.DisplayOrder = 100
+    mobileGui.ResetOnSpawn = false
+    mobileGui.IgnoreGuiInset = true
+    mobileGui.Parent = screenGui.Parent
+
+    mobileFrame = Instance.new("Frame")
+    mobileFrame.Name = "MobileKeypad"
+    mobileFrame.BackgroundColor3 = Color3.fromRGB(10, 10, 10)
+    mobileFrame.BorderSizePixel = 0
+    mobileFrame.ZIndex = 50
+    mobileFrame.Parent = mobileGui
+
+    -- 4 digit/util rows of 3 cells; bottom-left is ALL (or blank), bottom-right
+    -- is delete. A full-width OK occupies a 5th visual row.
+    local grid = {
+      { "7", "8", "9" },
+      { "4", "5", "6" },
+      { "1", "2", "3" },
+      { hasAll and "ALL" or "", "0", "DEL" },
+    }
+    local COLS = 3
+    local cells = {}  -- { btn = TextButton, row = n, col = n }
+
+    for r, rowLabels in ipairs(grid) do
+      for c, label in ipairs(rowLabels) do
+        if label ~= "" then
+          local btn = Instance.new("TextButton")
+          btn.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+          btn.BorderColor3 = Color3.fromRGB(100, 100, 40)
+          btn.TextColor3 = Color3.fromRGB(200, 180, 80)
+          btn.Font = Enum.Font.RobotoMono
+          btn.TextSize = 22
+          btn.ZIndex = 50
+          btn.Text = (label == "DEL") and "<-" or label
+          btn.Parent = mobileFrame
+          local token = label  -- "ALL"/"DEL"/digit; label is the token directly
+          btn.Activated:Connect(function() onKey(token) end)
+          table.insert(mobileButtons, btn)
+          table.insert(cells, { btn = btn, row = r, col = c })
+        end
+      end
+    end
+
+    local okBtn = Instance.new("TextButton")
+    okBtn.Name = "OK"
+    okBtn.BackgroundColor3 = Color3.fromRGB(40, 60, 30)
+    okBtn.BorderColor3 = Color3.fromRGB(100, 140, 60)
+    okBtn.TextColor3 = Color3.fromRGB(140, 200, 80)
+    okBtn.Font = Enum.Font.RobotoMono
+    okBtn.TextSize = 22
+    okBtn.ZIndex = 50
+    okBtn.Text = "OK"
+    okBtn.Parent = mobileFrame
+    okBtn.Activated:Connect(function() onKey("OK") end)
+    table.insert(mobileButtons, okBtn)
+
+    local ROWFRAC = 1 / 5  -- 4 digit rows + 1 OK row
+    local function layout()
+      if isLandscape() then
+        local w = 240
+        mobileFrame.Size = UDim2.new(0, w, 1, 0)
+        mobileFrame.Position = UDim2.new(1, -w, 0, 0)
+      else
+        local h = 320
+        mobileFrame.Size = UDim2.new(1, 0, 0, h)
+        mobileFrame.Position = UDim2.new(0, 0, 1, -h)
+      end
+      for _, cell in ipairs(cells) do
+        cell.btn.Size = UDim2.new(1 / COLS, -6, ROWFRAC, -6)
+        cell.btn.Position = UDim2.new((cell.col - 1) / COLS, 3, (cell.row - 1) * ROWFRAC, 3)
+      end
+      okBtn.Size = UDim2.new(1, -6, ROWFRAC, -6)
+      okBtn.Position = UDim2.new(0, 3, 4 * ROWFRAC, 3)
+    end
+
+    layout()
+    table.insert(connections,
+      Workspace.CurrentCamera:GetPropertyChangedSignal("ViewportSize"):Connect(layout))
+  end
+
   local ki = {}
 
   -- Called by Apple2Interface whenever the active promptDef changes
@@ -519,36 +606,46 @@ function KeyInput.new(screenGui)
       end)
 
       if isMobile then
-        -- Hidden TextBox: user types, only digits are accepted on submit
-        hiddenBox = Instance.new("TextBox")
-        hiddenBox.Size = UDim2.new(0, 1, 0, 1)
-        hiddenBox.Position = UDim2.new(0, -10, 0, -10)
-        hiddenBox.BackgroundTransparency = 1
-        hiddenBox.Text = ""
-        hiddenBox.Parent = screenGui
-        hiddenBox:CaptureFocus()
-        typeUpdateConn = RunService.RenderStepped:Connect(function()
-          local filtered = hiddenBox.Text:gsub("[^%d]", "")
-          if terminal then terminal.showInputLine(placeholder .. filtered) end
-        end)
-        table.insert(connections,
-          hiddenBox.FocusLost:Connect(function(enterPressed)
-            if enterPressed then
-              local submitted = hiddenBox.Text:gsub("[^%d]", "")
-              hiddenBox.Text = ""
-              local err = promptDef.onType(submitted, state, actions)
-              if err and promptDef._onError then promptDef._onError(err) end
+        -- Custom keypad drives typeBuf directly and reuses updateDisplay()/blink,
+        -- so the number still echoes on the terminal input row. No native keyboard.
+        local hasAll = type(promptDef.maxValue) == "number"
+        buildMobileKeypad(hasAll, function(token)
+          if token == "OK" then
+            local submitted = typeBuf
+            typeBuf = ""
+            cursorPos = 1
+            resetBlink()
+            if terminal then terminal.showInputLine(placeholder) end
+            local err = promptDef.onType(submitted, state, actions)
+            if err and promptDef._onError then promptDef._onError(err) end
+          elseif token == "DEL" then
+            if #typeBuf > 0 then
+              typeBuf = typeBuf:sub(1, -2)
+              cursorPos = #typeBuf + 1
             else
-              -- Focus lost without submitting (e.g. orientation change drops
-              -- TextBox focus and closes the soft keyboard). Re-capture focus on
-              -- the next frame while this prompt is still active. The Parent
-              -- guard prevents re-summoning after cleanup() destroys the box.
-              task.defer(function()
-                if hiddenBox and hiddenBox.Parent then hiddenBox:CaptureFocus() end
-              end)
+              beep(promptDef)
             end
-          end)
-        )
+            resetBlink()
+            updateDisplay()
+          elseif token == "ALL" then
+            local v = tostring(math.floor(promptDef.maxValue))
+            if maxLength and #v > maxLength then v = v:sub(1, maxLength) end
+            typeBuf = v
+            cursorPos = #typeBuf + 1
+            resetBlink()
+            updateDisplay()
+          else
+            -- digit token "0".."9"
+            if not maxLength or #typeBuf < maxLength then
+              typeBuf = typeBuf .. token
+              cursorPos = #typeBuf + 1
+              resetBlink()
+              updateDisplay()
+            else
+              beep(promptDef)  -- buffer already at max digits
+            end
+          end
+        end)
       else
         table.insert(connections,
           UserInputService.InputBegan:Connect(function(input, gameProcessed)

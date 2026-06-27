@@ -6,6 +6,7 @@ local UserInputService = game:GetService("UserInputService")
 local RunService       = game:GetService("RunService")
 local Players          = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Workspace = game:GetService("Workspace")
 
 local SoundPlayer = require(ReplicatedStorage.SoundPlayer)
 
@@ -62,6 +63,15 @@ local function toPrintableChar(name)
     return name
   end
   return nil
+end
+
+-- Landscape when the viewport is wider than tall. Used to dock mobile on-screen
+-- input into the empty space: bottom band in portrait, right strip in landscape.
+local function isLandscape()
+  local cam = Workspace.CurrentCamera
+  if not cam then return false end
+  local vp = cam.ViewportSize
+  return vp.X > vp.Y
 end
 
 local KeyInput = {}
@@ -134,14 +144,16 @@ function KeyInput.new(screenGui)
     maxLength = nil
   end
 
-  -- Build mobile virtual key buttons for "key" mode
+  -- Build mobile virtual key buttons for "key"/"singlechar" mode.
+  -- Portrait: a horizontal row docked to the bottom (in the bottom letterbox band).
+  -- Landscape: a vertical column docked to the right edge (in the empty right
+  -- strip), so it never covers the prices/prompt on the left. Re-lays out on
+  -- ViewportSize change so rotating mid-prompt re-flows the buttons.
   local function buildMobileButtons(keys, onPress)
-    -- The Apple II terminal renders in its own ScreenGui ("TaipanTerminal",
-    -- DisplayOrder 5) with an opaque black background. Across separate
-    -- ScreenGuis, draw order and input are governed by DisplayOrder, not ZIndex,
-    -- so the button row must live in its own ScreenGui with a higher DisplayOrder
-    -- — otherwise the terminal occludes the buttons and absorbs every tap.
-    -- (screenGui.Parent is the LocalPlayer's PlayerGui.)
+    -- Across separate ScreenGuis, draw order and input are governed by
+    -- DisplayOrder, not ZIndex; the terminal (DisplayOrder 5) is opaque, so the
+    -- button row must live in its own higher-DisplayOrder ScreenGui or the
+    -- terminal occludes it and absorbs every tap. (screenGui.Parent is PlayerGui.)
     mobileGui = Instance.new("ScreenGui")
     mobileGui.Name = "MobileKeyGui"
     mobileGui.DisplayOrder = 100
@@ -151,8 +163,6 @@ function KeyInput.new(screenGui)
 
     mobileFrame = Instance.new("Frame")
     mobileFrame.Name = "MobileKeyRow"
-    mobileFrame.Size = UDim2.new(1, 0, 0, 60)
-    mobileFrame.Position = UDim2.new(0, 0, 1, -60)
     mobileFrame.BackgroundColor3 = Color3.fromRGB(10, 10, 10)
     mobileFrame.BorderSizePixel = 0
     mobileFrame.ZIndex = 50
@@ -161,8 +171,6 @@ function KeyInput.new(screenGui)
     local count = #keys
     for i, key in ipairs(keys) do
       local btn = Instance.new("TextButton")
-      btn.Size = UDim2.new(1 / count, -4, 1, -8)
-      btn.Position = UDim2.new((i - 1) / count, 2, 0, 4)
       btn.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
       btn.BorderColor3 = Color3.fromRGB(100, 100, 40)
       btn.TextColor3 = Color3.fromRGB(200, 180, 80)
@@ -174,6 +182,31 @@ function KeyInput.new(screenGui)
       btn.Activated:Connect(function() onPress(key) end)
       table.insert(mobileButtons, btn)
     end
+
+    local function layout()
+      if isLandscape() then
+        -- Vertical column on the right edge.
+        local w = 110
+        mobileFrame.Size = UDim2.new(0, w, 1, 0)
+        mobileFrame.Position = UDim2.new(1, -w, 0, 0)
+        for i, btn in ipairs(mobileButtons) do
+          btn.Size = UDim2.new(1, -8, 1 / count, -8)
+          btn.Position = UDim2.new(0, 4, (i - 1) / count, 4)
+        end
+      else
+        -- Horizontal row along the bottom.
+        mobileFrame.Size = UDim2.new(1, 0, 0, 60)
+        mobileFrame.Position = UDim2.new(0, 0, 1, -60)
+        for i, btn in ipairs(mobileButtons) do
+          btn.Size = UDim2.new(1 / count, -4, 1, -8)
+          btn.Position = UDim2.new((i - 1) / count, 2, 0, 4)
+        end
+      end
+    end
+
+    layout()
+    table.insert(connections,
+      Workspace.CurrentCamera:GetPropertyChangedSignal("ViewportSize"):Connect(layout))
   end
 
   local ki = {}

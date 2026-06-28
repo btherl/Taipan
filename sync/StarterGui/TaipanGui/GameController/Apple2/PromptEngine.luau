@@ -357,11 +357,12 @@ local function sceneAtPort(state, actions, localSceneCb)
       cursorPrefix = "cargo, Quit trading, or Retire? "
     else
       rows[23] = { text = "Shall I Buy, Sell, Visit bank, Transfer",  color = GREEN }
-      rows[24] = { text = "cargo, or Quit trading?",                  color = GREEN }
+      rows[24] = { text = "cargo, Quit trading, or Restart?",         color = GREEN }
       table.insert(validKeys, "V")
       table.insert(validKeys, "T")
+      table.insert(validKeys, "R")
       cursorRow    = 24
-      cursorPrefix = "cargo, or Quit trading? "
+      cursorPrefix = "cargo, Quit trading, or Restart? "
     end
   else
     rows[23] = { text = "Shall I Buy, Sell, or Quit trading?",        color = GREEN }
@@ -390,7 +391,11 @@ local function sceneAtPort(state, actions, localSceneCb)
           if localSceneCb then localSceneCb("travel") end
         end
       elseif key == "R" then
-        actions.retire()
+        if canRetire then
+          actions.retire()
+        elseif localSceneCb then
+          localSceneCb("restart_confirm")
+        end
       end
     end,
   }

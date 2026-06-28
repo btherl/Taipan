@@ -162,6 +162,44 @@ return function()
     end)
   end)
 
+  describe("PromptEngine HK Restart option", function()
+    local function hkState(netWorth)
+      -- cash carries the whole net worth; debt/bank zero
+      return {
+        currentPort = 1, gameOver = false,
+        cash = netWorth, bankBalance = 0, debt = 0,
+        currentPrices = {1,2,3,4},
+        shipCargo = {0,0,0,0}, warehouseCargo = {0,0,0,0},
+        holdSpace = 60, shipCapacity = 60, guns = 0,
+      }
+    end
+
+    it("shows Restart (not Retire) at HK when net worth < 1,000,000", function()
+      local lines, promptDef = PromptEngine.processState(hkState(500000), nil, mockActions(), function() end)
+      expect(lines.rows[24].text).to.equal("cargo, Quit trading, or Restart?")
+      local keySet = {}
+      for _, k in ipairs(promptDef.keys) do keySet[k] = true end
+      expect(keySet["R"]).to.equal(true)
+    end)
+
+    it("routes R to restart_confirm when not retire-eligible", function()
+      local routed
+      local promptDef = select(2, PromptEngine.processState(
+        hkState(500000), nil, mockActions(), function(scene) routed = scene end))
+      promptDef.onKey("R", hkState(500000), mockActions())
+      expect(routed).to.equal("restart_confirm")
+    end)
+
+    it("still shows Retire and calls retire() when net worth >= 1,000,000", function()
+      local retired = false
+      local actions = mockActions(); actions.retire = function() retired = true end
+      local lines, promptDef = PromptEngine.processState(hkState(1000000), nil, actions, function() end)
+      expect(lines.rows[24].text).to.equal("cargo, Quit trading, or Retire?")
+      promptDef.onKey("R", hkState(1000000), actions)
+      expect(retired).to.equal(true)
+    end)
+  end)
+
   describe("PromptEngine sceneBank sequential", function()
     local function bankState()
       return {

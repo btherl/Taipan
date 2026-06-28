@@ -14,7 +14,7 @@
 - **Availability:** Hong Kong (`currentPort == HONG_KONG`) only, and only when **not** retire-eligible (net worth `cash + bankBalance - debt < 1000000`). Restart and Retire share the **R** key and the same screen slot; never shown together.
 - **Exact copy (verbatim):**
   - Menu row 24: `cargo, Quit trading, or Restart?`
-  - Confirmation: `Do you wish to abandon your ship, Taipan? (Y/N)`
+  - Confirmation (displayed across two rows; 40-col limit): `Do you wish to abandon your ship,` + `Taipan? (Y/N)`
   - Abandon message (displayed across two rows; 40-col limit): `Ashamed of your failure, you disappear` + `into the night, never to be seen again.`
 - **Server guard for `AbandonShip`:** state is a table, `not state.gameOver`, `currentPort == Constants.HONG_KONG`. No wealth check.
 - **`gameOverReason` value:** `"abandoned"` (string, exact).
@@ -216,11 +216,13 @@ Then add this `describe` block inside `return function() ... end`:
 
     it("renders the abandon confirmation prompt", function()
       local lines, promptDef = PromptEngine.processState(hkState(), "restart_confirm", mockActions(), function() end)
-      local found = false
+      local l1, l2 = false, false
       for _, row in pairs(lines.rows) do
-        if row.text == "Do you wish to abandon your ship, Taipan? (Y/N)" then found = true end
+        if row.text == "Do you wish to abandon your ship," then l1 = true end
+        if row.text == "Taipan? (Y/N)" then l2 = true end
       end
-      expect(found).to.equal(true)
+      expect(l1).to.equal(true)
+      expect(l2).to.equal(true)
       local keySet = {}
       for _, k in ipairs(promptDef.keys) do keySet[k] = true end
       expect(keySet["Y"]).to.equal(true)
@@ -258,7 +260,10 @@ In `PromptEngine.luau`, add this function immediately after `sceneQuitConfirm` (
 local function sceneRestartConfirm(_state, actions, localSceneCb)
   local rows = {}
   for r = 1, 24 do rows[r] = { text = "", color = AMBER } end
-  rows[23] = { text = "Do you wish to abandon your ship, Taipan? (Y/N)", color = AMBER }
+  -- Split across two rows: the full sentence is 47 chars, over the 40-column
+  -- terminal width that every other prompt respects.
+  rows[22] = { text = "Do you wish to abandon your ship,", color = AMBER }
+  rows[23] = { text = "Taipan? (Y/N)",                     color = AMBER }
   return { rows = rows }, {
     type  = "key",
     keys  = {"Y", "N"},

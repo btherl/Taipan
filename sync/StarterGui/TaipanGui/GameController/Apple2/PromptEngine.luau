@@ -585,7 +585,10 @@ end
 local function sceneRestartConfirm(_state, actions, localSceneCb)
   local rows = {}
   for r = 1, 24 do rows[r] = { text = "", color = AMBER } end
-  rows[23] = { text = "Do you wish to abandon your ship, Taipan? (Y/N)", color = AMBER }
+  -- Split across two rows: the full sentence is 47 chars, over the 40-column
+  -- terminal width that every other prompt respects.
+  rows[22] = { text = "Do you wish to abandon your ship,", color = AMBER }
+  rows[23] = { text = "Taipan? (Y/N)",                     color = AMBER }
   return { rows = rows }, {
     type  = "key",
     keys  = {"Y", "N"},

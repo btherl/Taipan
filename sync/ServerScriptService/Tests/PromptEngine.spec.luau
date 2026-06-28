@@ -246,11 +246,13 @@ return function()
 
     it("renders the abandon confirmation prompt", function()
       local lines, promptDef = PromptEngine.processState(hkState(), "restart_confirm", mockActions(), function() end)
-      local found = false
+      local l1, l2 = false, false
       for _, row in pairs(lines.rows) do
-        if row.text == "Do you wish to abandon your ship, Taipan? (Y/N)" then found = true end
+        if row.text == "Do you wish to abandon your ship," then l1 = true end
+        if row.text == "Taipan? (Y/N)" then l2 = true end
       end
-      expect(found).to.equal(true)
+      expect(l1).to.equal(true)
+      expect(l2).to.equal(true)
       local keySet = {}
       for _, k in ipairs(promptDef.keys) do keySet[k] = true end
       expect(keySet["Y"]).to.equal(true)

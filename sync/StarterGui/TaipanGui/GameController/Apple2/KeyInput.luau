@@ -589,8 +589,16 @@ function KeyInput.new(screenGui)
               -- TextBox focus and closes the soft keyboard). Re-capture focus on
               -- the next frame while this prompt is still active. The Parent
               -- guard prevents re-summoning after cleanup() destroys the box.
+              -- Re-capturing starts a fresh native input session that blanks the
+              -- field, so preserve the in-progress text and restore it after (caret
+              -- at the end); the per-frame mirror re-echoes it into place.
+              local preserved = hiddenBox.Text
               task.defer(function()
-                if hiddenBox and hiddenBox.Parent then hiddenBox:CaptureFocus() end
+                if hiddenBox and hiddenBox.Parent then
+                  hiddenBox:CaptureFocus()
+                  hiddenBox.Text = preserved
+                  hiddenBox.CursorPosition = #preserved + 1
+                end
               end)
             end
           end)

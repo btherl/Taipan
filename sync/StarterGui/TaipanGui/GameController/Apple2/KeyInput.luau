@@ -7,6 +7,7 @@ local RunService       = game:GetService("RunService")
 local Players          = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Workspace = game:GetService("Workspace")
+local GuiService = game:GetService("GuiService")  -- GetGuiInset: portrait keypad dock (see layout())
 
 local SoundPlayer = require(ReplicatedStorage.SoundPlayer)
 
@@ -312,15 +313,20 @@ function KeyInput.new(screenGui)
       else
         -- Dock below the terminal text so it doesn't cover the bottom rows. The
         -- canvas is centred with a large bottom letterbox band in portrait; read
-        -- its actual rendered bottom (insets included) rather than guessing, since
-        -- the topbar inset could otherwise push the keypad up over the text.
-        -- MobileKeypadGui uses IgnoreGuiInset=true (see makeMobileContainer), so a
-        -- frame offset Y shares the same screen-absolute origin as the canvas's
-        -- AbsolutePosition.Y — they align without a topbar-inset correction.
+        -- its actual rendered bottom rather than guessing a fixed band height.
+        --
+        -- Coordinate-space correction: the terminal canvas gui is
+        -- IgnoreGuiInset=false, so canvas.AbsolutePosition.Y is measured from the
+        -- topbar-inset origin; this keypad gui (MobileKeypadGui) is
+        -- IgnoreGuiInset=true, so a frame offset Y is true-screen. They do NOT
+        -- share an origin — add the inset to lift the canvas bottom into the
+        -- keypad's space, else the keypad lands ~inset px too high and covers the
+        -- lowest text rows (confirmed on S23 Ultra: inset=58 swallowed rows 20-24).
         local vpY = Workspace.CurrentCamera.ViewportSize.Y
+        local insetY = GuiService:GetGuiInset().Y
         local topY
         if canvas and canvas.AbsoluteSize.Y > 0 then
-          topY = canvas.AbsolutePosition.Y + canvas.AbsoluteSize.Y + 6
+          topY = canvas.AbsolutePosition.Y + canvas.AbsoluteSize.Y + insetY + 6
         else
           topY = vpY - 320  -- fallback: fixed bottom band
         end

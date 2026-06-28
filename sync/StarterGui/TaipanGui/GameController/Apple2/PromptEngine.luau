@@ -357,11 +357,12 @@ local function sceneAtPort(state, actions, localSceneCb)
       cursorPrefix = "cargo, Quit trading, or Retire? "
     else
       rows[23] = { text = "Shall I Buy, Sell, Visit bank, Transfer",  color = GREEN }
-      rows[24] = { text = "cargo, or Quit trading?",                  color = GREEN }
+      rows[24] = { text = "cargo, Quit trading, or Restart?",         color = GREEN }
       table.insert(validKeys, "V")
       table.insert(validKeys, "T")
+      table.insert(validKeys, "R")
       cursorRow    = 24
-      cursorPrefix = "cargo, or Quit trading? "
+      cursorPrefix = "cargo, Quit trading, or Restart? "
     end
   else
     rows[23] = { text = "Shall I Buy, Sell, or Quit trading?",        color = GREEN }
@@ -390,7 +391,11 @@ local function sceneAtPort(state, actions, localSceneCb)
           if localSceneCb then localSceneCb("travel") end
         end
       elseif key == "R" then
-        actions.retire()
+        if canRetire then
+          actions.retire()
+        elseif localSceneCb then
+          localSceneCb("restart_confirm")
+        end
       end
     end,
   }
@@ -537,10 +542,26 @@ local function sceneStartChoice(_state, actions, _localSceneCb)
   }
 end
 
+local function sceneAbandonMessage(_state, _actions, localSceneCb)
+  local rows = {}
+  for r = 1, 24 do rows[r] = { text = "", color = AMBER } end
+  rows[11] = { text = "Ashamed of your failure, you disappear", color = AMBER }
+  rows[12] = { text = "into the night, never to be seen again.", color = AMBER }
+  return { rows = rows }, {
+    type   = "key",
+    keys   = {},
+    anyKey = true,
+    onKey  = function()
+      if localSceneCb then localSceneCb("final_status") end
+    end,
+  }
+end
+
 local function sceneGameOver(state, actions, _localSceneCb)
   -- Only reached for "quit" (and the nil/unknown fallthrough). processState
-  -- routes "sunk" to sceneFinalStatus and "retired" to sceneMillionaire/
-  -- sceneFinalStatus, so those reasons never land here.
+  -- routes "sunk" to sceneFinalStatus, "retired" to sceneMillionaire/
+  -- sceneFinalStatus, and "abandoned" to sceneAbandonMessage/sceneFinalStatus,
+  -- so those reasons never land here.
   local reason = state.gameOverReason or "unknown"
   local lines = {
     { text = "GAME OVER", color = RED },
@@ -570,6 +591,27 @@ local function sceneQuitConfirm(_state, actions, localSceneCb)
     onKey = function(key, _s, _a)
       if key == "Y" then
         actions.quitGame()
+      elseif key == "N" then
+        if localSceneCb then localSceneCb(nil) end
+      end
+    end,
+  }
+end
+
+local function sceneRestartConfirm(_state, actions, localSceneCb)
+  local rows = {}
+  for r = 1, 24 do rows[r] = { text = "", color = AMBER } end
+  -- Split across two rows: the full sentence is 47 chars, over the 40-column
+  -- terminal width that every other prompt respects.
+  rows[22] = { text = "Do you wish to abandon your ship,", color = AMBER }
+  rows[23] = { text = "Taipan? (Y/N)",                     color = AMBER }
+  return { rows = rows }, {
+    type  = "key",
+    keys  = {"Y", "N"},
+    label = "Do you wish to abandon your ship, Taipan? (Y/N)",
+    onKey = function(key, _s, _a)
+      if key == "Y" then
+        actions.abandonShip()
       elseif key == "N" then
         if localSceneCb then localSceneCb(nil) end
       end
@@ -1522,6 +1564,11 @@ function PromptEngine.processState(state, localScene, actions, localSceneCb, com
       -- "buggers got us" status screen, sinking goes straight to final_stats().
       -- Skip sceneMillionaire (that screen is retirement-only).
       return sceneFinalStatus(state, actions, localSceneCb)
+    elseif state.gameOverReason == "abandoned" then
+      if localScene == "final_status" then
+        return sceneFinalStatus(state, actions, localSceneCb)
+      end
+      return sceneAbandonMessage(state, actions, localSceneCb)
     end
     return sceneGameOver(state, actions, localSceneCb)  -- "quit"
   end
@@ -1619,6 +1666,7 @@ function PromptEngine.processState(state, localScene, actions, localSceneCb, com
     return { rows = rows }, nil
   end
   if localScene == "quit_confirm" then return sceneQuitConfirm(state, actions, localSceneCb) end
+  if localScene == "restart_confirm" then return sceneRestartConfirm(state, actions, localSceneCb) end
   if state.startChoice == nil and (state.turnsElapsed or 1) == 1 and (state.destination or 0) == 0 then
     if localScene == "start_choice" then
       return sceneStartChoice(state, actions, localSceneCb)

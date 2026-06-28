@@ -58,6 +58,7 @@ Remotes.DeclineGun     = getOrCreate("RemoteEvent", "DeclineGun")     -- no args
 Remotes.ShipPanelDone  = getOrCreate("RemoteEvent", "ShipPanelDone")  -- dismiss ship panel
 Remotes.Retire         = getOrCreate("RemoteEvent", "Retire")         -- retire (HK, netWorth>=1M)
 Remotes.QuitGame       = getOrCreate("RemoteEvent", "QuitGame")       -- quit game (any time)
+Remotes.AbandonShip    = getOrCreate("RemoteEvent", "AbandonShip")    -- client->server: abandon ship at HK (restart)
 Remotes.SetUIMode      = getOrCreate("RemoteEvent", "SetUIMode")      -- client->server: "modern" or "apple2"
 
 -- Server -> Client updates

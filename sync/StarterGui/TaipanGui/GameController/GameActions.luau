@@ -39,6 +39,7 @@ return {
   retire         = function()       Remotes.Retire:FireServer() end,
   quitGame       = function()       Remotes.QuitGame:FireServer() end,
   restartGame    = function()       Remotes.RestartGame:FireServer() end,
+  abandonShip    = function()       Remotes.AbandonShip:FireServer() end,
   setUIMode      = function(mode)   Remotes.SetUIMode:FireServer(mode) end,
   requestState   = function()       Remotes.RequestStateUpdate:FireServer() end,
 }

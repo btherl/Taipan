@@ -1117,6 +1117,14 @@ Remotes.QuitGame.OnServerEvent:Connect(function(player)
   pushState(player)
 end)
 
+Remotes.AbandonShip.OnServerEvent:Connect(function(player)
+  local state = playerStates[player]
+  if type(state) ~= "table" or state.gameOver then return end
+  if state.currentPort ~= Constants.HONG_KONG then return end
+  setGameOver(state, "abandoned")
+  pushState(player)
+end)
+
 Remotes.AcceptBankruptcyLoan.OnServerEvent:Connect(function(player)
   local state = playerStates[player]
   if type(state) ~= "table" then return end

@@ -542,6 +542,21 @@ local function sceneStartChoice(_state, actions, _localSceneCb)
   }
 end
 
+local function sceneAbandonMessage(_state, _actions, localSceneCb)
+  local rows = {}
+  for r = 1, 24 do rows[r] = { text = "", color = AMBER } end
+  rows[11] = { text = "Ashamed of your failure, you disappear", color = AMBER }
+  rows[12] = { text = "into the night, never to be seen again.", color = AMBER }
+  return { rows = rows }, {
+    type   = "key",
+    keys   = {},
+    anyKey = true,
+    onKey  = function()
+      if localSceneCb then localSceneCb("final_status") end
+    end,
+  }
+end
+
 local function sceneGameOver(state, actions, _localSceneCb)
   -- Only reached for "quit" (and the nil/unknown fallthrough). processState
   -- routes "sunk" to sceneFinalStatus and "retired" to sceneMillionaire/
@@ -1548,6 +1563,11 @@ function PromptEngine.processState(state, localScene, actions, localSceneCb, com
       -- "buggers got us" status screen, sinking goes straight to final_stats().
       -- Skip sceneMillionaire (that screen is retirement-only).
       return sceneFinalStatus(state, actions, localSceneCb)
+    elseif state.gameOverReason == "abandoned" then
+      if localScene == "final_status" then
+        return sceneFinalStatus(state, actions, localSceneCb)
+      end
+      return sceneAbandonMessage(state, actions, localSceneCb)
     end
     return sceneGameOver(state, actions, localSceneCb)  -- "quit"
   end

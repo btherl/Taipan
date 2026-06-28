@@ -276,4 +276,43 @@ return function()
       expect(routedToNil).to.equal(true)
     end)
   end)
+
+  describe("PromptEngine abandon flow", function()
+    local function abandonedState()
+      return {
+        gameOver = true, gameOverReason = "abandoned",
+        finalScore = 42, finalRating = "Galley Hand",
+        cash = 1000, bankBalance = 0, debt = 0,
+        shipCapacity = 60, guns = 0, turnsElapsed = 3,
+        month = 4, year = 1860, currentPort = 1, damage = 0,
+        shipCargo = {0,0,0,0}, warehouseCargo = {0,0,0,0}, warehouseUsed = 0,
+        holdSpace = 60,
+      }
+    end
+
+    it("shows the abandon message first, then advances to final_status", function()
+      local routed
+      local lines, promptDef = PromptEngine.processState(
+        abandonedState(), nil, mockActions(), function(scene) routed = scene end)
+      local line1, line2 = false, false
+      for _, row in pairs(lines.rows) do
+        if row.text == "Ashamed of your failure, you disappear" then line1 = true end
+        if row.text == "into the night, never to be seen again." then line2 = true end
+      end
+      expect(line1).to.equal(true)
+      expect(line2).to.equal(true)
+      expect(promptDef.anyKey).to.equal(true)
+      promptDef.onKey("X", abandonedState(), mockActions())
+      expect(routed).to.equal("final_status")
+    end)
+
+    it("routes to the score screen at localScene final_status", function()
+      local lines = PromptEngine.processState(abandonedState(), "final_status", mockActions(), function() end)
+      local found = false
+      for _, row in pairs(lines.rows) do
+        if row.text == "Your final status:" then found = true end
+      end
+      expect(found).to.equal(true)
+    end)
+  end)
 end

@@ -128,6 +128,7 @@ function KeyInput.new(screenGui)
   local typeUpdateConn = nil  -- RenderStepped for mobile TextBox mirror
   local blinkConn      = nil  -- RenderStepped for cursor blink
   local hiddenBox      = nil  -- hidden TextBox for mobile keyboard
+  local restoreCanvas  = nil  -- reverts the canvas top-dock applied for mobile text entry
 
   local CURSOR_CHAR    = "_"
   local BLINK_HALF     = 0.265  -- half of 0.53s Apple II cursor cycle
@@ -155,6 +156,7 @@ function KeyInput.new(screenGui)
   local function cleanup()
     for _, c in ipairs(connections) do c:Disconnect() end
     connections = {}
+    if restoreCanvas then restoreCanvas(); restoreCanvas = nil end
     if mobileGui then mobileGui:Destroy(); mobileGui = nil end
     mobileFrame = nil
     mobileButtons = {}
@@ -510,6 +512,33 @@ function KeyInput.new(screenGui)
       maxLength = promptDef.maxLength  -- nil = unlimited
 
       if isMobile then
+        -- Lift the terminal canvas into the top half of the screen so the native
+        -- soft keyboard (drawn by the OS along the bottom) does not cover the
+        -- input row. The canvas Frame has a 16:9 UIAspectRatioConstraint, so
+        -- capping it to a top-anchored half-height box top-docks it in portrait
+        -- (already short) and shrinks it to the top half in landscape. The scale
+        -- values re-fit automatically on orientation change, so no manual
+        -- re-flow is needed. cleanup() calls restoreCanvas to revert.
+        do
+          local term   = promptDef._terminal
+          local canvas = term and term._gui and term._gui:FindFirstChild("TextParent")
+          if canvas then
+            local origAnchor = canvas.AnchorPoint
+            local origPos    = canvas.Position
+            local origSize   = canvas.Size
+            canvas.AnchorPoint = Vector2.new(0.5, 0)
+            canvas.Position    = UDim2.fromScale(0.5, 0)
+            canvas.Size        = UDim2.fromScale(1, 0.5)
+            restoreCanvas = function()
+              if canvas and canvas.Parent then
+                canvas.AnchorPoint = origAnchor
+                canvas.Position    = origPos
+                canvas.Size        = origSize
+              end
+            end
+          end
+        end
+
         -- Hidden TextBox triggers native on-screen keyboard
         hiddenBox = Instance.new("TextBox")
         hiddenBox.Size = UDim2.new(0, 1, 0, 1)

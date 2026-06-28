@@ -582,6 +582,24 @@ local function sceneQuitConfirm(_state, actions, localSceneCb)
   }
 end
 
+local function sceneRestartConfirm(_state, actions, localSceneCb)
+  local rows = {}
+  for r = 1, 24 do rows[r] = { text = "", color = AMBER } end
+  rows[23] = { text = "Do you wish to abandon your ship, Taipan? (Y/N)", color = AMBER }
+  return { rows = rows }, {
+    type  = "key",
+    keys  = {"Y", "N"},
+    label = "Do you wish to abandon your ship, Taipan? (Y/N)",
+    onKey = function(key, _s, _a)
+      if key == "Y" then
+        actions.abandonShip()
+      elseif key == "N" then
+        if localSceneCb then localSceneCb(nil) end
+      end
+    end,
+  }
+end
+
 local function sceneCombatLayout(state, actions, localSceneCb, combatSelection)
   local combat  = state.combat or {}
   local total   = combat.enemyTotal or 0
@@ -1624,6 +1642,7 @@ function PromptEngine.processState(state, localScene, actions, localSceneCb, com
     return { rows = rows }, nil
   end
   if localScene == "quit_confirm" then return sceneQuitConfirm(state, actions, localSceneCb) end
+  if localScene == "restart_confirm" then return sceneRestartConfirm(state, actions, localSceneCb) end
   if state.startChoice == nil and (state.turnsElapsed or 1) == 1 and (state.destination or 0) == 0 then
     if localScene == "start_choice" then
       return sceneStartChoice(state, actions, localSceneCb)

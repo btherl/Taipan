@@ -45,6 +45,11 @@
       "guid": "11183",
       "children": [
         {
+          "name": "AbandonShip",
+          "className": "RemoteEvent",
+          "guid": "11200"
+        },
+        {
           "name": "AcceptGun",
           "className": "RemoteEvent",
           "guid": "11178"
@@ -497,18 +502,6 @@
               "guid": "11149",
               "filePaths": [
                 "sync/ServerScriptService/Tests/PersistenceEngine.spec.luau"
-              ]
-            },
-            {
-              "name": "PriceEngine",
-              "className": "Folder",
-              "guid": "11085",
-              "children": [
-                {
-                  "name": "spec",
-                  "className": "Folder",
-                  "guid": "11086"
-                }
               ]
             },
             {

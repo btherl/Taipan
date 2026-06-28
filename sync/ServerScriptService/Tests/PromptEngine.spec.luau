@@ -17,6 +17,7 @@ local function mockActions()
     shipRepair = function() end, shipPanelDone = function() end,
     setFirmName = function() end, chooseStart   = function() end,
     buyLiYuen = function() end, setUIMode = function() end,
+    abandonShip = function() end,
   }
 end
 
@@ -227,6 +228,50 @@ return function()
       local lines, promptDef = PromptEngine.processState(
         bankState(), "bank_withdraw", mockActions(), function() end)
       expect(promptDef.type).to.equal("numeric")
+    end)
+  end)
+
+  describe("PromptEngine sceneRestartConfirm", function()
+    local function hkState()
+      -- startChoice set so processState does not route to the new-game
+      -- firm-name branch (which fires when startChoice == nil).
+      return {
+        currentPort = 1, gameOver = false, startChoice = "cash",
+        cash = 500000, bankBalance = 0, debt = 0,
+        currentPrices = {1,2,3,4},
+        shipCargo = {0,0,0,0}, warehouseCargo = {0,0,0,0},
+        holdSpace = 60, shipCapacity = 60, guns = 0,
+      }
+    end
+
+    it("renders the abandon confirmation prompt", function()
+      local lines, promptDef = PromptEngine.processState(hkState(), "restart_confirm", mockActions(), function() end)
+      local found = false
+      for _, row in pairs(lines.rows) do
+        if row.text == "Do you wish to abandon your ship, Taipan? (Y/N)" then found = true end
+      end
+      expect(found).to.equal(true)
+      local keySet = {}
+      for _, k in ipairs(promptDef.keys) do keySet[k] = true end
+      expect(keySet["Y"]).to.equal(true)
+      expect(keySet["N"]).to.equal(true)
+    end)
+
+    it("Y calls abandonShip()", function()
+      local called = false
+      local actions = mockActions(); actions.abandonShip = function() called = true end
+      local promptDef = select(2, PromptEngine.processState(hkState(), "restart_confirm", actions, function() end))
+      promptDef.onKey("Y", hkState(), actions)
+      expect(called).to.equal(true)
+    end)
+
+    it("N returns to the port menu via localSceneCb(nil)", function()
+      local routedToNil = false
+      local promptDef = select(2, PromptEngine.processState(
+        hkState(), "restart_confirm", mockActions(),
+        function(scene) if scene == nil then routedToNil = true end end))
+      promptDef.onKey("N", hkState(), mockActions())
+      expect(routedToNil).to.equal(true)
     end)
   end)
 end

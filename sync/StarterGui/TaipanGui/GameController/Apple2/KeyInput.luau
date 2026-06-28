@@ -550,14 +550,37 @@ function KeyInput.new(screenGui)
 
         -- Mirror TextBox content to terminal each frame
         local terminal = promptDef._terminal  -- Apple2Interface sets this
+        local buildRow = promptDef._buildInputRow
         typeUpdateConn = RunService.RenderStepped:Connect(function()
-          if terminal then terminal.showInputLine(placeholder .. hiddenBox.Text) end
+          -- (B) The native keyboard has no max-length property, so cap its buffer
+          -- here (and on submit) -- otherwise an over-long name overruns the
+          -- screen later.
+          if maxLength and #hiddenBox.Text > maxLength then
+            hiddenBox.Text = hiddenBox.Text:sub(1, maxLength)
+          end
+          if not terminal then return end
+          if buildRow and promptDef._inputRow then
+            -- (A) Echo into the prompt's own input row (e.g. the firm box at row
+            -- 14), not the default bottom input row (row 24): with the canvas
+            -- lifted to the top half, a row-24 echo floats in the gap above the
+            -- keyboard. A trailing "_" marks the caret; padding to maxLength+1
+            -- keeps the field width (and box border) constant.
+            local display = hiddenBox.Text .. "_"
+            local fieldLen = (maxLength or #hiddenBox.Text) + 1
+            while #display < fieldLen do display = display .. " " end
+            terminal.showInputAt(promptDef._inputRow, buildRow(display))
+          else
+            terminal.showInputLine(placeholder .. hiddenBox.Text)
+          end
         end)
 
         table.insert(connections,
           hiddenBox.FocusLost:Connect(function(enterPressed)
             if enterPressed then
               local submitted = hiddenBox.Text
+              if maxLength and #submitted > maxLength then
+                submitted = submitted:sub(1, maxLength)
+              end
               hiddenBox.Text = ""
               local err = promptDef.onType(submitted, state, actions)
               if err and promptDef._onError then promptDef._onError(err) end

@@ -164,9 +164,11 @@ return function()
 
   describe("PromptEngine HK Restart option", function()
     local function hkState(netWorth)
-      -- cash carries the whole net worth; debt/bank zero
+      -- cash carries the whole net worth; debt/bank zero.
+      -- startChoice set so processState routes to sceneAtPort, not the
+      -- new-game firm-name branch (which fires when startChoice == nil).
       return {
-        currentPort = 1, gameOver = false,
+        currentPort = 1, gameOver = false, startChoice = "cash",
         cash = netWorth, bankBalance = 0, debt = 0,
         currentPrices = {1,2,3,4},
         shipCargo = {0,0,0,0}, warehouseCargo = {0,0,0,0},

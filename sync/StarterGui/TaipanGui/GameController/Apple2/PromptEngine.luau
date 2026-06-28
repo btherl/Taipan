@@ -559,8 +559,9 @@ end
 
 local function sceneGameOver(state, actions, _localSceneCb)
   -- Only reached for "quit" (and the nil/unknown fallthrough). processState
-  -- routes "sunk" to sceneFinalStatus and "retired" to sceneMillionaire/
-  -- sceneFinalStatus, so those reasons never land here.
+  -- routes "sunk" to sceneFinalStatus, "retired" to sceneMillionaire/
+  -- sceneFinalStatus, and "abandoned" to sceneAbandonMessage/sceneFinalStatus,
+  -- so those reasons never land here.
   local reason = state.gameOverReason or "unknown"
   local lines = {
     { text = "GAME OVER", color = RED },

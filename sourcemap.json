@@ -528,18 +528,11 @@
               ]
             },
             {
-              "name": "PromptEngine",
-              "className": "Folder",
-              "guid": "11087",
-              "children": [
-                {
-                  "name": "spec",
-                  "className": "ModuleScript",
-                  "guid": "11151",
-                  "filePaths": [
-                    "sync/ServerScriptService/Tests/PromptEngine/spec.luau"
-                  ]
-                }
+              "name": "PromptEngine.spec",
+              "className": "ModuleScript",
+              "guid": "11151",
+              "filePaths": [
+                "sync/ServerScriptService/Tests/PromptEngine.spec.luau"
               ]
             },
             {

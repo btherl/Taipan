@@ -6,6 +6,8 @@ local UserInputService = game:GetService("UserInputService")
 local RunService       = game:GetService("RunService")
 local Players          = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Workspace = game:GetService("Workspace")
+local GuiService = game:GetService("GuiService")  -- GetGuiInset: portrait keypad dock (see layout())
 
 local SoundPlayer = require(ReplicatedStorage.SoundPlayer)
 
@@ -62,6 +64,38 @@ local function toPrintableChar(name)
     return name
   end
   return nil
+end
+
+-- Landscape when the viewport is wider than tall. Used to dock mobile on-screen
+-- input into the empty space: bottom band in portrait, right strip in landscape.
+local function isLandscape()
+  local cam = Workspace.CurrentCamera
+  if not cam then return false end
+  local vp = cam.ViewportSize
+  return vp.X > vp.Y
+end
+
+-- Fraction of the terminal's 16:9 canvas width occupied by the 40-column text
+-- (column 40's right edge). The terminal text lives in a 1920x1080 virtual canvas
+-- (Terminal.luau: X_OFFSET=30, CHAR_WIDTH=14*2.7=37.8, 40 cols), so the text ends
+-- at (30 + 40*37.8)/1920 of the canvas width. Used to dock landscape controls just
+-- right of the text instead of a fixed width from the screen edge — the canvas is
+-- centred, so on wide screens (extra pillarbox) a fixed dock would overlap the
+-- rightmost columns.
+local TEXT_RIGHT_FRAC = (30 + 40 * (14 * 2.7)) / 1920  -- = 0.803125
+
+-- Screen-space X just right of the terminal text (plus an 8px margin), and the
+-- width from there to the right edge, for docking a landscape control strip. The
+-- canvas is height-constrained in landscape, so its width = viewport height*16/9;
+-- using full viewport height (ignoring the topbar inset) slightly over-estimates,
+-- leaving a small safe gap rather than overlapping. minW guarantees a usable strip.
+local function rightStrip(minW)
+  local vp = Workspace.CurrentCamera.ViewportSize
+  local canvasW = vp.Y * (16 / 9)
+  local leftX = vp.X / 2 + (TEXT_RIGHT_FRAC - 0.5) * canvasW + 8
+  if vp.X - leftX < minW then leftX = vp.X - minW end
+  if leftX < 0 then leftX = 0 end
+  return leftX, vp.X - leftX
 end
 
 local KeyInput = {}
@@ -134,35 +168,48 @@ function KeyInput.new(screenGui)
     maxLength = nil
   end
 
-  -- Build mobile virtual key buttons for "key" mode
-  local function buildMobileButtons(keys, onPress)
-    -- The Apple II terminal renders in its own ScreenGui ("TaipanTerminal",
-    -- DisplayOrder 5) with an opaque black background. Across separate
-    -- ScreenGuis, draw order and input are governed by DisplayOrder, not ZIndex,
-    -- so the button row must live in its own ScreenGui with a higher DisplayOrder
-    -- — otherwise the terminal occludes the buttons and absorbs every tap.
-    -- (screenGui.Parent is the LocalPlayer's PlayerGui.)
+  -- Create the mobile input container (its own high-DisplayOrder ScreenGui plus a
+  -- backing Frame) and assign the shared mobileGui/mobileFrame upvalues. Across
+  -- separate ScreenGuis, draw order and input are governed by DisplayOrder, not
+  -- ZIndex; the terminal (DisplayOrder 5) is opaque, so mobile input must live in
+  -- its own higher-DisplayOrder ScreenGui or the terminal occludes it and absorbs
+  -- every tap. (screenGui.Parent is the LocalPlayer's PlayerGui.)
+  local function makeMobileContainer(guiName, frameName)
     mobileGui = Instance.new("ScreenGui")
-    mobileGui.Name = "MobileKeyGui"
+    mobileGui.Name = guiName
     mobileGui.DisplayOrder = 100
     mobileGui.ResetOnSpawn = false
     mobileGui.IgnoreGuiInset = true
     mobileGui.Parent = screenGui.Parent
 
     mobileFrame = Instance.new("Frame")
-    mobileFrame.Name = "MobileKeyRow"
-    mobileFrame.Size = UDim2.new(1, 0, 0, 60)
-    mobileFrame.Position = UDim2.new(0, 0, 1, -60)
+    mobileFrame.Name = frameName
     mobileFrame.BackgroundColor3 = Color3.fromRGB(10, 10, 10)
     mobileFrame.BorderSizePixel = 0
     mobileFrame.ZIndex = 50
     mobileFrame.Parent = mobileGui
+  end
+
+  -- Run layout once and re-run it on every viewport (orientation) change so the
+  -- mobile controls re-flow live. The connection is tracked in `connections`, so
+  -- cleanup() disconnects it when the prompt ends.
+  local function bindLayout(layout)
+    layout()
+    table.insert(connections,
+      Workspace.CurrentCamera:GetPropertyChangedSignal("ViewportSize"):Connect(layout))
+  end
+
+  -- Build mobile virtual key buttons for "key"/"singlechar" mode.
+  -- Portrait: a horizontal row docked to the bottom (in the bottom letterbox band).
+  -- Landscape: a vertical column docked to the right edge (in the empty right
+  -- strip), so it never covers the prices/prompt on the left. Re-lays out on
+  -- ViewportSize change so rotating mid-prompt re-flows the buttons.
+  local function buildMobileButtons(keys, onPress)
+    makeMobileContainer("MobileKeyGui", "MobileKeyRow")
 
     local count = #keys
     for i, key in ipairs(keys) do
       local btn = Instance.new("TextButton")
-      btn.Size = UDim2.new(1 / count, -4, 1, -8)
-      btn.Position = UDim2.new((i - 1) / count, 2, 0, 4)
       btn.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
       btn.BorderColor3 = Color3.fromRGB(100, 100, 40)
       btn.TextColor3 = Color3.fromRGB(200, 180, 80)
@@ -173,6 +220,139 @@ function KeyInput.new(screenGui)
       btn.Parent = mobileFrame
       btn.Activated:Connect(function() onPress(key) end)
       table.insert(mobileButtons, btn)
+    end
+
+    local function layout()
+      if isLandscape() then
+        -- Vertical column on the right edge.
+        local w = 110
+        mobileFrame.Size = UDim2.new(0, w, 1, 0)
+        mobileFrame.Position = UDim2.new(1, -w, 0, 0)
+        for i, btn in ipairs(mobileButtons) do
+          btn.Size = UDim2.new(1, -8, 1 / count, -8)
+          btn.Position = UDim2.new(0, 4, (i - 1) / count, 4)
+        end
+      else
+        -- Horizontal row along the bottom.
+        mobileFrame.Size = UDim2.new(1, 0, 0, 60)
+        mobileFrame.Position = UDim2.new(0, 0, 1, -60)
+        for i, btn in ipairs(mobileButtons) do
+          btn.Size = UDim2.new(1 / count, -4, 1, -8)
+          btn.Position = UDim2.new((i - 1) / count, 2, 0, 4)
+        end
+      end
+    end
+
+    bindLayout(layout)
+  end
+
+  -- Build a custom numeric keypad for "numeric" prompts on mobile, replacing the
+  -- native soft keyboard so we control size/placement. Portrait: a block docked
+  -- to the bottom band. Landscape: a block docked to the right strip. onKey is
+  -- called with "0".."9", "DEL", "ALL", or "OK". ALL is shown only when hasAll.
+  local function buildMobileKeypad(hasAll, onKey, term)
+    makeMobileContainer("MobileKeypadGui", "MobileKeypad")
+
+    -- The terminal's 16:9 text canvas (centred, with letterbox bands). Used to
+    -- dock the keypad below the actual rendered text bottom in portrait, rather
+    -- than a fixed band height that would cover the lowest rows on tall screens.
+    local canvas = term and term._gui and term._gui:FindFirstChild("TextParent")
+
+    -- 4 digit/util rows of 3 cells; bottom-left is ALL (or blank), bottom-right
+    -- is delete. A full-width OK occupies a 5th visual row.
+    local grid = {
+      { "7", "8", "9" },
+      { "4", "5", "6" },
+      { "1", "2", "3" },
+      { hasAll and "ALL" or "", "0", "DEL" },
+    }
+    local COLS = 3
+    local cells = {}  -- { btn = TextButton, row = n, col = n }
+
+    for r, rowLabels in ipairs(grid) do
+      for c, label in ipairs(rowLabels) do
+        if label ~= "" then
+          local btn = Instance.new("TextButton")
+          btn.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+          btn.BorderColor3 = Color3.fromRGB(100, 100, 40)
+          btn.TextColor3 = Color3.fromRGB(200, 180, 80)
+          btn.Font = Enum.Font.RobotoMono
+          btn.TextSize = 22
+          btn.ZIndex = 50
+          btn.Text = (label == "DEL") and "<-" or label
+          btn.Parent = mobileFrame
+          local token = label  -- "ALL"/"DEL"/digit; label is the token directly
+          btn.Activated:Connect(function() onKey(token) end)
+          table.insert(mobileButtons, btn)
+          table.insert(cells, { btn = btn, row = r, col = c })
+        end
+      end
+    end
+
+    local okBtn = Instance.new("TextButton")
+    okBtn.Name = "OK"
+    okBtn.BackgroundColor3 = Color3.fromRGB(40, 60, 30)
+    okBtn.BorderColor3 = Color3.fromRGB(100, 140, 60)
+    okBtn.TextColor3 = Color3.fromRGB(140, 200, 80)
+    okBtn.Font = Enum.Font.RobotoMono
+    okBtn.TextSize = 22
+    okBtn.ZIndex = 50
+    okBtn.Text = "OK"
+    okBtn.Parent = mobileFrame
+    okBtn.Activated:Connect(function() onKey("OK") end)
+    table.insert(mobileButtons, okBtn)
+
+    local ROWFRAC = 1 / 5  -- 4 digit rows + 1 OK row
+    local function layout()
+      if isLandscape() then
+        -- Dock to the empty strip right of the text, not a fixed width from the
+        -- screen edge (which overlaps the rightmost columns on wide screens).
+        local leftX, w = rightStrip(170)
+        mobileFrame.Size = UDim2.new(0, w, 1, 0)
+        mobileFrame.Position = UDim2.new(0, leftX, 0, 0)
+      else
+        -- Dock below the terminal text so it doesn't cover the bottom rows. The
+        -- canvas is centred with a large bottom letterbox band in portrait; read
+        -- its actual rendered bottom rather than guessing a fixed band height.
+        --
+        -- Coordinate-space correction: the terminal canvas gui is
+        -- IgnoreGuiInset=false, so canvas.AbsolutePosition.Y is measured from the
+        -- topbar-inset origin; this keypad gui (MobileKeypadGui) is
+        -- IgnoreGuiInset=true, so a frame offset Y is true-screen. They do NOT
+        -- share an origin — add the inset to lift the canvas bottom into the
+        -- keypad's space, else the keypad lands ~inset px too high and covers the
+        -- lowest text rows (confirmed on S23 Ultra: inset=58 swallowed rows 20-24).
+        local vpY = Workspace.CurrentCamera.ViewportSize.Y
+        local insetY = GuiService:GetGuiInset().Y
+        local topY
+        if canvas and canvas.AbsoluteSize.Y > 0 then
+          topY = canvas.AbsolutePosition.Y + canvas.AbsoluteSize.Y + insetY + 6
+        else
+          topY = vpY - 320  -- fallback: fixed bottom band
+        end
+        -- Guarantee a usable keypad height. On near-square screens (rare) this can
+        -- push the top up over the lowest text rows; a tappable keypad wins.
+        local minH = 240
+        if vpY - topY < minH then topY = vpY - minH end
+        if topY < 0 then topY = 0 end
+        mobileFrame.Size = UDim2.new(1, 0, 0, vpY - topY)
+        mobileFrame.Position = UDim2.new(0, 0, 0, topY)
+      end
+      for _, cell in ipairs(cells) do
+        cell.btn.Size = UDim2.new(1 / COLS, -6, ROWFRAC, -6)
+        cell.btn.Position = UDim2.new((cell.col - 1) / COLS, 3, (cell.row - 1) * ROWFRAC, 3)
+      end
+      okBtn.Size = UDim2.new(1, -6, ROWFRAC, -6)
+      okBtn.Position = UDim2.new(0, 3, 4 * ROWFRAC, 3)
+    end
+
+    bindLayout(layout)
+    -- Re-flow when the canvas resizes (e.g. orientation change updates its bottom
+    -- edge) so the portrait dock tracks the text; AbsoluteSize is current here,
+    -- unlike when reading it during the ViewportSize signal.
+    if canvas then
+      table.insert(connections,
+        canvas:GetPropertyChangedSignal("AbsoluteSize"):Connect(layout))
     end
   end
 
@@ -486,36 +666,46 @@ function KeyInput.new(screenGui)
       end)
 
       if isMobile then
-        -- Hidden TextBox: user types, only digits are accepted on submit
-        hiddenBox = Instance.new("TextBox")
-        hiddenBox.Size = UDim2.new(0, 1, 0, 1)
-        hiddenBox.Position = UDim2.new(0, -10, 0, -10)
-        hiddenBox.BackgroundTransparency = 1
-        hiddenBox.Text = ""
-        hiddenBox.Parent = screenGui
-        hiddenBox:CaptureFocus()
-        typeUpdateConn = RunService.RenderStepped:Connect(function()
-          local filtered = hiddenBox.Text:gsub("[^%d]", "")
-          if terminal then terminal.showInputLine(placeholder .. filtered) end
-        end)
-        table.insert(connections,
-          hiddenBox.FocusLost:Connect(function(enterPressed)
-            if enterPressed then
-              local submitted = hiddenBox.Text:gsub("[^%d]", "")
-              hiddenBox.Text = ""
-              local err = promptDef.onType(submitted, state, actions)
-              if err and promptDef._onError then promptDef._onError(err) end
+        -- Custom keypad drives typeBuf directly and reuses updateDisplay()/blink,
+        -- so the number still echoes on the terminal input row. No native keyboard.
+        local hasAll = type(promptDef.maxValue) == "number"
+        buildMobileKeypad(hasAll, function(token)
+          if token == "OK" then
+            local submitted = typeBuf
+            typeBuf = ""
+            cursorPos = 1
+            resetBlink()
+            if terminal then terminal.showInputLine(placeholder) end
+            local err = promptDef.onType(submitted, state, actions)
+            if err and promptDef._onError then promptDef._onError(err) end
+          elseif token == "DEL" then
+            if #typeBuf > 0 then
+              typeBuf = typeBuf:sub(1, -2)
+              cursorPos = #typeBuf + 1
             else
-              -- Focus lost without submitting (e.g. orientation change drops
-              -- TextBox focus and closes the soft keyboard). Re-capture focus on
-              -- the next frame while this prompt is still active. The Parent
-              -- guard prevents re-summoning after cleanup() destroys the box.
-              task.defer(function()
-                if hiddenBox and hiddenBox.Parent then hiddenBox:CaptureFocus() end
-              end)
+              beep(promptDef)
             end
-          end)
-        )
+            resetBlink()
+            updateDisplay()
+          elseif token == "ALL" then
+            local v = tostring(math.floor(promptDef.maxValue))
+            if maxLength and #v > maxLength then v = v:sub(1, maxLength) end
+            typeBuf = v
+            cursorPos = #typeBuf + 1
+            resetBlink()
+            updateDisplay()
+          else
+            -- digit token "0".."9"
+            if not maxLength or #typeBuf < maxLength then
+              typeBuf = typeBuf .. token
+              cursorPos = #typeBuf + 1
+              resetBlink()
+              updateDisplay()
+            else
+              beep(promptDef)  -- buffer already at max digits
+            end
+          end
+        end, terminal)
       else
         table.insert(connections,
           UserInputService.InputBegan:Connect(function(input, gameProcessed)

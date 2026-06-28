@@ -809,6 +809,7 @@ local function sceneRepairAmount(state, actions, localSceneCb)
     _inputRow       = 23,
     _buildInputRow  = function(s) return { text = prompt_base .. s, color = GREEN } end,
     maxDigits       = 9,
+    maxValue        = math.min(state.cash or 0, maxCost),
     onType = function(text, _s, _a)
       local amt = tonumber(text) or 0
       if amt > (state.cash or 0) then
@@ -1023,6 +1024,7 @@ local function sceneWuRepay(state, actions, localSceneCb)
     _inputRow       = 20,
     _buildInputRow  = function(s) return { text = "him? " .. s, color = AMBER } end,
     maxDigits       = 9,
+    maxValue        = math.min(state.cash or 0, state.debt or 0),
     onType = function(text, s, _a)
       local amt = tonumber(text) or 0
       if amt > 0 then
@@ -1132,6 +1134,7 @@ local function sceneBuySellAmount(state, actions, localSceneCb, goodIdx, isBuy, 
     _inputRow       = 23,
     _buildInputRow  = buildAmountRow,
     maxDigits       = 9,
+    maxValue        = isBuy and affordable or cargoAmt,
     onType = function(text, _s, _a)
       local qty = tonumber(text) or 0
       if qty == 0 then
@@ -1183,6 +1186,7 @@ local function sceneBank(state, actions, localSceneCb)
     _inputRow       = 19,
     _buildInputRow  = function(s) return { text = question .. s, color = AMBER } end,
     maxDigits       = 9,
+    maxValue        = maxDeposit,
     onType = function(text, _s, _a)
       local amt = tonumber(text) or 0
       if amt > maxDeposit then
@@ -1208,6 +1212,7 @@ local function sceneWithdraw(state, actions, localSceneCb)
     _inputRow       = 19,
     _buildInputRow  = function(s) return { text = question .. s, color = AMBER } end,
     maxDigits       = 9,
+    maxValue        = maxWithdraw,
     onType = function(text, _s, _a)
       local amt = tonumber(text) or 0
       if amt > maxWithdraw then
@@ -1334,6 +1339,7 @@ local function sceneWarehouseStep(state, actions, localSceneCb, startN)
     _inputRow       = 20,
     _buildInputRow  = function(s) return { text = secondLine .. s, color = AMBER } end,
     maxDigits       = 9,
+    maxValue        = maxAvail,
     onType = function(text, _s, _a)
       local qty = tonumber(text) or 0
       if qty == 0 then

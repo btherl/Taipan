@@ -602,23 +602,55 @@ local function sceneQuitConfirm(_state, actions, localSceneCb)
   }
 end
 
-local function sceneRestartConfirm(_state, actions, localSceneCb)
-  local rows = {}
-  for r = 1, 24 do rows[r] = { text = "", color = AMBER } end
-  -- Split across two rows: the full sentence is 47 chars, over the 40-column
-  -- terminal width that every other prompt respects.
-  rows[22] = { text = "Do you wish to abandon your ship,", color = AMBER }
-  rows[23] = { text = "Taipan? (Y/N)",                     color = AMBER }
+local ABANDON_CONFIRM_Q = "Will you abandon your ship, Taipan? "  -- 36 chars
+
+local function buildAbandonConfirmRow(s)
+  -- Question text inverted to attract attention; the typed echo (with caret)
+  -- stays in normal video.
+  return { segments = {
+    { text = ABANDON_CONFIRM_Q, color = AMBER, inverted = true },
+    { text = s,                 color = AMBER },
+  }}
+end
+
+local function sceneRestartConfirm(state, actions, localSceneCb, playSound)
+  -- Keep the at-port screen (status + prices) visible behind the confirmation:
+  -- same comprador layout as sceneAtPort, with the question on row 23 and row 24
+  -- blank. Standardized as a type-and-Enter prompt (no literal "(Y/N)").
+  local rows   = buildPortRows(state)
+  local prices = state.currentPrices or {0, 0, 0, 0}
+  local p1 = tostring(math.floor(prices[1]))
+  local p2 = tostring(math.floor(prices[2]))
+  local p3 = tostring(math.floor(prices[3]))
+  local p4 = tostring(math.floor(prices[4]))
+
+  rows[17] = { text = "Comprador's Report",                              color = AMBER }
+  rows[18] = { text = "",                                                color = AMBER }
+  rows[19] = { text = "Taipan, present prices per unit here are",        color = AMBER }
+  rows[20] = { text = "   Pepper: " .. pad(p1, 7) .. "Silk: " .. p2,   color = GREEN }
+  rows[21] = { text = "   Arms: "   .. pad(p3, 9) .. "General: " .. p4, color = GREEN }
+  rows[22] = { text = "",                                                color = AMBER }
+  rows[23] = buildAbandonConfirmRow("")
+  rows[24] = { text = "",                                                color = AMBER }
+
   return { rows = rows }, {
-    type  = "key",
-    keys  = {"Y", "N"},
-    label = "Do you wish to abandon your ship, Taipan? (Y/N)",
-    onKey = function(key, _s, _a)
-      if key == "Y" then
+    type            = "type",
+    maxLength       = 1,
+    typePlaceholder = "",
+    _inputRow       = 23,
+    _buildInputRow  = buildAbandonConfirmRow,
+    onType = function(text, _s, _a)
+      local c = (text or ""):upper()
+      if c == "Y" then
         actions.abandonShip()
-      elseif key == "N" then
+        return nil
+      elseif c == "N" then
         if localSceneCb then localSceneCb(nil) end
+        return nil
       end
+      -- empty / whitespace / any other char: re-prompt in place with bad joss
+      if playSound then playSound("badjoss") end
+      return nil
     end,
   }
 end
@@ -1670,7 +1702,7 @@ function PromptEngine.processState(state, localScene, actions, localSceneCb, com
     return { rows = rows }, nil
   end
   if localScene == "quit_confirm" then return sceneQuitConfirm(state, actions, localSceneCb) end
-  if localScene == "restart_confirm" then return sceneRestartConfirm(state, actions, localSceneCb) end
+  if localScene == "restart_confirm" then return sceneRestartConfirm(state, actions, localSceneCb, playSound) end
   if state.startChoice == nil and (state.turnsElapsed or 1) == 1 and (state.destination or 0) == 0 then
     if localScene == "start_choice" then
       return sceneStartChoice(state, actions, localSceneCb)

@@ -542,11 +542,15 @@ local function sceneStartChoice(_state, actions, _localSceneCb)
   }
 end
 
-local function sceneAbandonMessage(_state, _actions, localSceneCb)
-  local rows = {}
-  for r = 1, 24 do rows[r] = { text = "", color = AMBER } end
-  rows[11] = { text = "Ashamed of your failure, you disappear", color = AMBER }
-  rows[12] = { text = "into the night, never to be seen again.", color = AMBER }
+local function sceneAbandonMessage(state, _actions, localSceneCb)
+  -- Keep the port status (rows 1-16) visible; clear the comprador area and show
+  -- the parting message there, mirroring the combat "buggers got us" status
+  -- screen rather than a fully blanked screen. setGameOver preserves cash/ship/
+  -- port, so buildPortRows renders correctly.
+  local rows = buildPortRows(state)
+  for r = 17, 24 do rows[r] = { text = "", color = AMBER } end
+  rows[19] = { text = "Ashamed of your failure, you disappear", color = AMBER }
+  rows[20] = { text = "into the night, never to be seen again.", color = AMBER }
   return { rows = rows }, {
     type   = "key",
     keys   = {},

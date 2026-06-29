@@ -583,7 +583,21 @@ function KeyInput.new(screenGui)
               end
               hiddenBox.Text = ""
               local err = promptDef.onType(submitted, state, actions)
-              if err and promptDef._onError then promptDef._onError(err) end
+              if err and promptDef._onError then
+                promptDef._onError(err)
+              else
+                -- onType returned no error. If it advanced the scene, setPrompt ->
+                -- cleanup destroyed hiddenBox and the Parent guard below no-ops. If
+                -- it stayed on this prompt (e.g. empty/whitespace firm name -> nil,
+                -- no advance), the box survives and we must re-summon the keyboard or
+                -- the player is stranded with no keyboard and no refocus affordance
+                -- (soft-lock at the firm-name screen on touch devices). Do not
+                -- restore text: an empty submit should leave the field empty (it was
+                -- already cleared above).
+                task.defer(function()
+                  if hiddenBox and hiddenBox.Parent then hiddenBox:CaptureFocus() end
+                end)
+              end
             else
               -- Focus lost without submitting (e.g. orientation change drops
               -- TextBox focus and closes the soft keyboard). Re-capture focus on
